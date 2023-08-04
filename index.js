@@ -1,9 +1,8 @@
 const main = () => {
 
-    // Clear Workspace and reset counter values
+    // Clear Workspace
     $('#workspace').empty();
-    $('#group_no').html('No');
-    $('#member_no').html('0');
+
 
     // Get names from html input and split by new line
     const get_members = $('#input-items').val();
@@ -15,7 +14,7 @@ const main = () => {
 
     
     // Get members per group from html input
-    const members_per_group = $('#input-no').value;
+    const members_per_group = $('#input-no').val();
 
     // End program if members per group input is empty
     if (members_per_group == null || members_per_group == '') return 0;
@@ -35,7 +34,7 @@ const main = () => {
             let cur_list_html = ``;
             for (n = 0; n < max_members_to_add; n++) {
                 let random_name = members[Math.floor(Math.random() * members.length)];
-                cur_list_html += `<li>${random_name}</li>`;
+                cur_list_html += `<li class='text-light'>${random_name}</li>`;
                 let index_of_random = members.indexOf(random_name);
                 if (index_of_random > -1) {
                     members.splice(index_of_random, 1);
@@ -54,7 +53,7 @@ const main = () => {
                     }
                 }
                 let random_name = members[Math.floor(Math.random() * members.length)];
-                cur_list_html += `<li>${random_name}</li>`;
+                cur_list_html += `<li class='text-light'>${random_name}</li>`;
                 let index_of_random = members.indexOf(random_name);
                 if (index_of_random > -1) {
                     members.splice(index_of_random, 1);
@@ -69,8 +68,8 @@ const main = () => {
 // Function to add result to html
 const addToHTML = (number, list) => {
     let new_element = `
-            <div>
-                <h1>Group ${number}</h1>
+            <div class="bg-dark rounded p-2 mb-2">
+                <h2 class="text-light">Group ${number}</h2>
                 <ol>
                     ${list}
                 </ol>
