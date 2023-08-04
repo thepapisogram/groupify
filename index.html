@@ -4,12 +4,40 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+    <link rel="stylesheet" href="./style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+    <title>Group Generator</title>
 </head>
-<body id="body">
+<body>
 
-    <div id="app"></div>
+    <div class="row m-0" id="root">
+        <div class="d-flex justify-content-center align-items-center flex-column col-12 col-md-4 bg-dark">
+            <div>
+                <h1 class="text-center text-warning mb-0">Group Creator</h1>
+                <p class="text-center text-muted lead mb-0">Developed by Anthony Saah</p>
+            </div>
+            <div class="input-group my-4">
+                <input class="form-control bg-dark text-warning fw-bold" type="number" id="input-no" placeholder="Number of members per group">
+            </div>
+            <div class="input-group" id="input-container">
+                <textarea class="form-control bg-dark text-warning fw-bold" rows="8" id="input-items" placeholder="Enter each value(name) on a new line"></textarea>
+            </div>
+            <button onclick="main();" class="mt-3 d-block w-100 btn btn-warning">Create Groups</button>
+        </div>
+        <div class="col-12 col-md-8 bg-dark p-3" id="display">
+            <h1 class="text-center text-warning mb-0"><span id="group_no">No</span> Groups</h1>
+            <p class="lead text-center text-muted"><span id="member_no">0</span> members per group</p>
 
+            <div id="workspace">
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+        crossorigin="anonymous"></script>
     <script src="./index.js"></script>
 </body>
 </html>
