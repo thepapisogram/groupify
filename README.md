@@ -46,7 +46,7 @@ To run this project locally, follow these steps:
 #### Contributions are welcome! If you have suggestions for improvements or want to report a bug, please create an issue or submit a pull request.
 
 ### License
-#### This project is licensed under the MIT License. See the LICENSE file for more details
+#### This project is licensed under the GNU GENERAL PUBLIC LICENSE. See the LICENSE file for more details
 
 ### Acknowledgements
 #### Inspired by the need for efficient group management in various settings
