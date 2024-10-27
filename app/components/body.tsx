@@ -73,12 +73,18 @@ const Body = () => {
     }
   };
 
-  const modalRef = useRef(null);
+  const modalRef = useRef<HTMLDialogElement | null>(null);
+
   const openModal = () => {
-    if(groupList !== ''){
-        if(modalRef.current){ modalRef.current.showModal(); createGroups(); }
-    }else showAlert();
-  }
+    if (groupList !== "") {
+      if (modalRef.current) {
+        modalRef.current.showModal();
+        createGroups();
+      }
+    } else {
+      showAlert();
+    }
+  };
 
   return (
     <section className="grid bg-white dark:bg-slate-800 my-2 md:my-5 lg:my-10 md:rounded-lg shadow-lg p-5 w-full md:w-9/12 lg:w-7/12 xl:w-5/12 h-max gap-y-4">
