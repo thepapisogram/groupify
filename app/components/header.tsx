@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { rubik_gemstones } from "@/app/ui/fonts";
+import logo from '@/public/logo/logo.png'
 
 const Header = ({ title, subtitle}:{title:string, subtitle:string}) => {
     return (
@@ -7,7 +8,7 @@ const Header = ({ title, subtitle}:{title:string, subtitle:string}) => {
         <div className="flex items-center justify-center gap-x-3">
           <Image
             className="block"
-            src="/logo/logo.png"
+            src={logo}
             width={50}
             height={50}
             alt="Groupify Logo"
