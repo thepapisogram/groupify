@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { rubik_gemstones } from "@/app/ui/fonts";
-import logo from '@/public/logo/logo.png'
+import logo from '@/public/static/logo/logo.png'
 
 const Header = ({ title, subtitle}:{title:string, subtitle:string}) => {
     return (

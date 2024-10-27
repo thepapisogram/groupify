@@ -9,7 +9,7 @@ module.exports = {
       },
       {
         protocol: "https",
-        hostname: "https://groupify-tool.netlify.app", // replace with your live domain
+        hostname: "groupify-tool.netlify.app", // replace with your live domain
         pathname: "/**",
       },
     ],
