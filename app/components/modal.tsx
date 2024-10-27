@@ -100,7 +100,7 @@ const Modal = forwardRef(
       });
 
       // Generate the Word document as a Blob
-      Packer.toBlob(doc).then((blob:unknown) => {
+      Packer.toBlob(doc).then((blob: Blob) => {
         saveAs(blob, "Groupify_Groups.docx");
       });
     };
