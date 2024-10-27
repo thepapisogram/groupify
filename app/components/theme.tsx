@@ -10,7 +10,7 @@ const Theme = () => {
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
-    const handleMediaChange = (event) => {
+    const handleMediaChange = (event: { matches: boolean | ((prevState: boolean) => boolean); }) => {
       setIsDarkMode(event.matches);
     };
 
