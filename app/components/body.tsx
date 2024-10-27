@@ -6,7 +6,7 @@ import Modal from "./modal";
 const Body = () => {
     
   const [alert, setAlert] = useState(false);
-  const [alertText, setAlertText] = useState("Enter Names to group");
+  const [alertText] = useState("Enter Names to group");
 
   const showAlert = () => {
     setAlert(true);
@@ -22,7 +22,7 @@ const Body = () => {
   const [batches, setBatches] = useState<string[][]>([]);
 
   const createGroups = () => {
-    let AllMembers = groupList.split("\n");
+    const AllMembers = groupList.split("\n");
 
     // Shuffle Members
     for (let i = AllMembers.length - 1; i > 0; i--) {
@@ -31,8 +31,8 @@ const Body = () => {
     }
     
     // Check if groups will have equal no. of members
-    let no_of_members = AllMembers.length % groupSize;
-    let equalMembers = no_of_members === 0;
+    const no_of_members = AllMembers.length % groupSize;
+    const equalMembers = no_of_members === 0;
 
     if(equalMembers){
         const batches = [];
@@ -53,7 +53,7 @@ const Body = () => {
     }else{
         const no_of_batches = Math.floor(AllMembers.length / groupSize);
         const batches = [];
-        let extraMembers = AllMembers.length % groupSize;
+        const extraMembers = AllMembers.length % groupSize;
 
         // Form initial groups
         for (let i = 0; i < no_of_batches; i++) {
@@ -63,7 +63,7 @@ const Body = () => {
         }
 
         // Distribute extra members to each batch in round-robin
-        let extraIndex = no_of_batches * groupSize;
+        const extraIndex = no_of_batches * groupSize;
         for (let i = 0; i < extraMembers; i++) {
           batches[i % no_of_batches].push(AllMembers[extraIndex + i]);
         }

@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react";
-
 export default function Alert({ show, text }:{ show:boolean, text:string }) {
 
   return (
