@@ -1,6 +1,7 @@
 {
   "name": "groupify",
-  "version": "0.1.0",
+  "version": "1.00",
+  "author": "Anthony Saah",
   "private": true,
   "type": "module",
   "scripts": {
