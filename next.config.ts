@@ -1,17 +1,7 @@
-module.exports = {
-  images: {
-    remotePatterns: [
-      {
-        protocol: "http",
-        hostname: "localhost",
-        port: "3000", // or your development server port
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "groupify-tool.netlify.app", // replace with your live domain
-        pathname: "/**",
-      },
-    ],
-  },
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* config options here */
 };
+
+export default nextConfig;

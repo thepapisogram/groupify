@@ -1,10 +1,10 @@
 import Link from "next/link";
-import Theme from "./theme";
+// import Theme from "./theme";
 
 const Footer = ({ author, href, title, year }:{ author:string, href:string, title:string, year:string }) => {
     return (
       <footer className="w-full text-center font-medium px-5 md:px-10">
-        <Theme />
+        {/* <Theme /> */}
         <p className="text-sm text-slate-400 dark:text-zinc-600">
           &copy; Copyright {title} {year}
         </p>

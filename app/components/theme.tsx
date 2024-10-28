@@ -1,5 +1,5 @@
-"use client"
-import { useState, useEffect } from 'react';
+"use client";
+import { useState, useEffect } from "react";
 
 const Theme = () => {
   const prefersDarkMode =
@@ -7,33 +7,37 @@ const Theme = () => {
     window.matchMedia("(prefers-color-scheme: dark)").matches;
   const [isDarkMode, setIsDarkMode] = useState(prefersDarkMode);
 
+  const applyTheme = (isDark: boolean) => {
+    document.documentElement.setAttribute(
+      "data-theme",
+      isDark ? "dark" : "light"
+    );
+    document.documentElement.classList.toggle("dark", isDark);
+  };
+
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
-    const handleMediaChange = (event: { matches: boolean | ((prevState: boolean) => boolean); }) => {
+    const handleMediaChange = (event: MediaQueryListEvent) => {
       setIsDarkMode(event.matches);
+      applyTheme(event.matches);
     };
 
-    // Set the initial theme
-    if (isDarkMode) {
-      document.documentElement.setAttribute("data-theme", "dark");
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.removeAttribute("data-theme");
-      document.documentElement.classList.remove("dark");
-    }
+    applyTheme(isDarkMode); // Initial theme setup
 
-    // Add the event listener
     mediaQuery.addEventListener("change", handleMediaChange);
 
-    // Clean up the event listener on unmount
     return () => {
       mediaQuery.removeEventListener("change", handleMediaChange);
     };
   }, [isDarkMode]);
 
   const handleThemeChange = () => {
-    setIsDarkMode(!isDarkMode);
+    setIsDarkMode((prev) => {
+      const newMode = !prev;
+      applyTheme(newMode);
+      return newMode;
+    });
   };
 
   return (

@@ -116,10 +116,10 @@ const Modal = forwardRef(
           </form>
           <h3 className="font-bold text-lg">Groupify</h3>
           <div className="text-center mt-5">
-            <p className="text-lg">Set Font Sizes</p>
+            <p className="text-md">Set Font Sizes</p>
             <div className="grid grid-cols-2 w-full mt-2 gap-x-2">
               <div className="grid grid-cols-2 bg-zinc-200 dark:bg-zinc-900 rounded-lg">
-                <p className="my-auto">Title (px)</p>
+                <p className="my-auto text-sm">Title</p>
                 <input
                   type="number"
                   className="p-2 rounded-lg outline-none text-center bg-transparent"
@@ -129,7 +129,7 @@ const Modal = forwardRef(
                 />
               </div>
               <div className="grid grid-cols-2 bg-zinc-200 dark:bg-zinc-900 rounded-lg">
-                <p className="my-auto">Name (px)</p>
+                <p className="my-auto text-sm">Name</p>
                 <input
                   type="number"
                   className="p-2 rounded-lg outline-none text-center bg-transparent"
@@ -141,7 +141,7 @@ const Modal = forwardRef(
             </div>
           </div>
           <div className="text-center mt-5">
-            <p className="text-lg">Choose File Type</p>
+            <p className="text-md">Choose File Type</p>
             <div className="flex items-center justify-center w-full">
               <button
                 className={clsx(
@@ -175,7 +175,10 @@ const Modal = forwardRef(
             </div>
           </div>
           <div className="modal-action">
-            <button onClick={handleDownload} className="btn">
+            <button
+              onClick={handleDownload}
+              className="btn w-full bg-slate-500 dark:bg-teal-800 text-white dark:text-zinc-200 border border-slate-600 dark:border-teal-900 py-2 rounded-lg mt-3 hover:bg-slate-600 dark:hover:bg-teal-900 transition-colors"
+            >
               Download {fileType} file
             </button>
           </div>
