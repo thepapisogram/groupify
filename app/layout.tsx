@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { inter } from "./ui/fonts";
 import appmeta from '@/app/data/appmeta';
 
-import "./globals.css";
+import "@/app/globals.css"
 
 export const metadata: Metadata = {
   title: appmeta.title,
