@@ -3,7 +3,7 @@ import Link from "next/link";
 
 const Footer = ({ author, href, title, year }:{ author:string, href:string, title:string, year:string }) => {
     return (
-      <footer className="w-full text-center font-medium px-5 md:px-10">
+      <footer className="w-full text-center font-medium px-5 md:px-10 mt-auto">
         {/* <Theme /> */}
         <p className="text-sm text-slate-400 dark:text-zinc-600">
           &copy; Copyright {title} {year}

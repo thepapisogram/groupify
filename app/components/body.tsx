@@ -87,19 +87,21 @@ const Body = () => {
   };
 
   return (
-    <section className="grid bg-white dark:bg-slate-800 my-2 md:my-5 lg:my-10 md:rounded-lg shadow-lg p-5 w-full md:w-9/12 lg:w-7/12 xl:w-5/12 h-max gap-y-4">
+    <section className="grid bg-white dark:bg-slate-800 rounded-lg shadow-lg p-5 w-11/12 sm:w-96 md:w-96 h-max gap-y-3">
       <textarea
         className="bg-white dark:bg-slate-900 text-stone-900 dark:text-zinc-200 w-full border border-slate-300 dark:border-slate-600 outline-none rounded-lg p-3 resize-none h-40"
         placeholder="Enter Names Here"
         value={groupList}
         onChange={(e) => setGroupList(e.target.value)}
       ></textarea>
-      <div className="grid grid-cols-2 items-center pl-3">
-        <p className="text-stone-900 dark:text-zinc-300">No. of Members</p>
+      <div className="grid grid-cols-3 items-center pl-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-300 dark:border-slate-600">
+        <p className="text-stone-900 dark:text-zinc-300 col-span-2">
+          Members / Group
+        </p>
         <input
-          className="bg-white dark:bg-slate-900 text-stone-900 dark:text-zinc-200 w-full border border-slate-300 dark:border-slate-600 outline-none rounded-lg p-3"
+          className="bg-transparent text-stone-900 dark:text-zinc-200 outline-none rounded-lg p-3"
           type="number"
-          placeholder="Group Size"
+          placeholder="size"
           min={1}
           value={groupSize}
           onChange={(e) => setGroupSize(Number(e.target.value))}

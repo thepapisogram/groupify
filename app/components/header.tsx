@@ -1,27 +1,24 @@
 import Image from "next/image";
-import { rubik_gemstones } from "@/app/ui/fonts";
+import { mogra } from "@/app/ui/fonts";
 
-const Header = ({ title, subtitle}:{title:string, subtitle:string}) => {
+const Header = ({ title}:{title:string}) => {
     return (
-      <header className="grid gap-y-2 text-center px-5 md:px-10">
+      <header className="grid gap-y-2 text-center px-5 md:px-10 mt-5 mb-10">
         <div className="flex items-center justify-center gap-x-3">
           <Image
             className="block"
             src="/logo.png"
-            width={50}
-            height={50}
+            width={70}
+            height={70}
             alt="Groupify Logo"
             unoptimized
           />
           <h1
-            className={`${rubik_gemstones.className} text-sky-600 dark:text-green-600 text-3xl md:text-5xl my-auto`}
+            className={`${mogra.className} text-sky-600 dark:text-teal-600 text-4xl md:text-5xl my-auto`}
           >
             {title}
           </h1>
         </div>
-        <h2 className="text-stone-900 dark:text-zinc-300 font-medium mt-1 text-md md:text-lg">
-          {subtitle}
-        </h2>
       </header>
     );
 }
