@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { mogra } from "@/app/ui/fonts";
+import {rubik_gemstones } from "@/app/ui/fonts";
 
 const Header = ({ title}:{title:string}) => {
     return (
@@ -14,7 +14,7 @@ const Header = ({ title}:{title:string}) => {
             unoptimized
           />
           <h1
-            className={`${mogra.className} text-sky-600 dark:text-teal-600 text-4xl md:text-5xl my-auto`}
+            className={`${rubik_gemstones.className} text-sky-600 dark:text-teal-600 text-4xl md:text-5xl my-auto`}
           >
             {title}
           </h1>
