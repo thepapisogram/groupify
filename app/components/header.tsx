@@ -11,6 +11,7 @@ const Header = ({ title, subtitle}:{title:string, subtitle:string}) => {
             width={50}
             height={50}
             alt="Groupify Logo"
+            unoptimized
           />
           <h1
             className={`${rubik_gemstones.className} text-sky-600 dark:text-green-600 text-3xl md:text-5xl my-auto`}
