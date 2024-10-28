@@ -7,7 +7,7 @@ const Header = ({ title, subtitle}:{title:string, subtitle:string}) => {
         <div className="flex items-center justify-center gap-x-3">
           <Image
             className="block"
-            src="/logo.png"
+            src="./logo.png"
             width={50}
             height={50}
             alt="Groupify Logo"
