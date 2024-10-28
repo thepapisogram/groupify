@@ -9,7 +9,8 @@ export const metadata: Metadata = {
   title: appmeta.title,
   description: appmeta.description,
   authors: [ appmeta.author ],
-  keywords: appmeta.keywords
+  keywords: appmeta.keywords,
+  icons: "/favicon.ico"
 };
 
 export default function RootLayout({
