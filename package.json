@@ -3,7 +3,7 @@
   "version": "1.00",
   "author": "Anthony Saah",
   "private": true,
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
