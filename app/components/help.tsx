@@ -6,8 +6,15 @@ import { useEffect } from "react";
 const Help = () => {
 
     useEffect(() => {
-        document.getElementById("my_modal_3").showModal();
-    }, [])
+      const modalElement = document.getElementById(
+        "my_modal_3"
+      ) as HTMLDialogElement;
+      if (modalElement) {
+        modalElement.showModal();
+      } else {
+        console.error("Modal element not found");
+      }
+    }, []);
 
     return (
       <>
@@ -19,7 +26,8 @@ const Help = () => {
                 ✕
               </button>
             </form>
-            <h3 className="font-bold text-lg">How to use Groupify</h3>
+            <h3 className="font-extrabold text-lg">Welcome to Groupify!</h3>
+            <h3 className="font-bold text-md">How to use</h3>
             <div className="my-5">
               <p className="font-normal">
                 1. Click the &ldquo;Enter Names Here&ldquo; field.
