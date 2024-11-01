@@ -38,6 +38,7 @@ const Help = () => {
                 className="rounded-lg shadow-md mt-2 mx-auto"
                 width="300"
                 height="300"
+                unoptimized
               />
             </div>
             <div className="my-5">
@@ -50,6 +51,7 @@ const Help = () => {
                 className="rounded-lg shadow-md mt-2 mx-auto"
                 width="300"
                 height="300"
+                unoptimized
               />
             </div>
             <div className="my-5">
@@ -62,6 +64,7 @@ const Help = () => {
                 className="rounded-lg shadow-md mt-2 mx-auto"
                 width="300"
                 height="300"
+                unoptimized
               />
             </div>
             <div className="my-5">
@@ -74,6 +77,7 @@ const Help = () => {
                 className="rounded-lg shadow-md mt-2 mx-auto"
                 width="300"
                 height="300"
+                unoptimized
               />
             </div>
             <div className="my-5">
@@ -84,6 +88,7 @@ const Help = () => {
                 className="rounded-lg shadow-md mt-2 mx-auto"
                 width="300"
                 height="300"
+                unoptimized
               />
             </div>
             <div className="my-5">
@@ -94,6 +99,7 @@ const Help = () => {
                 className="rounded-lg shadow-md mt-2 mx-auto"
                 width="300"
                 height="300"
+                unoptimized
               />
             </div>
           </div>
