@@ -9,6 +9,16 @@ Groupify is a web application designed to help users easily create random groups
 - **Word Document Download**: Download the grouped names as a formatted Word document.
 - **User-Friendly Interface**: Built with Next.js and styled with Tailwind CSS for a responsive experience.
 
+## How to use
+### 1.	Click the "Enter Names Here" field.
+### 2.	Type the names with each name on a new line
+### 3.	Specify number of members with the "size" field
+### 4.	Click "Generate Groups"
+### 5.	Select the file type you prefer
+### 6.	Click on Download
+ 
+
+
 ## Technologies Used
 
 - [Next.js](https://nextjs.org/) - Framework for building the frontend.

@@ -3,6 +3,7 @@ import Body from "./components/body";
 
 import appmeta from "./data/appmeta";
 import Footer from "./components/footer";
+import Help from "./components/help";
 
 export default function Home() {
 
@@ -16,6 +17,7 @@ export default function Home() {
         title={appmeta.app.title}
         year={appmeta.app.year}
       />
+      <Help />
     </main>
   );
 }
