@@ -8,7 +8,7 @@ const Header = () => {
   return (
     <header className="col-span-full">
         <span className="flex justify-center items-center">
-            <Image className="w-auto h-auto" src="/favicon.ico" width={50} height={50} alt="logo" />
+            <Image className="w-auto h-auto" src="/favicon.ico" width={50} height={50} alt="logo" priority />
         </span>
         <h1 className={`${rubik.className} text-3xl tracking-widest font-extrabold capitalize text-white dark:text-cyan-500 text-center`}>{appMeta.app.name}</h1>
     </header>

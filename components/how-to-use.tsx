@@ -1,20 +1,22 @@
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const HowToUse = () => {
   return (
-    <>
-      <HoverCard>
-        <HoverCardTrigger asChild>
-          <Button variant="link" className="dark:text-cyan-600">How to Use</Button>
-        </HoverCardTrigger>
-        <HoverCardContent>
+    <div>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="link" className="dark:text-cyan-600">
+            How to Use
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="dark:bg-stone-950 dark:border-cyan-700 dark:text-cyan-600">
           <h3 className="font-semibold mb-2">How to Use</h3>
-          <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600">
+          <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600 dark:text-cyan-600">
             <li>
               <strong>Enter Names</strong>: Add names in the text box, with each
               name on a new line.
@@ -25,12 +27,13 @@ const HowToUse = () => {
             </li>
             <li>
               <strong>Download Results</strong>: Click{" "}
-              <strong>&quot;Generate File&quot;</strong> to generate the groups and download either an excel or word file.
+              <strong>&quot;Generate File&quot;</strong> to generate the groups
+              and download either an excel or word file.
             </li>
-          </ol>{" "}
-        </HoverCardContent>
-      </HoverCard>
-    </>
+          </ol>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 };
 
