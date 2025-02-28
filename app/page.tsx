@@ -16,13 +16,12 @@ import HowToUse from "@/components/how-to-use";
 import Bgd from "@/components/bgd";
 
 export default function Home() {
-
   const errors = {
     empty: "Please enter names",
     size: "Please enter a valid group size",
     format: "Please select a format",
-    unknown: "Unknown Error Occurred"
-  }
+    unknown: "Unknown Error Occurred",
+  };
 
   // const [batches, setBatches] = useState<string[][]>([]);
   let batches: string[][] = [];
@@ -40,9 +39,20 @@ export default function Home() {
       return false;
     }
 
-    toast.loading("Generating File...");
+    if (size <= 0 || isNaN(size)) {
+      toast.error(errors.size, {
+        richColors: true,
+        dismissible: true,
+      });
+      return;
+    }
+
+    toast.loading("Generating File...", {
+      richColors: true,
+      dismissible: false,
+    });
     createGroups();
-    
+
     setTimeout(() => {
       toast.dismiss();
       if (format === "excel") genExcel();
@@ -56,14 +66,6 @@ export default function Home() {
   };
 
   const createGroups = async () => {
-    if (size <= 0 || isNaN(size)) {
-      toast.error(errors.size, {
-        richColors: true,
-        dismissible: true,
-      });
-      return;
-    }
-
     const AllMembers = names.split("\n").filter((name) => name.trim() !== ""); // Filter out empty lines
 
     // Shuffle Members
@@ -72,7 +74,7 @@ export default function Home() {
       [AllMembers[i], AllMembers[j]] = [AllMembers[j], AllMembers[i]];
     }
 
-    const temp_batches =  [];
+    const temp_batches = [];
     const totalMembers = AllMembers.length;
     const no_of_batches = Math.floor(totalMembers / size);
     const extraMembers = totalMembers % size;
@@ -89,7 +91,9 @@ export default function Home() {
       if (bestDistribution) {
         // Distribute extra members to existing groups in round-robin fashion
         for (let i = 0; i < extraMembers; i++) {
-          temp_batches[i % no_of_batches].push(AllMembers[no_of_batches * size + i]);
+          temp_batches[i % no_of_batches].push(
+            AllMembers[no_of_batches * size + i]
+          );
         }
       } else {
         // Form a new group for the extra members
@@ -98,7 +102,7 @@ export default function Home() {
         temp_batches.push(AllMembers.slice(start, end));
       }
     }
-    
+
     batches = temp_batches;
   };
 
@@ -186,11 +190,13 @@ export default function Home() {
 
   const toggleConfig = () => {
     setShowSettings(!showSettings);
-  }
+  };
 
   return (
     <div className="bg-white dark:bg-cyan-950 dark:bg-opacity-50 bg-opacity-70 backdrop-blur-lg grid md:grid-cols-2 gap-5 p-3 rounded-xl w-full h-max md:w-[700px]">
-      <div className={clsx("space-y-2 md:block w-full", { "hidden": showSettings })}>
+      <div
+        className={clsx("space-y-2 md:block w-full", { hidden: showSettings })}
+      >
         <Textarea
           className="block p-4 min-h-[379px] resize-none text-base bg-zinc-200 dark:bg-stone-950 dark:border-stone-950 dark:text-cyan-500 tracking-widest h-full rounded-xl"
           placeholder="Enter Names Here"
