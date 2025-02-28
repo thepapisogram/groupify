@@ -195,7 +195,7 @@ export default function Home() {
   }
 
   return (
-    <div className="bg-white dark:bg-cyan-950 dark:bg-opacity-50 bg-opacity-70 backdrop-blur-lg grid md:grid-cols-2 gap-5 p-6 rounded-xl w-full h-max md:w-[700px] overflow-y-scroll md:overflow-hidden">
+    <div className="bg-white dark:bg-cyan-950 dark:bg-opacity-50 bg-opacity-70 backdrop-blur-lg grid md:grid-cols-2 gap-5 p-6 rounded-xl w-full h-max md:w-[700px] md:overflow-y-scroll md:overflow-hidden">
       <div className={clsx("space-y-2 md:block", { "hidden": showSettings })}>
         <Textarea
           className="p-4 min-h-[379px] text-base bg-zinc-200 dark:bg-stone-950 dark:backdrop-blur-lg dark:border-stone-950 dark:text-cyan-500 tracking-widest h-full rounded-xl"
