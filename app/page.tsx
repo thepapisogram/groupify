@@ -1,10 +1,10 @@
 "use client";
-import { SetStateAction, useState } from "react";
+import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import Header from "@/components/header";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
@@ -17,6 +17,9 @@ import clsx from "clsx";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { Document, Packer, Paragraph, TextRun } from "docx";
+import Link from "next/link";
+import appMeta from "@/data/metadata";
+import HowToUse from "@/components/how-to-use";
 
 export default function Home() {
 
@@ -274,6 +277,23 @@ export default function Home() {
           </Button>
         </div>
       </div>
+      <footer className="col-span-full flex items-center justify-between">
+        <div className="flex items-center justify-around gap-2">
+          <HowToUse />
+          {/* <Button variant="link">Donate to Project</Button> */}
+          <Link href={appMeta.author.url} target="_blank" className={buttonVariants({ variant: "link" })}>
+            About Me
+          </Link>
+        </div>
+        <div className="flex flex-col items-center justify-center gap-1 pr-4">
+          <span className="text-sm text-neutral-700 tracking-widest">
+            Developed by Anthony Saah
+          </span>
+          <span className="text-xs text-muted-foreground">
+            &copy; Copyright Groupify {new Date().getFullYear()}
+          </span>
+        </div>
+      </footer>
     </div>
   );
 }

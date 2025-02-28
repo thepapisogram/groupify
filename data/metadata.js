@@ -6,25 +6,32 @@ const author = {
 const app = {
     name: "Groupify",
     version: "2.0",
+    description: "Groupify is an innovative tool designed to effortlessly sort names into groups. Perfect for classroom settings, it helps class captains quickly and efficiently split the class into groups of 5. Developed by Anthony Saah, Groupify streamlines group organization with ease.",
+    applicationName: "Groupify",
     keywords: ["groupify", "groupify tool", "grouping", "classroom", "tool", author.name],
 }
 
 const main = {
-    title: `${app.name}`,
-    description: "A tool to sort names into groups, sample usage; a classroom setting where the class captain needs to split the class into groups of 5. Developed by Anthony Saah",
-    applicationName: "Groupify",
+    title: app.name,
+    description: app.description,
+    lang: "en",
+    charset: "UTF-8",
     authors: [{ name: author.name, url: author.url }],
     generator: "Next.js",
     publisher: author.name,
     creator: author.name,
     keywords: app.keywords,
-    // referrer: "origin",
-    // themeColor: "#ffffff",
+    referrer: "origin",
+    icons: {
+        icon: "/favicon.ico",
+        shortcut: "/favicon.ico",
+        apple: "/favicon.ico",
+    },
     // colorScheme: "light",
     // robots: "index, follow",
     // openGraph: {
     //   title: "Groupify",
-    //   description: "A tool to sort names into groups, sample usage; a classroom setting where the class captain needs to split the class into groups of 5.",
+    //   description: "Groupify is an innovative tool designed to effortlessly sort names into groups. Perfect for classroom settings, it helps class captains quickly and efficiently split the class into groups of 5.",
     //   url: "https://groupify.com",
     //   siteName: "Groupify",
     //   images: [
@@ -43,21 +50,21 @@ const main = {
     //   site: "@groupify",
     //   creator: "@creator",
     //   title: "Groupify",
-    //   description: "A tool to sort names into groups, sample usage; a classroom setting where the class captain needs to split the class into groups of 5.",
+    //   description: "Groupify is an innovative tool designed to effortlessly sort names into groups. Perfect for classroom settings, it helps class captains quickly and efficiently split the class into groups of 5.",
     //   images: ["https://groupify.com/twitter-image.jpg"],
     // },
-    icons: {
-      icon: "/favicon.ico",
-      shortcut: "/favicon.ico",
-      apple: "/favicon.ico",
-    },
     // manifest: "/site.webmanifest",
 }
+
+const viewport = "width=device-width, initial-scale=1.0";
+const themeColor = "#0f172a";
 
 const appMeta = {
     app,
     author,
-    main
+    main,
+    viewport,
+    themeColor
 }
 
 export default appMeta;
