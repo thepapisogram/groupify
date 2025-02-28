@@ -19,7 +19,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${roboto.className} antialiased fixed flex flex-col md:space-y-6 items-center justify-center top-0 w-svw h-svh p-1 md:p-0 bg-slate-900 dark:bg-stone-950`}
+        className={`${roboto.className} antialiased fixed flex flex-col md:space-y-6 items-center justify-center top-0 left-0 w-full h-full p-2 md:p-0 bg-slate-900 dark:bg-stone-950`}
       >
         {/* <Header /> */}
         {children}

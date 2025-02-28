@@ -189,10 +189,10 @@ export default function Home() {
   }
 
   return (
-    <div className="bg-white dark:bg-cyan-950 dark:bg-opacity-50 bg-opacity-70 backdrop-blur-lg grid md:grid-cols-2 gap-5 p-6 rounded-xl w-full h-max md:w-[700px]">
-      <div className={clsx("space-y-2 md:block", { hidden: showSettings })}>
+    <div className="bg-white dark:bg-cyan-950 dark:bg-opacity-50 bg-opacity-70 backdrop-blur-lg grid md:grid-cols-2 gap-5 p-3 rounded-xl w-full h-max md:w-[700px]">
+      <div className={clsx("space-y-2 md:block w-full", { "hidden": showSettings })}>
         <Textarea
-          className="p-4 min-h-[379px] resize-none text-base bg-zinc-200 dark:bg-stone-950 dark:backdrop-blur-lg dark:border-stone-950 dark:text-cyan-500 tracking-widest h-full rounded-xl"
+          className="block p-4 min-h-[379px] resize-none text-base bg-zinc-200 dark:bg-stone-950 dark:border-stone-950 dark:text-cyan-500 tracking-widest h-full rounded-xl"
           placeholder="Enter Names Here"
           value={names}
           onChange={(e) => setNames(e.target.value)}
@@ -205,9 +205,9 @@ export default function Home() {
       >
         <Header />
         <div className="grid gap-2">
-          <div className="flex bg-zinc-200 dark:bg-zinc-800 p-2 rounded-full">
+          <div className="flex bg-zinc-200 dark:bg-stone-900 p-3 rounded-full">
             <Label
-              className="w-full flex items-center dark:text-cyan-500 text-base pl-2"
+              className="w-full flex items-center dark:text-cyan-500 text-base pl-4"
               htmlFor="group_size"
             >
               Group Size
@@ -225,7 +225,7 @@ export default function Home() {
             Number of members per group
           </span>
         </div>
-        <div className="grid bg-zinc-200 bg-opacity-10 backdrop-blur-lg gap-1 px-4 py-3 rounded-full">
+        <div className="grid bg-zinc-200 dark:bg-stone-900 bg-opacity-10 backdrop-blur-lg gap-1 px-4 py-3 rounded-full">
           <div className="flex items-center justify-center space-x-4">
             <Switch
               id="best-distribution"
@@ -235,8 +235,8 @@ export default function Home() {
             <Bgd val={bestDistribution} />
           </div>
         </div>
-        <div className="grid gap-1">
-          <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+        <div className="grid gap-2">
+          <div className="grid grid-cols-2 gap-x-2 gap-y-2">
             <Button
               onClick={() => setFormat("excel")}
               className={clsx(
@@ -267,14 +267,14 @@ export default function Home() {
               Document Download format
             </span>
           </div>
-          <Button
-            onClick={genFile}
-            className="rounded-full mt-3 dark:bg-cyan-900 dark:hover:bg-cyan-950 dark:text-zinc-300"
-            variant="secondary"
-          >
-            Generate File
-          </Button>
         </div>
+        <Button
+          onClick={genFile}
+          className="rounded-full dark:bg-cyan-900 dark:hover:bg-cyan-950 dark:text-zinc-300"
+          variant="secondary"
+        >
+          Generate File
+        </Button>
       </div>
       <footer className="col-span-full flex flex-col md:flex-row items-center md:justify-between gap-2">
         <div className="flex items-center justify-around gap-2">
