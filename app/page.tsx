@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import Header from "@/components/header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -191,7 +190,7 @@ export default function Home() {
 
   return (
     <div className="bg-white dark:bg-cyan-950 dark:bg-opacity-50 bg-opacity-70 backdrop-blur-lg grid md:grid-cols-2 gap-5 p-6 rounded-xl w-full h-max md:w-[700px]">
-      <div className={clsx("space-y-2 md:block", { "hidden": showSettings })}>
+      <div className={clsx("space-y-2 md:block", { hidden: showSettings })}>
         <Textarea
           className="p-4 min-h-[379px] resize-none text-base bg-zinc-200 dark:bg-stone-950 dark:backdrop-blur-lg dark:border-stone-950 dark:text-cyan-500 tracking-widest h-full rounded-xl"
           placeholder="Enter Names Here"
@@ -199,22 +198,26 @@ export default function Home() {
           onChange={(e) => setNames(e.target.value)}
         />
       </div>
-      <div className={`${showSettings ? "flex" : "hidden"} md:flex flex-col gap-y-6 md:gap-y-4 bg-cyan-900 dark:bg-stone-950 p-4 rounded-xl shadow-lg`}>
+      <div
+        className={`${
+          showSettings ? "flex" : "hidden"
+        } md:flex flex-col gap-y-6 md:gap-y-4 bg-cyan-900 dark:bg-stone-950 p-4 rounded-xl shadow-lg`}
+      >
         <Header />
         <div className="grid gap-2">
-          <div className="flex bg-zinc-200 dark:bg-zinc-800 px-2 rounded-full">
+          <div className="flex bg-zinc-200 dark:bg-zinc-800 p-2 rounded-full">
             <Label
               className="w-full flex items-center dark:text-cyan-500 text-base pl-2"
               htmlFor="group_size"
             >
               Group Size
             </Label>
-            <Input
-              className="border-0 flex-1 min-w-20 dark:text-cyan-500"
+            <input
+              className="flex-1 min-w-20 dark:text-cyan-500 border-0 bg-transparent outline-0"
               type="number"
-              id="group_size"
               value={size}
               placeholder="0"
+              min={2}
               onChange={(e) => setSize(parseInt(e.target.value))}
             />
           </div>
@@ -276,13 +279,18 @@ export default function Home() {
       <footer className="col-span-full flex flex-col md:flex-row items-center md:justify-between gap-2">
         <div className="flex items-center justify-around gap-2">
           <HowToUse />
-          <Button className="md:hidden dark:bg-cyan-900 hover:bg-cyan-950 dark:text-zinc-300" onClick={toggleConfig}>
+          <Button
+            className="md:hidden dark:bg-cyan-900 hover:bg-cyan-950 dark:text-zinc-300"
+            onClick={toggleConfig}
+          >
             Show {showSettings ? "Input" : "Settings"}
           </Button>
           <Link
             href={appMeta.author.url}
             target="_blank"
-            className={`${buttonVariants({ variant: "link" })} dark:text-cyan-600`}
+            className={`${buttonVariants({
+              variant: "link",
+            })} dark:text-cyan-600`}
           >
             About Me
           </Link>
