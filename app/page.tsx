@@ -1,101 +1,279 @@
-import Image from "next/image";
+"use client";
+import { SetStateAction, useState } from "react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import Header from "@/components/header";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import clsx from "clsx";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
+import { Document, Packer, Paragraph, TextRun } from "docx";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  const errors = {
+    empty: "Please enter names",
+    size: "Please enter a valid group size",
+    format: "Please select a format",
+    unknown: "Unknown Error Occurred"
+  }
+
+  // const [batches, setBatches] = useState<string[][]>([]);
+  let batches: string[][] = [];
+  const [bestDistribution, setBestDistribution] = useState(true);
+  const [names, setNames] = useState<string>("");
+  const [size, setSize] = useState<number>(2);
+  const [format, setFormat] = useState<string>("excel");
+
+  const genFile = () => {
+    if (names === "") {
+      toast.warning(errors.empty, {
+        richColors: true,
+        dismissible: true,
+      });
+      return false;
+    }
+
+    toast.loading("Generating File...");
+    createGroups();
+    
+    setTimeout(() => {
+      toast.dismiss();
+      if (format === "excel") genExcel();
+      else if (format === "word") genWord();
+      else
+        toast.error(errors.format, {
+          richColors: true,
+          dismissible: true,
+        });
+    }, 1000);
+  };
+
+  const createGroups = async () => {
+    if (size <= 0 || isNaN(size)) {
+      toast.error(errors.size, {
+        richColors: true,
+        dismissible: true,
+      });
+      return;
+    }
+
+    const AllMembers = names.split("\n").filter((name) => name.trim() !== ""); // Filter out empty lines
+
+    // Shuffle Members
+    for (let i = AllMembers.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [AllMembers[i], AllMembers[j]] = [AllMembers[j], AllMembers[i]];
+    }
+
+    const temp_batches =  [];
+    const totalMembers = AllMembers.length;
+    const no_of_batches = Math.floor(totalMembers / size);
+    const extraMembers = totalMembers % size;
+
+    // Form initial groups
+    for (let i = 0; i < no_of_batches; i++) {
+      const start = i * size;
+      const end = start + size;
+      temp_batches.push(AllMembers.slice(start, end));
+    }
+
+    // Handle extra members
+    if (extraMembers > 0) {
+      if (bestDistribution) {
+        // Distribute extra members to existing groups in round-robin fashion
+        for (let i = 0; i < extraMembers; i++) {
+          temp_batches[i % no_of_batches].push(AllMembers[no_of_batches * size + i]);
+        }
+      } else {
+        // Form a new group for the extra members
+        const start = no_of_batches * size;
+        const end = start + extraMembers;
+        temp_batches.push(AllMembers.slice(start, end));
+      }
+    }
+    
+    batches = temp_batches;
+  };
+
+  const genExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Groups");
+
+    const groups = batches.map((batch: Array<string>, index: number) => ({
+      title: `Group ${index + 1}`,
+      members: batch,
+    }));
+
+    groups.forEach((group, index) => {
+      // Add group title with bold font and font size 18
+      const titleRow = worksheet.addRow([group.title]);
+      titleRow.font = { bold: true, size: 18 };
+
+      // Add members below the title
+      group.members.forEach((member) => {
+        const memberRow = worksheet.addRow([member]);
+        memberRow.font = { size: 14 }; // Optional: Set a smaller font size for members
+      });
+
+      // Add a blank row between groups
+      if (index < groups.length - 1) {
+        worksheet.addRow([]);
+      }
+    });
+
+    // Adjust column width for readability
+    worksheet.columns.forEach((column) => {
+      column.width = 20;
+    });
+
+    // Generate the Excel file as a Blob
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/octet-stream" });
+
+    saveAs(blob, "Groupify - File.xlsx");
+  };
+
+  const genWord = () => {
+    const groupedData = batches.map((batch: Array<string>, index: number) => ({
+      title: `Group ${index + 1}`,
+      members: batch,
+    }));
+
+    // Initialize a new Document instance
+    const doc = new Document({
+      sections: [
+        {
+          children: groupedData.flatMap((group) => [
+            // Group title as bold and larger font size
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: group.title,
+                  bold: true,
+                  size: 36,
+                }),
+              ],
+              spacing: { after: 200 }, // Space after title
+            }),
+            // Group members each in a new paragraph
+            ...group.members.map(
+              (member) =>
+                new Paragraph({
+                  children: [new TextRun({ text: member, size: 28 })],
+                })
+            ),
+            // Blank paragraph between groups
+            new Paragraph(""),
+          ]),
+        },
+      ],
+    });
+
+    // Generate the Word document as a Blob
+    Packer.toBlob(doc).then((blob: Blob) => {
+      saveAs(blob, "Groupify - File.docx");
+    });
+  };
+
+  return (
+    <div className="bg-white bg-opacity-70 backdrop-blur-lg grid grid-cols-2 gap-5 p-6 rounded-xl w-[700px]">
+      <div className="space-y-2">
+        <Textarea
+          className="p-4 bg-zinc-200 h-full rounded-xl"
+          placeholder="Enter Names Here"
+          value={names}
+          onChange={(e) => setNames(e.target.value)}
+        />
+      </div>
+      <div className="flex flex-col gap-y-4 bg-cyan-900 p-4 rounded-xl shadow-lg">
+        <Header />
+        <div className="grid gap-2">
+          <div className="flex bg-zinc-200 px-2 rounded-full">
+            <Label
+              className="w-full flex items-center text-base pl-2"
+              htmlFor="group_size"
+            >
+              Group Size
+            </Label>
+            <Input
+              className="border-0 flex-1 min-w-20"
+              type="number"
+              id="group_size"
+              value={size}
+              placeholder="0"
+              onChange={(e) => setSize(parseInt(e.target.value))}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          </div>
+          <span className="text-xs text-right text-zinc-200 tracking-wide col-span-full opacity-90">
+            Number of members per group
+          </span>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        <div className="grid bg-zinc-200 bg-opacity-10 backdrop-blur-lg gap-1 px-4 py-3 rounded-full">
+          <div className="flex items-center justify-center space-x-4">
+            <Switch
+              id="best-distribution"
+              checked={bestDistribution}
+              onCheckedChange={setBestDistribution}
+            />
+            <Label htmlFor="best-distribution" className="text-white" asChild>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger className="cursor-help text-white">
+                    Best Group Distribution
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {bestDistribution
+                      ? "Extra members will be distributed across existing groups for balanced sizes."
+                      : "Extra members will form a new group, which may result in smaller groups."}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
+          </div>
+        </div>
+        <div className="grid gap-1">
+          <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+            <Button
+              onClick={() => setFormat("excel")}
+              className={clsx("rounded-full", {
+                "cursor-default": format === "excel",
+              })}
+              variant={format === "excel" ? "default" : "secondary"}
+            >
+              Excel
+            </Button>
+            <Button
+              onClick={() => setFormat("word")}
+              className={clsx("rounded-full", {
+                "cursor-default": format === "word",
+              })}
+              variant={format === "word" ? "default" : "secondary"}
+            >
+              Word
+            </Button>
+            <span className="text-xs text-right text-zinc-200 tracking-wide col-span-full opacity-90">
+              Document Download format
+            </span>
+          </div>
+          <Button
+            onClick={genFile}
+            className="rounded-full mt-2"
+            variant="secondary"
+          >
+            Generate File
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
