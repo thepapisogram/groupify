@@ -10,7 +10,7 @@ const HowToUse = () => {
     <>
       <HoverCard>
         <HoverCardTrigger asChild>
-          <Button variant="link">How to Use</Button>
+          <Button variant="link" className="dark:text-cyan-600">How to Use</Button>
         </HoverCardTrigger>
         <HoverCardContent>
           <h3 className="font-semibold mb-2">How to Use</h3>
@@ -22,20 +22,6 @@ const HowToUse = () => {
             <li>
               <strong>Set Group Size</strong>: Specify how many members you want
               in each group.
-            </li>
-            <li>
-              <strong>Choose Distribution</strong>: Toggle{" "}
-              <strong>&quot;Best Group Distribution&quot;</strong> to:
-              <ul className="list-disc list-inside ml-4">
-                <li>
-                  <strong>ON</strong>: Distribute extra members across existing
-                  groups for balanced sizes.
-                </li>
-                <li>
-                  <strong>OFF</strong>: Create a new group for extra members,
-                  which may result in smaller groups.
-                </li>
-              </ul>
             </li>
             <li>
               <strong>Download Results</strong>: Click{" "}

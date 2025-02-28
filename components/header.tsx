@@ -10,7 +10,7 @@ const Header = () => {
         <span className="flex justify-center items-center">
             <Image className="w-auto h-auto" src="/favicon.ico" width={50} height={50} alt="logo" />
         </span>
-        <h1 className={`${rubik.className} text-3xl tracking-widest font-extrabold capitalize text-white text-center`}>{appMeta.app.name}</h1>
+        <h1 className={`${rubik.className} text-3xl tracking-widest font-extrabold capitalize text-white dark:text-cyan-500 text-center`}>{appMeta.app.name}</h1>
     </header>
   )
 }

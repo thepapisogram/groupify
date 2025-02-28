@@ -23,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${roboto.className} antialiased fixed flex flex-col space-y-6 items-center justify-center top-0 w-svw h-svh bg-slate-900`}
+        className={`${roboto.className} antialiased fixed flex flex-col md:space-y-6 items-center justify-center top-0 w-svw h-svh p-5 md:p-0 bg-slate-900 dark:bg-stone-950`}
       >
         {/* <Header /> */}
         {children}

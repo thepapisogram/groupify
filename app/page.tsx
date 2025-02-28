@@ -188,28 +188,34 @@ export default function Home() {
     });
   };
 
+  const [showSettings, setShowSettings] = useState(false);
+
+  const toggleConfig = () => {
+    setShowSettings(!showSettings);
+  }
+
   return (
-    <div className="bg-white bg-opacity-70 backdrop-blur-lg grid grid-cols-2 gap-5 p-6 rounded-xl w-[700px]">
-      <div className="space-y-2">
+    <div className="bg-white dark:bg-cyan-950 dark:bg-opacity-50 bg-opacity-70 backdrop-blur-lg grid md:grid-cols-2 gap-5 p-6 rounded-xl w-full h-max md:w-[700px] overflow-y-scroll md:overflow-hidden">
+      <div className={clsx("space-y-2 md:block", { "hidden": showSettings })}>
         <Textarea
-          className="p-4 bg-zinc-200 h-full rounded-xl"
+          className="p-4 min-h-[379px] bg-zinc-200 dark:bg-stone-950 dark:border-stone-950 dark:text-cyan-600 h-full rounded-xl"
           placeholder="Enter Names Here"
           value={names}
           onChange={(e) => setNames(e.target.value)}
         />
       </div>
-      <div className="flex flex-col gap-y-4 bg-cyan-900 p-4 rounded-xl shadow-lg">
+      <div className={`${showSettings ? "flex" : "hidden"} md:flex flex-col gap-y-4 bg-cyan-900 dark:bg-stone-950 p-4 rounded-xl shadow-lg`}>
         <Header />
         <div className="grid gap-2">
-          <div className="flex bg-zinc-200 px-2 rounded-full">
+          <div className="flex bg-zinc-200 dark:bg-zinc-800 px-2 rounded-full">
             <Label
-              className="w-full flex items-center text-base pl-2"
+              className="w-full flex items-center dark:text-cyan-500 text-base pl-2"
               htmlFor="group_size"
             >
               Group Size
             </Label>
             <Input
-              className="border-0 flex-1 min-w-20"
+              className="border-0 flex-1 min-w-20 dark:text-cyan-500"
               type="number"
               id="group_size"
               value={size}
@@ -217,7 +223,7 @@ export default function Home() {
               onChange={(e) => setSize(parseInt(e.target.value))}
             />
           </div>
-          <span className="text-xs text-right text-zinc-200 tracking-wide col-span-full opacity-90">
+          <span className="text-xs text-right text-zinc-200 dark:text-cyan-500 tracking-wide col-span-full opacity-90 dark:opacity-80">
             Number of members per group
           </span>
         </div>
@@ -228,10 +234,10 @@ export default function Home() {
               checked={bestDistribution}
               onCheckedChange={setBestDistribution}
             />
-            <Label htmlFor="best-distribution" className="text-white" asChild>
+            <Label htmlFor="best-distribution" asChild>
               <TooltipProvider>
                 <Tooltip>
-                  <TooltipTrigger className="cursor-help text-white">
+                  <TooltipTrigger className="cursor-help text-white dark:text-cyan-500">
                     Best Group Distribution
                   </TooltipTrigger>
                   <TooltipContent>
@@ -248,45 +254,59 @@ export default function Home() {
           <div className="grid grid-cols-2 gap-x-2 gap-y-1">
             <Button
               onClick={() => setFormat("excel")}
-              className={clsx("rounded-full", {
-                "cursor-default": format === "excel",
-              })}
+              className={clsx(
+                "rounded-full border-2 border-transparent dark:hover:bg-stone-950 dark:text-white dark:bg-stone-900",
+                {
+                  "cursor-default dark:border-cyan-500 dark:text-cyan-500 dark:font-bold dark:bg-stone-950 dark:hover:bg-stone-950":
+                    format === "excel",
+                }
+              )}
               variant={format === "excel" ? "default" : "secondary"}
             >
               Excel
             </Button>
             <Button
               onClick={() => setFormat("word")}
-              className={clsx("rounded-full", {
-                "cursor-default": format === "word",
-              })}
+              className={clsx(
+                "rounded-full border-2 border-transparent dark:hover:bg-stone-950 dark:text-white dark:bg-stone-900",
+                {
+                  "cursor-default dark:border-cyan-500 dark:text-cyan-500 dark:font-bold dark:bg-stone-950 dark:hover:bg-stone-950":
+                    format === "word",
+                }
+              )}
               variant={format === "word" ? "default" : "secondary"}
             >
               Word
             </Button>
-            <span className="text-xs text-right text-zinc-200 tracking-wide col-span-full opacity-90">
+            <span className="text-xs text-right text-zinc-200 dark:text-cyan-500 tracking-wide col-span-full opacity-90 dark:opacity-80">
               Document Download format
             </span>
           </div>
           <Button
             onClick={genFile}
-            className="rounded-full mt-2"
+            className="rounded-full mt-3 dark:bg-cyan-900 dark:hover:bg-cyan-950 dark:text-zinc-300"
             variant="secondary"
           >
             Generate File
           </Button>
         </div>
       </div>
-      <footer className="col-span-full flex items-center justify-between">
+      <footer className="col-span-full flex flex-col md:flex-row items-center md:justify-between gap-2">
         <div className="flex items-center justify-around gap-2">
           <HowToUse />
-          {/* <Button variant="link">Donate to Project</Button> */}
-          <Link href={appMeta.author.url} target="_blank" className={buttonVariants({ variant: "link" })}>
+          <Button className="md:hidden dark:bg-cyan-900 hover:bg-cyan-950 dark:text-zinc-300" onClick={toggleConfig}>
+            Show {showSettings ? "Input" : "Settings"}
+          </Button>
+          <Link
+            href={appMeta.author.url}
+            target="_blank"
+            className={`${buttonVariants({ variant: "link" })} dark:text-cyan-600`}
+          >
             About Me
           </Link>
         </div>
-        <div className="flex flex-col items-center justify-center gap-1 pr-4">
-          <span className="text-sm text-neutral-700 tracking-widest">
+        <div className="flex flex-col items-center md:items-end justify-center gap-1 dark:opacity-50">
+          <span className="text-sm text-muted-foreground tracking-widest">
             Developed by Anthony Saah
           </span>
           <span className="text-xs text-muted-foreground">

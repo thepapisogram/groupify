@@ -2,7 +2,7 @@ import type { Config } from "tailwindcss";
 import tailwindAnimate from 'tailwindcss-animate'
 
 export default {
-    darkMode: ["class"],
+	darkMode: "media",
     content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -59,5 +59,6 @@ export default {
   		}
   	}
   },
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   plugins: [tailwindAnimate, require("tailwindcss-animate")],
 } satisfies Config;
