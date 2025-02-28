@@ -7,12 +7,6 @@ import Header from "@/components/header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import clsx from "clsx";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -20,6 +14,7 @@ import { Document, Packer, Paragraph, TextRun } from "docx";
 import Link from "next/link";
 import appMeta from "@/data/metadata";
 import HowToUse from "@/components/how-to-use";
+import Bgd from "@/components/bgd";
 
 export default function Home() {
 
@@ -195,16 +190,16 @@ export default function Home() {
   }
 
   return (
-    <div className="bg-white dark:bg-cyan-950 dark:bg-opacity-50 bg-opacity-70 backdrop-blur-lg grid md:grid-cols-2 gap-5 p-6 rounded-xl w-full h-max md:w-[700px] md:overflow-y-scroll md:overflow-hidden">
+    <div className="bg-white dark:bg-cyan-950 dark:bg-opacity-50 bg-opacity-70 backdrop-blur-lg grid md:grid-cols-2 gap-5 p-6 rounded-xl w-full h-max md:w-[700px]">
       <div className={clsx("space-y-2 md:block", { "hidden": showSettings })}>
         <Textarea
-          className="p-4 min-h-[379px] text-base bg-zinc-200 dark:bg-stone-950 dark:backdrop-blur-lg dark:border-stone-950 dark:text-cyan-500 tracking-widest h-full rounded-xl"
+          className="p-4 min-h-[379px] resize-none text-base bg-zinc-200 dark:bg-stone-950 dark:backdrop-blur-lg dark:border-stone-950 dark:text-cyan-500 tracking-widest h-full rounded-xl"
           placeholder="Enter Names Here"
           value={names}
           onChange={(e) => setNames(e.target.value)}
         />
       </div>
-      <div className={`${showSettings ? "flex" : "hidden"} md:flex flex-col gap-y-4 bg-cyan-900 dark:bg-stone-950 p-4 rounded-xl shadow-lg`}>
+      <div className={`${showSettings ? "flex" : "hidden"} md:flex flex-col gap-y-6 md:gap-y-4 bg-cyan-900 dark:bg-stone-950 p-4 rounded-xl shadow-lg`}>
         <Header />
         <div className="grid gap-2">
           <div className="flex bg-zinc-200 dark:bg-zinc-800 px-2 rounded-full">
@@ -234,20 +229,7 @@ export default function Home() {
               checked={bestDistribution}
               onCheckedChange={setBestDistribution}
             />
-            <Label htmlFor="best-distribution" asChild>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger className="cursor-help text-white dark:text-cyan-500">
-                    Best Group Distribution
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {bestDistribution
-                      ? "Extra members will be distributed across existing groups for balanced sizes."
-                      : "Extra members will form a new group, which may result in smaller groups."}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </Label>
+            <Bgd val={bestDistribution} />
           </div>
         </div>
         <div className="grid gap-1">
