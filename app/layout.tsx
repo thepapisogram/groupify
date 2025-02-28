@@ -8,12 +8,8 @@ import { Toaster } from "@/components/ui/sonner";
 const roboto = Roboto({ weight: "400", subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  ...appMeta.main,
-  referrer: appMeta.main.referrer as Metadata['referrer'],
+  ...appMeta.main
 };
-
-export const viewport = appMeta.viewport;
-export const themeColor = appMeta.themeColor;
 
 export default function RootLayout({
   children,

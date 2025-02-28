@@ -21,7 +21,6 @@ const main = {
     publisher: author.name,
     creator: author.name,
     keywords: app.keywords,
-    referrer: "origin",
     icons: {
         icon: "/favicon.ico",
         shortcut: "/favicon.ico",
@@ -56,15 +55,10 @@ const main = {
     // manifest: "/site.webmanifest",
 }
 
-const viewport = "width=device-width, initial-scale=1.0";
-const themeColor = "#0f172a";
-
 const appMeta = {
     app,
     author,
     main,
-    viewport,
-    themeColor
 }
 
 export default appMeta;
