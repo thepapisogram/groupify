@@ -234,8 +234,10 @@ export default function Home() {
         <div className="grid bg-zinc-200 dark:bg-stone-900 bg-opacity-10 backdrop-blur-lg gap-1 px-4 py-3 rounded-full">
           <div className="flex items-center justify-center space-x-4">
             <Switch
+              className="data-[state=checked]:bg-cyan-500 data-[state=unchecked]:bg-black"
               id="best-distribution"
               checked={bestDistribution}
+              data-thumb="bg-stone-900"
               onCheckedChange={setBestDistribution}
             />
             <Bgd val={bestDistribution} />
