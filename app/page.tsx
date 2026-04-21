@@ -346,7 +346,7 @@ export default function Home() {
               <div className="relative">
                 <div className="relative rounded-2xl border border-border/50 bg-card/80 p-3 backdrop-blur-sm">
                   <Image
-                    src={logo}
+                    src={"/logo.png"}
                     width={36}
                     height={36}
                     alt="Groupify"
