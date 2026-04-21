@@ -37,7 +37,7 @@ export function PageHeader() {
             target="_blank"
             className="hidden rounded-xl border border-border/50 bg-card/60 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm transition-all hover:border-primary/40 hover:text-primary sm:block"
           >
-            by {appMeta.author.name}
+            By {appMeta.author.name}
           </Link>
           <ModeToggle />
         </div>
