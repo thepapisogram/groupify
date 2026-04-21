@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
 import Image from "next/image";
+import logo from "@/public/logo.png";
 import appMeta from "@/data/metadata";
 import { ModeToggle } from "@/components/theme-switcher";
 
@@ -345,7 +346,7 @@ export default function Home() {
               <div className="relative">
                 <div className="relative rounded-2xl border border-border/50 bg-card/80 p-3 backdrop-blur-sm">
                   <Image
-                    src="/favicon.ico"
+                    src={logo}
                     width={36}
                     height={36}
                     alt="Groupify"
