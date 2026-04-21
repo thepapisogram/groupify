@@ -1,30 +1,44 @@
-import type { Metadata } from "next";
-import { Roboto } from 'next/font/google'
+import { Syne, DM_Sans } from "next/font/google"
+import type { Metadata } from "next"
+import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/sonner"
+import "./globals.css"
+import appMeta from "../data/metadata"
 
-import "./globals.css";
-import appMeta from "../data/metadata";
-import { Toaster } from "@/components/ui/sonner";
+const syne = Syne({
+  subsets: ["latin"],
+  variable: "--font-syne",
+  display: "swap",
+})
 
-const roboto = Roboto({ weight: "400", subsets: ['latin'] });
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dm",
+  display: "swap",
+})
 
 export const metadata: Metadata = {
-  ...appMeta.main
-};
+  ...appMeta.main,
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${roboto.className} antialiased fixed flex flex-col md:space-y-6 items-center justify-center top-0 left-0 w-full h-full p-2 md:p-0 bg-slate-900 dark:bg-stone-950`}
-      >
-        {/* <Header /> */}
-        {children}
-        <Toaster />
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${syne.variable} ${dmSans.variable} font-dm antialiased`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster position="bottom-right" richColors />
+        </ThemeProvider>
       </body>
     </html>
-  );
+  )
 }
