@@ -2,13 +2,17 @@ import { SizeControl } from "@/components/groupify/size-control";
 import type { DistributionMode, ExportFormat } from "@/components/groupify/types";
 
 interface SidebarProps {
+  groupBy: "size" | "count";
   size: number;
+  groupCount: number;
   mode: DistributionMode;
   isWorking: boolean;
   nameCount: number;
   hasResults: boolean;
   copiedText: boolean;
+  onGroupByChange: (groupBy: "size" | "count") => void;
   onSizeChange: (value: number) => void;
+  onGroupCountChange: (value: number) => void;
   onModeChange: (mode: DistributionMode) => void;
   onGenerate: () => void;
   onExport: (format: ExportFormat) => void;
@@ -36,13 +40,17 @@ const HOW_TO_USE_STEPS = [
 ];
 
 export function Sidebar({
+  groupBy,
   size,
+  groupCount,
   mode,
   isWorking,
   nameCount,
   hasResults,
   copiedText,
+  onGroupByChange,
   onSizeChange,
+  onGroupCountChange,
   onModeChange,
   onGenerate,
   onExport,
@@ -56,9 +64,32 @@ export function Sidebar({
         </p>
 
         <div className="space-y-3">
-          <label className="text-sm font-medium text-foreground">Members per group</label>
-          <SizeControl value={size} onChange={onSizeChange} />
-          <p className="text-[11px] text-muted-foreground/60">Min 2 - Max 99</p>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-foreground">
+              {groupBy === "size" ? "Members per group" : "Number of groups"}
+            </label>
+            <button
+              type="button"
+              onClick={() => onGroupByChange(groupBy === "size" ? "count" : "size")}
+              className="rounded-full bg-muted/50 p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              title={groupBy === "size" ? "Switch to number of groups" : "Switch to members per group"}
+            >
+              <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 1l4 4-4 4" />
+                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                <path d="M7 23l-4-4 4-4" />
+                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+              </svg>
+            </button>
+          </div>
+          {groupBy === "size" ? (
+            <SizeControl value={size} min={2} max={99} onChange={onSizeChange} />
+          ) : (
+            <SizeControl value={groupCount} min={1} max={99} onChange={onGroupCountChange} />
+          )}
+          <p className="text-[11px] text-muted-foreground/60">
+            Min {groupBy === "size" ? 2 : 1} - Max 99
+          </p>
         </div>
 
         <div className="space-y-3">

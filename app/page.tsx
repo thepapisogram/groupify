@@ -18,6 +18,8 @@ type ActivePanel = "input" | "results";
 export default function Page() {
   const [names, setNames] = useState("");
   const [size, setSize] = useState(4);
+  const [groupCount, setGroupCount] = useState(2);
+  const [lastChanged, setLastChanged] = useState<"size" | "count">("size");
   const [mode, setMode] = useState<DistributionMode>("best");
   const [groups, setGroups] = useState<Group[]>([]);
   const [isWorking, setIsWorking] = useState(false);
@@ -26,16 +28,58 @@ export default function Page() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const nameCount = names.split("\n").filter((name) => name.trim()).length;
-  const estGroups = nameCount >= 2 && size >= 2 ? Math.ceil(nameCount / size) : 0;
+  const estGroups = nameCount >= 2 ? groupCount : 0;
   const totalGrouped = groups.reduce((sum, group) => sum + group.members.length, 0);
   const hasResults = groups.length > 0;
 
   const handleNamesChange = (value: string) => {
     setNames(value);
+    const newNameCount = value.split("\n").filter((name) => name.trim()).length;
 
-    if (value.split("\n").every((name) => name.trim() === "")) {
+    if (newNameCount === 0) {
       setGroups([]);
       setActivePanel("input");
+    } else {
+      if (lastChanged === "size") {
+        setGroupCount(
+          mode === "best"
+            ? Math.max(1, Math.floor(newNameCount / size))
+            : Math.ceil(newNameCount / size),
+        );
+      } else {
+        setSize(Math.max(2, Math.ceil(newNameCount / groupCount)));
+      }
+    }
+  };
+
+  const handleSizeChange = (newSize: number) => {
+    setSize(newSize);
+    setLastChanged("size");
+    if (nameCount > 0) {
+      setGroupCount(
+        mode === "best"
+          ? Math.max(1, Math.floor(nameCount / newSize))
+          : Math.ceil(nameCount / newSize),
+      );
+    }
+  };
+
+  const handleGroupCountChange = (newCount: number) => {
+    setGroupCount(newCount);
+    setLastChanged("count");
+    if (nameCount > 0) {
+      setSize(Math.max(2, Math.ceil(nameCount / newCount)));
+    }
+  };
+
+  const handleModeChange = (newMode: DistributionMode) => {
+    setMode(newMode);
+    if (lastChanged === "size" && nameCount > 0) {
+      setGroupCount(
+        newMode === "best"
+          ? Math.max(1, Math.floor(nameCount / size))
+          : Math.ceil(nameCount / size),
+      );
     }
   };
 
@@ -53,7 +97,12 @@ export default function Page() {
 
     setIsWorking(true);
     setTimeout(() => {
-      const result = buildGroups(names, size, mode);
+      const result = buildGroups(
+        names,
+        lastChanged,
+        lastChanged === "size" ? size : groupCount,
+        mode,
+      );
       setGroups(result);
       setIsWorking(false);
       setActivePanel("results");
@@ -61,15 +110,20 @@ export default function Page() {
         `${result.length} group${result.length !== 1 ? "s" : ""} created from ${nameCount} names`,
       );
     }, 380);
-  }, [mode, nameCount, names, size]);
+  }, [mode, nameCount, names, size, groupCount, lastChanged]);
 
   const handleShuffle = useCallback(() => {
     if (nameCount === 0 || size < 2) return;
 
-    const result = buildGroups(names, size, mode);
+    const result = buildGroups(
+      names,
+      lastChanged,
+      lastChanged === "size" ? size : groupCount,
+      mode,
+    );
     setGroups(result);
     toast.success("Reshuffled!");
-  }, [mode, nameCount, names, size]);
+  }, [mode, nameCount, names, size, groupCount, lastChanged]);
 
   const handleExport = async (format: ExportFormat) => {
     if (groups.length === 0) return;
@@ -152,34 +206,51 @@ export default function Page() {
           </div>
 
           <Sidebar
+            groupBy={lastChanged}
             size={size}
+            groupCount={groupCount}
             mode={mode}
             isWorking={isWorking}
             nameCount={nameCount}
             hasResults={hasResults}
             copiedText={copiedText}
-            onSizeChange={setSize}
-            onModeChange={setMode}
+            onGroupByChange={setLastChanged}
+            onSizeChange={handleSizeChange}
+            onGroupCountChange={handleGroupCountChange}
+            onModeChange={handleModeChange}
             onGenerate={handleGenerate}
             onExport={handleExport}
             onCopyText={handleCopyText}
           />
         </div>
 
-        <footer className="mt-16 flex flex-col items-center gap-1 text-center">
-          <p className="text-xs text-muted-foreground/50">
-            Developed by{" "}
-            <Link
-              href={appMeta.author.url}
-              target="_blank"
-              className="text-muted-foreground/70 transition-colors underline-offset-2 hover:text-primary hover:underline"
-            >
-              {appMeta.author.name}
-            </Link>
-          </p>
-          <p className="text-[11px] text-muted-foreground/30">
-            Groupify v{appMeta.app.version} - {new Date().getFullYear()}
-          </p>
+        <footer className="mt-16 flex flex-col items-center gap-4 text-center">
+          <Link
+            href="/forms/new"
+            className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary transition-all hover:bg-primary/10 hover:shadow-sm"
+          >
+            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Create a custom form
+          </Link>
+          
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground/50">
+              Developed by{" "}
+              <Link
+                href={appMeta.author.url}
+                target="_blank"
+                className="text-muted-foreground/70 transition-colors underline-offset-2 hover:text-primary hover:underline"
+              >
+                {appMeta.author.name}
+              </Link>
+            </p>
+            <p className="text-[11px] text-muted-foreground/30">
+              Groupify v{appMeta.app.version} - {new Date().getFullYear()}
+            </p>
+          </div>
         </footer>
       </div>
     </div>
