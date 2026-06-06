@@ -9,7 +9,11 @@ import { PageHeader } from "@/components/groupify/page-header";
 import { PanelSwitcher } from "@/components/groupify/panel-switcher";
 import { ResultsPanel } from "@/components/groupify/results-panel";
 import { Sidebar } from "@/components/groupify/sidebar";
-import type { DistributionMode, ExportFormat, Group } from "@/components/groupify/types";
+import type {
+  DistributionMode,
+  ExportFormat,
+  Group,
+} from "@/components/groupify/types";
 import { buildGroups, exportGroups } from "@/components/groupify/utils";
 
 type ActivePanel = "input" | "results";
@@ -26,14 +30,21 @@ export default function Page() {
   const [copiedText, setCopiedText] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const nameCount = names.split("\n").filter((name: string) => name.trim()).length;
+  const nameCount = names
+    .split("\n")
+    .filter((name: string) => name.trim()).length;
   const estGroups = nameCount >= 2 ? groupCount : 0;
-  const totalGrouped = groups.reduce((sum: number, group: Group) => sum + group.members.length, 0);
+  const totalGrouped = groups.reduce(
+    (sum: number, group: Group) => sum + group.members.length,
+    0,
+  );
   const hasResults = groups.length > 0;
 
   const handleNamesChange = (value: string) => {
     setNames(value);
-    const newNameCount = value.split("\n").filter((name: string) => name.trim()).length;
+    const newNameCount = value
+      .split("\n")
+      .filter((name: string) => name.trim()).length;
 
     if (newNameCount === 0) {
       setGroups([]);
@@ -127,7 +138,9 @@ export default function Page() {
   const handleExport = async (format: ExportFormat) => {
     if (groups.length === 0) return;
 
-    const id = toast.loading(`Preparing ${format === "excel" ? "Excel" : "Word"} file...`);
+    const id = toast.loading(
+      `Preparing ${format === "excel" ? "Excel" : "Word"} file...`,
+    );
 
     try {
       await exportGroups(groups, format);
@@ -168,7 +181,7 @@ export default function Page() {
 
   return (
     <div className="mesh-bg relative min-h-dvh">
-      <div className="relative z-10 mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <div className="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-28 sm:px-6 sm:py-8">
         <PageHeader />
 
         <PanelSwitcher
@@ -236,12 +249,38 @@ export default function Page() {
               href="/documentation"
               className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary transition-all hover:bg-primary/10 hover:shadow-sm"
             >
-              <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M14 2v6h6" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M16 13H8" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M16 17H8" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M10 9H8" strokeLinecap="round" strokeLinejoin="round" />
+              <svg
+                className="size-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M14 2v6h6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M16 13H8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M16 17H8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M10 9H8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
               View Documentation
             </Link>
@@ -249,14 +288,28 @@ export default function Page() {
               href="/forms/new"
               className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary transition-all hover:bg-primary/10 hover:shadow-sm"
             >
-              <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" />
+              <svg
+                className="size-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
               Create a custom form
             </Link>
           </div>
-          
+
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground/50">
               Developed by{" "}

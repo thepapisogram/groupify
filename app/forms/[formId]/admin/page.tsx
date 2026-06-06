@@ -74,6 +74,7 @@ export default function AdminDashboardPage() {
   const nameCount = submissions.length;
   const hasResults = groups.length > 0;
   const totalGrouped = groups.reduce((sum, group) => sum + group.members.length, 0);
+  const estGroups = nameCount >= 2 ? groupCount : 0;
 
   const handleSizeChange = (newSize: number) => {
     setSize(newSize);
@@ -311,6 +312,8 @@ export default function AdminDashboardPage() {
             nameCount={nameCount}
             hasResults={hasResults}
             copiedText={copiedText}
+            estGroups={estGroups}
+            groupsCount={groups.length}
             onGroupByChange={setGroupBy}
             onSizeChange={handleSizeChange}
             onGroupCountChange={handleGroupCountChange}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { toast } from "sonner";
 import { ChevronLeft } from "lucide-react";
 
@@ -56,7 +57,18 @@ export default function LoginPage() {
 
       <div className="w-full max-w-sm space-y-6 rounded-2xl border border-border/50 bg-card/50 p-6 shadow-xl backdrop-blur-sm">
         <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-border/50 bg-card/80 shadow-sm backdrop-blur-sm">
+            <Image
+              src="/logo.webp"
+              width={40}
+              height={40}
+              alt="Groupify"
+              className="size-10"
+              priority
+              unoptimized
+            />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Log in to Groupify</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
             Sign in to access your saved lists and custom forms.
           </p>

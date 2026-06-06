@@ -143,8 +143,8 @@ export function Sidebar({
           type="button"
           onClick={onGenerate}
           disabled={isWorking || nameCount === 0}
-          className={`w-full rounded-2xl px-6 py-3.5 font-syne text-sm font-bold tracking-wide text-primary-foreground shadow-lg transition-all active:scale-98 disabled:cursor-not-allowed disabled:opacity-40 animate-slide-up stagger-2 ${
-            isWorking ? "btn-shimmer" : "bg-primary hover:opacity-90 animate-pulse-ring"
+          className={`w-full rounded-2xl px-6 py-3.5 font-syne text-sm font-bold tracking-wide text-primary-foreground shadow-lg transition-all active:scale-98 disabled:cursor-not-allowed disabled:bg-primary/40 disabled:text-primary-foreground/60 disabled:border-primary/20 animate-slide-up stagger-2 border border-primary/30 backdrop-blur-md sm:border-transparent sm:backdrop-blur-none ${
+            isWorking ? "btn-shimmer bg-primary/80 sm:bg-primary" : "bg-primary/80 hover:bg-primary/90 sm:bg-primary animate-pulse-ring"
           }`}
         >
           {isWorking ? (

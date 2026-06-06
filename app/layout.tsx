@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/components/auth/session-provider"
 import "./globals.css"
 import appMeta from "../data/metadata"
-import { WelcomePopup } from "@/components/groupify/welcome-popup"
+import { PopupManager } from "@/components/groupify/popup-manager"
 
 const syne = Syne({
   subsets: ["latin"],
@@ -39,7 +39,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             {children}
-            <WelcomePopup />
+            <PopupManager />
             <Toaster position="bottom-right" richColors />
           </ThemeProvider>
         </AuthProvider>

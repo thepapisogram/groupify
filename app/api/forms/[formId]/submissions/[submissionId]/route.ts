@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
 export async function DELETE(
   req: NextRequest,
@@ -18,14 +19,14 @@ export async function DELETE(
     const client = await clientPromise;
     const db = client.db("groupify");
 
-    const form = await db.collection("forms").findOne({ _id: formId });
+    const form = await db.collection("forms").findOne({ _id: new ObjectId(formId) });
     
     if (!form || form.adminToken !== token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const result = await db.collection("submissions").deleteOne({
-      _id: submissionId,
+      _id: new ObjectId(submissionId),
       formId: formId,
     });
 
