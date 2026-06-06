@@ -1,0 +1,30 @@
+Freemium Model
+Here's a structure that makes sense given what Groupify actually does:
+Free tier (anonymous + signed-out)
+
+Unlimited group generation (keep this free forever — it's the core hook and has no server cost)
+Export to clipboard, Excel, Word — keep free
+No forms, no saved history
+
+Free tier (signed in)
+
+3 active forms at a time
+100 submissions per form
+Submissions stored for 30 days, then auto-deleted
+Basic fields only (text, number)
+Admin dashboard access
+
+Pro tier (~$4–6/month, or a one-time annual)
+
+Unlimited forms
+Unlimited submissions per form
+Submissions stored indefinitely
+All field types including select and a future file type
+Excel/Word export from the admin dashboard (currently this already works, but gate it behind Pro)
+Custom form branding (logo, accent color)
+Submission notifications via email (e.g. "You have a new response")
+CSV export of raw submissions
+
+The key principle: the core group generator stays completely free. That's what drives organic sharing and word-of-mouth ("here's this free tool I use"). Forms are the value-add that justify payment because they save real coordination time.
+For implementation, you'd add a plan field to the users collection ("free" | "pro"), check it in your API routes before creating a 4th form or accepting the 101st submission, and surface upgrade prompts in the UI at the natural friction points (when they hit the form limit, when they try to export from admin).
+Paystack is your obvious payment gateway given the Ghanaian context — you already have it in other projects.

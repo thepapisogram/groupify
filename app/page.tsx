@@ -9,7 +9,6 @@ import { PageHeader } from "@/components/groupify/page-header";
 import { PanelSwitcher } from "@/components/groupify/panel-switcher";
 import { ResultsPanel } from "@/components/groupify/results-panel";
 import { Sidebar } from "@/components/groupify/sidebar";
-import { StatsBar } from "@/components/groupify/stats-bar";
 import type { DistributionMode, ExportFormat, Group } from "@/components/groupify/types";
 import { buildGroups, exportGroups } from "@/components/groupify/utils";
 
@@ -27,14 +26,14 @@ export default function Page() {
   const [copiedText, setCopiedText] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const nameCount = names.split("\n").filter((name) => name.trim()).length;
+  const nameCount = names.split("\n").filter((name: string) => name.trim()).length;
   const estGroups = nameCount >= 2 ? groupCount : 0;
-  const totalGrouped = groups.reduce((sum, group) => sum + group.members.length, 0);
+  const totalGrouped = groups.reduce((sum: number, group: Group) => sum + group.members.length, 0);
   const hasResults = groups.length > 0;
 
   const handleNamesChange = (value: string) => {
     setNames(value);
-    const newNameCount = value.split("\n").filter((name) => name.trim()).length;
+    const newNameCount = value.split("\n").filter((name: string) => name.trim()).length;
 
     if (newNameCount === 0) {
       setGroups([]);
@@ -145,8 +144,8 @@ export default function Page() {
 
     const text = groups
       .map(
-        (group) =>
-          `${group.label}\n${group.members.map((member, index) => `${index + 1}. ${member}`).join("\n")}`,
+        (group: Group) =>
+          `${group.label}\n${group.members.map((member: string, index: number) => `${index + 1}. ${member}`).join("\n")}`,
       )
       .join("\n\n");
 
@@ -180,28 +179,34 @@ export default function Page() {
         />
 
         <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-          <div className="flex flex-col gap-4">
-            {activePanel === "input" || !hasResults ? (
+          <div className="grid">
+            <div
+              className={`col-start-1 row-start-1 transition-all duration-300 ${
+                activePanel === "input" || !hasResults
+                  ? "opacity-100 z-10 translate-x-0"
+                  : "opacity-0 -z-10 -translate-x-4 pointer-events-none invisible"
+              }`}
+            >
               <NamesInputPanel
                 names={names}
                 onNamesChange={handleNamesChange}
                 onClear={handleClear}
                 textareaRef={textareaRef}
               />
-            ) : (
+            </div>
+            <div
+              className={`col-start-1 row-start-1 transition-all duration-300 ${
+                activePanel === "results" && hasResults
+                  ? "opacity-100 z-10 translate-x-0"
+                  : "opacity-0 -z-10 translate-x-4 pointer-events-none invisible"
+              }`}
+            >
               <ResultsPanel
                 groups={groups}
                 totalGrouped={totalGrouped}
                 onShuffle={handleShuffle}
               />
-            )}
-            <StatsBar
-              nameCount={nameCount}
-              size={size}
-              estGroups={estGroups}
-              hasResults={hasResults}
-              groupsCount={groups.length}
-            />
+            </div>
           </div>
 
           <Sidebar
@@ -213,6 +218,8 @@ export default function Page() {
             nameCount={nameCount}
             hasResults={hasResults}
             copiedText={copiedText}
+            estGroups={estGroups}
+            groupsCount={groups.length}
             onGroupByChange={setLastChanged}
             onSizeChange={handleSizeChange}
             onGroupCountChange={handleGroupCountChange}

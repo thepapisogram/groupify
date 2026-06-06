@@ -10,13 +10,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Users, ShieldCheck, MailQuestion } from "lucide-react";
+import appMeta from "@/data/metadata";
 
 export function WelcomePopup() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     // Check if the user explicitly dismissed the popup permanently
-    const hasSeenWelcome = localStorage.getItem("groupify_v2.1_seen");
+    const hasSeenWelcome = localStorage.getItem(`groupify_v${appMeta.app.version}_seen`);
     if (!hasSeenWelcome) {
       setIsOpen(true);
     }
@@ -28,7 +29,7 @@ export function WelcomePopup() {
   };
 
   const handleDontShowAgain = () => {
-    localStorage.setItem("groupify_v2.1_seen", "true");
+    localStorage.setItem(`groupify_v${appMeta.app.version}_seen`, "true");
     setIsOpen(false);
   };
 
@@ -39,9 +40,9 @@ export function WelcomePopup() {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <Sparkles className="h-6 w-6 text-primary" />
           </div>
-          <DialogTitle className="text-center text-2xl">What's New in Groupify 2.1</DialogTitle>
+          <DialogTitle className="text-center text-2xl">What&apos;s New in Groupify 2.1</DialogTitle>
           <DialogDescription className="text-center text-base">
-            We've added some powerful new features to make your grouping experience even better!
+            We&apos;ve added some powerful new features to make your grouping experience even better!
           </DialogDescription>
         </DialogHeader>
         
@@ -79,13 +80,13 @@ export function WelcomePopup() {
 
         <div className="mt-2 flex flex-col gap-3">
           <Button onClick={handleClose} className="w-full">
-            Awesome, let's go!
+            Awesome, let&apos;s go!
           </Button>
           <button 
             onClick={handleDontShowAgain}
             className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            Don't show this again
+            Don&apos;t show this again
           </button>
         </div>
       </DialogContent>

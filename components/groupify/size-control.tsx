@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 interface SizeControlProps {
   value: number;
   min?: number;
@@ -6,6 +8,26 @@ interface SizeControlProps {
 }
 
 export function SizeControl({ value, min = 2, max = 99, onChange }: SizeControlProps) {
+  const [localValue, setLocalValue] = useState(value.toString());
+
+  useEffect(() => {
+    setLocalValue(value.toString());
+  }, [value]);
+
+  const handleBlur = () => {
+    let num = parseInt(localValue, 10);
+    if (isNaN(num)) num = min;
+    num = Math.max(min, Math.min(max, num));
+    setLocalValue(num.toString());
+    onChange(num);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.currentTarget.blur();
+    }
+  };
+
   return (
     <div className="flex items-center gap-3">
       <button
@@ -17,9 +39,16 @@ export function SizeControl({ value, min = 2, max = 99, onChange }: SizeControlP
       </button>
 
       <div className="relative w-12 text-center">
-        <span className="font-syne text-2xl font-bold tabular-nums text-foreground animate-count-up">
-          {value}
-        </span>
+        <input
+          type="number"
+          value={localValue}
+          onChange={(e) => setLocalValue(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          className="w-full bg-transparent text-center font-syne text-2xl font-bold tabular-nums text-foreground outline-none animate-count-up"
+          min={min}
+          max={max}
+        />
       </div>
 
       <button

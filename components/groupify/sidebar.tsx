@@ -1,4 +1,5 @@
 import { SizeControl } from "@/components/groupify/size-control";
+import { StatsBar } from "@/components/groupify/stats-bar";
 import type { DistributionMode, ExportFormat } from "@/components/groupify/types";
 
 interface SidebarProps {
@@ -10,6 +11,8 @@ interface SidebarProps {
   nameCount: number;
   hasResults: boolean;
   copiedText: boolean;
+  estGroups: number;
+  groupsCount: number;
   onGroupByChange: (groupBy: "size" | "count") => void;
   onSizeChange: (value: number) => void;
   onGroupCountChange: (value: number) => void;
@@ -48,6 +51,8 @@ export function Sidebar({
   nameCount,
   hasResults,
   copiedText,
+  estGroups,
+  groupsCount,
   onGroupByChange,
   onSizeChange,
   onGroupCountChange,
@@ -58,6 +63,14 @@ export function Sidebar({
 }: SidebarProps) {
   return (
     <div className="space-y-4">
+      <StatsBar
+        nameCount={nameCount}
+        size={size}
+        estGroups={estGroups}
+        hasResults={hasResults}
+        groupsCount={groupsCount}
+      />
+
       <div className="space-y-6 rounded-2xl border border-border/50 bg-card/70 p-5 backdrop-blur-sm shadow-md animate-slide-up stagger-1">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
           Configuration
@@ -125,48 +138,50 @@ export function Sidebar({
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={onGenerate}
-        disabled={isWorking || nameCount === 0}
-        className={`w-full rounded-2xl px-6 py-3.5 font-syne text-sm font-bold tracking-wide text-primary-foreground shadow-lg transition-all active:scale-98 disabled:cursor-not-allowed disabled:opacity-40 animate-slide-up stagger-2 ${
-          isWorking ? "btn-shimmer" : "bg-primary hover:opacity-90 animate-pulse-ring"
-        }`}
-      >
-        {isWorking ? (
-          <span className="flex items-center justify-center gap-2">
-            <svg className="size-4 animate-spin" viewBox="0 0 24 24" fill="none">
-              <circle
-                cx="12"
-                cy="12"
-                r="10"
+      <div className="fixed bottom-4 left-4 right-4 z-50 sm:static sm:bottom-auto sm:left-auto sm:right-auto sm:z-auto">
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={isWorking || nameCount === 0}
+          className={`w-full rounded-2xl px-6 py-3.5 font-syne text-sm font-bold tracking-wide text-primary-foreground shadow-lg transition-all active:scale-98 disabled:cursor-not-allowed disabled:opacity-40 animate-slide-up stagger-2 ${
+            isWorking ? "btn-shimmer" : "bg-primary hover:opacity-90 animate-pulse-ring"
+          }`}
+        >
+          {isWorking ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="size-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeDasharray="32"
+                  strokeLinecap="round"
+                />
+              </svg>
+              Grouping...
+            </span>
+          ) : (
+            <span className="flex items-center justify-center gap-2">
+              {hasResults ? "Regenerate" : "Generate Groups"}
+              <svg
+                className="size-4"
+                viewBox="0 0 24 24"
+                fill="none"
                 stroke="currentColor"
-                strokeWidth="3"
-                strokeDasharray="32"
-                strokeLinecap="round"
-              />
-            </svg>
-            Grouping...
-          </span>
-        ) : (
-          <span className="flex items-center justify-center gap-2">
-            {hasResults ? "Regenerate" : "Generate Groups"}
-            <svg
-              className="size-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-            >
-              <path
-                d="M5 12h14M12 5l7 7-7 7"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-        )}
-      </button>
+                strokeWidth="2.5"
+              >
+                <path
+                  d="M5 12h14M12 5l7 7-7 7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+          )}
+        </button>
+      </div>
 
       {hasResults ? (
         <div className="space-y-3 rounded-2xl border border-border/50 bg-card/70 p-5 backdrop-blur-sm shadow-md animate-slide-up stagger-3">

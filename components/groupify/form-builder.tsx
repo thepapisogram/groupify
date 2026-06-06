@@ -30,6 +30,48 @@ interface FormBuilderProps {
   isEdit?: boolean;
 }
 
+function TagsInput({ value = [], onChange, placeholder }: { value?: string[], onChange: (v: string[]) => void, placeholder: string }) {
+  const [input, setInput] = useState("");
+  
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      const val = input.trim();
+      if (val && !value.includes(val)) {
+        onChange([...value, val]);
+      }
+      setInput("");
+    } else if (e.key === "Backspace" && input === "" && value.length > 0) {
+      onChange(value.slice(0, -1));
+    }
+  };
+
+  const removeTag = (indexToRemove: number) => {
+    onChange(value.filter((_, i) => i !== indexToRemove));
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/50 bg-muted/20 p-2 text-sm focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50">
+      {value.map((tag, i) => (
+        <span key={i} className="flex items-center gap-1 rounded bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
+          {tag}
+          <button type="button" onClick={() => removeTag(i)} className="text-primary-foreground/70 hover:text-primary-foreground">
+            &times;
+          </button>
+        </span>
+      ))}
+      <input
+        type="text"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={value.length === 0 ? placeholder : "Add another option..."}
+        className="flex-1 bg-transparent px-1 min-w-[120px] outline-none text-foreground placeholder:text-muted-foreground/50"
+      />
+    </div>
+  );
+}
+
 export function FormBuilder({
   initialTitle = "My Grouping Form",
   initialFields = [{ id: nanoid(6), label: "Name", type: "text", isPrimary: true, required: true }],
@@ -42,6 +84,27 @@ export function FormBuilder({
   const [fields, setFields] = useState<FormField[]>(initialFields);
   const [isSaving, setIsSaving] = useState(false);
   const [saveResult, setSaveResult] = useState<{ formId: string; adminToken: string } | null>(null);
+  
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedId(id);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    if (!draggedId || draggedId === id) return;
+
+    const draggedIndex = fields.findIndex((f) => f.id === draggedId);
+    const targetIndex = fields.findIndex((f) => f.id === id);
+
+    const newFields = [...fields];
+    const [draggedItem] = newFields.splice(draggedIndex, 1);
+    newFields.splice(targetIndex, 0, draggedItem);
+    
+    setFields(newFields);
+  };
 
   const addField = () => {
     setFields([
@@ -146,7 +209,7 @@ export function FormBuilder({
                 </svg>
               </div>
               <h2 className="mt-6 text-2xl font-bold text-foreground">Form created successfully!</h2>
-              <p className="mt-2 text-muted-foreground">Save these links. You won't be able to see the admin link again.</p>
+              <p className="mt-2 text-muted-foreground">Save these links. You won&apos;t be able to see the admin link again.</p>
             </div>
 
             <div className="space-y-4">
@@ -237,9 +300,23 @@ export function FormBuilder({
               </button>
             </div>
 
-            <div className="space-y-4">
-              {fields.map((field, index) => (
-                <div key={field.id} className="relative space-y-4 rounded-xl border border-border/50 bg-card/40 p-5 backdrop-blur-sm">
+            <div className="space-y-4 ml-4">
+              {fields.map((field) => (
+                <div 
+                  key={field.id} 
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, field.id)}
+                  onDragOver={(e) => handleDragOver(e, field.id)}
+                  onDragEnd={() => setDraggedId(null)}
+                  className={`relative space-y-4 rounded-xl border border-border/50 bg-card/40 p-5 backdrop-blur-sm transition-all ${draggedId === field.id ? "opacity-40 border-primary/50 scale-[0.98]" : ""}`}
+                >
+                  <div className="absolute top-1/2 -left-6 -translate-y-1/2 cursor-grab text-muted-foreground/30 hover:text-foreground active:cursor-grabbing p-1">
+                    <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/>
+                      <circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/>
+                    </svg>
+                  </div>
+
                   {field.isPrimary && (
                     <div className="absolute -top-3 left-4 rounded-full bg-primary px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground shadow-sm">
                       Primary Identifier
@@ -276,27 +353,37 @@ export function FormBuilder({
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => removeField(field.id)}
-                      className="mt-6 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                      title="Remove field"
-                    >
-                      <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </button>
+                    <div className="flex gap-1 mt-6">
+                      <button
+                        type="button"
+                        onClick={() => setPrimaryField(field.id)}
+                        className={`rounded-lg p-2 transition-colors ${field.isPrimary ? "text-amber-500 hover:text-amber-600" : "text-muted-foreground/30 hover:text-amber-500 hover:bg-amber-500/10"}`}
+                        title={field.isPrimary ? "Primary Field" : "Set as Primary"}
+                      >
+                        <svg className="size-5" viewBox="0 0 24 24" fill={field.isPrimary ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeField(field.id)}
+                        className="rounded-lg p-2 text-muted-foreground/40 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        title="Remove field"
+                      >
+                        <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
 
                   {field.type === "select" && (
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground">Options (comma separated)</label>
-                      <input
-                        type="text"
-                        value={field.options?.join(", ") || ""}
-                        onChange={(e) => updateField(field.id, { options: e.target.value.split(",").map(s => s.trim()).filter(Boolean) })}
-                        placeholder="e.g. Engineering, Marketing, Sales"
-                        className="w-full rounded-lg border border-border/50 bg-muted/20 px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none"
+                      <label className="text-xs font-medium text-muted-foreground">Options</label>
+                      <TagsInput
+                        value={field.options}
+                        onChange={(options) => updateField(field.id, { options })}
+                        placeholder="e.g. Engineering, Marketing (Press Enter to add)"
                       />
                     </div>
                   )}
@@ -311,16 +398,6 @@ export function FormBuilder({
                       />
                       Required
                     </label>
-                    
-                    {!field.isPrimary && (
-                      <button
-                        type="button"
-                        onClick={() => setPrimaryField(field.id)}
-                        className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        Set as Primary
-                      </button>
-                    )}
                   </div>
                 </div>
               ))}

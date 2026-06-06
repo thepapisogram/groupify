@@ -10,6 +10,7 @@ import { buildGroups, exportGroups } from "@/components/groupify/utils";
 import { DistributionMode, Group, ExportFormat } from "@/components/groupify/types";
 import { toast } from "sonner";
 import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
 
 export default function AdminDashboardPage() {
   const params = useParams();
@@ -51,6 +52,23 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     fetchSubmissions();
   }, [fetchSubmissions]);
+
+  const handleDeleteSubmission = async (submissionId: string) => {
+    if (!window.confirm("Are you sure you want to delete this response?")) return;
+
+    try {
+      const res = await fetch(`/api/forms/${formId}/submissions/${submissionId}?token=${adminToken}`, {
+        method: "DELETE"
+      });
+
+      if (!res.ok) throw new Error("Failed to delete");
+
+      setSubmissions(submissions.filter(s => s._id !== submissionId));
+      toast.success("Submission deleted");
+    } catch (error) {
+      toast.error("Failed to delete submission");
+    }
+  };
 
   // Handlers for synchronization (same as homepage)
   const nameCount = submissions.length;
@@ -210,7 +228,20 @@ export default function AdminDashboardPage() {
           <div className="space-y-6">
             {!hasResults ? (
               <div className="rounded-2xl border border-border/50 bg-card/70 p-6 backdrop-blur-sm shadow-md">
-                <h2 className="text-lg font-semibold text-foreground mb-4">Recent Submissions</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-foreground">Recent Submissions</h2>
+                  {submissions.length > 0 && (
+                    <button
+                      onClick={handleGenerate}
+                      className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 shadow-sm animate-fade-in"
+                    >
+                      Generate Groups
+                      <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
                 {submissions.length === 0 ? (
                   <div className="py-12 text-center text-muted-foreground">
                     <p>No responses yet.</p>
@@ -228,6 +259,7 @@ export default function AdminDashboardPage() {
                             </th>
                           ))}
                           <th className="px-4 py-3 font-medium text-right">Time</th>
+                          <th className="px-4 py-3 font-medium w-12"></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -239,7 +271,20 @@ export default function AdminDashboardPage() {
                               </td>
                             ))}
                             <td className="px-4 py-3 text-muted-foreground text-right whitespace-nowrap">
-                              {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              <span title={new Date(sub.submittedAt).toLocaleString()}>
+                                {formatDistanceToNow(new Date(sub.submittedAt), { addSuffix: true })}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <button 
+                                onClick={() => handleDeleteSubmission(sub._id)}
+                                className="p-1.5 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                                title="Delete submission"
+                              >
+                                <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              </button>
                             </td>
                           </tr>
                         ))}
