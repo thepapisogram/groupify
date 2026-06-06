@@ -19,6 +19,7 @@ export function DonatePopup({ onFinished }: { onFinished?: () => void }) {
   const [amount, setAmount] = useState("10");
 
   useEffect(() => {
+    localStorage.setItem("groupify_donate_seen", "true");
     const userEmail = session?.user?.email;
     if (userEmail) {
       const timer = setTimeout(() => setEmail(userEmail), 0);
@@ -27,12 +28,6 @@ export function DonatePopup({ onFinished }: { onFinished?: () => void }) {
   }, [session]);
 
   const handleClose = () => {
-    setIsOpen(false);
-    setTimeout(() => onFinished?.(), 300);
-  };
-
-  const handleDontShowAgain = () => {
-    localStorage.setItem("groupify_donate_seen", "true");
     setIsOpen(false);
     setTimeout(() => onFinished?.(), 300);
   };
@@ -129,14 +124,6 @@ export function DonatePopup({ onFinished }: { onFinished?: () => void }) {
           <Button variant="outline" onClick={handleClose} className="w-full">
             Maybe Later
           </Button>
-        </div>
-        <div className="text-center">
-          <button 
-            onClick={handleDontShowAgain}
-            className="mt-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Don&apos;t show this again
-          </button>
         </div>
       </DialogContent>
     </Dialog>
