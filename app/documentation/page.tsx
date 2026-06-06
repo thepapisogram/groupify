@@ -1,15 +1,14 @@
-import Link from "next/link";
+
 import { Footer } from "@/components/groupify/footer";
 import { PageHeader } from "@/components/groupify/page-header";
 import {
-  ChevronLeft,
-  FileText,
-  Users,
-  Share2,
-  Download,
-  Settings,
-  Database,
-} from "lucide-react";
+  RiFileTextLine,
+  RiTeamLine,
+  RiShareLine,
+  RiDownloadLine,
+  RiSettings4Line,
+  RiDatabase2Line,
+} from "@remixicon/react";
 
 export const metadata = {
   title: "Documentation | Groupify",
@@ -27,7 +26,7 @@ export default function DocumentationPage() {
         {/* Header */}
         <header className="mb-16 space-y-4 text-center sm:text-left">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-            <FileText className="size-3.5" />
+            <RiFileTextLine className="size-3.5" />
             Official Guide
           </div>
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
@@ -45,7 +44,7 @@ export default function DocumentationPage() {
           <section className="space-y-6">
             <div className="flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Users className="size-5" />
+                <RiTeamLine className="size-5" />
               </div>
               <h2 className="text-2xl font-semibold tracking-tight">
                 Generating Groups
@@ -108,7 +107,7 @@ export default function DocumentationPage() {
           <section className="space-y-6">
             <div className="flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
-                <Database className="size-5" />
+                <RiDatabase2Line className="size-5" />
               </div>
               <h2 className="text-2xl font-semibold tracking-tight">
                 Custom Forms
@@ -125,7 +124,7 @@ export default function DocumentationPage() {
               <div className="space-y-4">
                 <div className="rounded-xl border border-border/50 bg-card/30 p-6 backdrop-blur-sm">
                   <h3 className="mb-3 flex items-center gap-2 font-medium text-foreground">
-                    <Settings className="size-4 text-muted-foreground" />
+                    <RiSettings4Line className="size-4 text-muted-foreground" />
                     Building a Form
                   </h3>
                   <p className="text-sm text-muted-foreground">
@@ -139,7 +138,7 @@ export default function DocumentationPage() {
 
                 <div className="rounded-xl border border-border/50 bg-card/30 p-6 backdrop-blur-sm">
                   <h3 className="mb-3 flex items-center gap-2 font-medium text-foreground">
-                    <Share2 className="size-4 text-muted-foreground" />
+                    <RiShareLine className="size-4 text-muted-foreground" />
                     Sharing & Collecting
                   </h3>
                   <p className="text-sm text-muted-foreground">
@@ -157,7 +156,7 @@ export default function DocumentationPage() {
           <section className="space-y-6">
             <div className="flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
-                <Download className="size-5" />
+                <RiDownloadLine className="size-5" />
               </div>
               <h2 className="text-2xl font-semibold tracking-tight">
                 Exporting Data

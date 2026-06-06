@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { Share2, Edit2, Eye } from "lucide-react";
+import { RiShareLine, RiEdit2Line, RiEyeLine } from "@remixicon/react";
 import { ShareDialog } from "@/components/groupify/share-dialog";
 
 interface FormCardActionsProps {
@@ -12,14 +12,9 @@ interface FormCardActionsProps {
 
 export function FormCardActions({ formId, adminToken }: FormCardActionsProps) {
   const [shareOpen, setShareOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [shareUrl, setShareUrl] = useState("");
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setShareUrl(`${window.location.origin}/forms/${formId}`);
-    }
-  }, [formId]);
+  const [shareUrl] = useState(() => 
+    typeof window !== "undefined" ? `${window.location.origin}/forms/${formId}` : ""
+  );
 
   return (
     <>
@@ -28,21 +23,21 @@ export function FormCardActions({ formId, adminToken }: FormCardActionsProps) {
           href={`/forms/${formId}/admin?token=${adminToken}`}
           className="flex-1 inline-flex justify-center items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
         >
-          <Eye className="size-4" />
+          <RiEyeLine className="size-4" />
           View
         </Link>
         <Link
           href={`/forms/${formId}/edit?token=${adminToken}`}
           className="flex-1 inline-flex justify-center items-center gap-2 rounded-lg border border-border/50 bg-transparent px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
         >
-          <Edit2 className="size-4" />
+          <RiEdit2Line className="size-4" />
           Edit
         </Link>
         <button
           onClick={() => setShareOpen(true)}
           className="flex-1 inline-flex justify-center items-center gap-2 rounded-lg border border-border/50 bg-transparent px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
         >
-          <Share2 className="size-4" />
+          <RiShareLine className="size-4" />
           Share
         </button>
       </div>

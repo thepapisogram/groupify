@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
-import { Heart } from "lucide-react";
+import { RiHeartFill } from "@remixicon/react";
 import { useSession } from "next-auth/react";
 import { usePaystackPayment } from "react-paystack";
 import { toast } from "sonner";
@@ -68,7 +68,7 @@ export function DonatePopup({ onFinished }: { onFinished?: () => void }) {
       <DialogContent className="w-[calc(100%-2rem)] rounded-xl sm:w-full sm:max-w-md sm:rounded-lg">
         <DialogHeader>
           <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-            <Heart className="h-5 w-5 text-primary" />
+              <RiHeartFill className="size-5 text-rose-500" />
           </div>
           <DialogTitle className="text-center text-xl">Support Groupify</DialogTitle>
           <DialogDescription className="text-center text-sm">

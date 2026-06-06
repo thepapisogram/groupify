@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { UserPlus } from "lucide-react";
+import { RiUserAddLine } from "@remixicon/react";
 import { useRouter } from "next/navigation";
 
 export function CreateAccountPopup({ onFinished }: { onFinished?: () => void }) {
@@ -37,7 +37,7 @@ export function CreateAccountPopup({ onFinished }: { onFinished?: () => void }) 
       <DialogContent className="w-[calc(100%-2rem)] rounded-xl sm:w-full sm:max-w-md sm:rounded-lg">
         <DialogHeader>
           <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-            <UserPlus className="h-5 w-5 text-primary" />
+            <RiUserAddLine className="size-6 text-primary" />
           </div>
           <DialogTitle className="text-center text-xl">Create a Free Account</DialogTitle>
           <DialogDescription className="text-center text-sm">

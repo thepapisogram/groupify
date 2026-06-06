@@ -1,5 +1,5 @@
 import type { Group } from "@/components/groupify/types";
-import { Users2 } from "lucide-react";
+import { RiTeamLine } from "@remixicon/react";
 
 interface GroupCardProps {
   group: Group;
@@ -21,7 +21,7 @@ export function GroupCard({ group, index }: GroupCardProps) {
         borderColor: hslBorder,
         backgroundColor: hslBg,
         animationDelay: `${index * 0.05}s`,
-        // @ts-ignore
+        // @ts-expect-error Types mismatch from API response
         "--hover-border": hslHoverBorder,
         "--badge-bg-light": hsl,
         "--badge-bg-dark": hslDark,
@@ -38,7 +38,7 @@ export function GroupCard({ group, index }: GroupCardProps) {
             className="flex size-6 items-center justify-center rounded-full shadow-sm bg-[var(--item-bg-light)] dark:bg-[var(--item-bg-dark)]"
             style={{ color: hsl }}
           >
-            <Users2 className="size-3" strokeWidth={2.5} />
+            <RiTeamLine className="size-4 text-emerald-500" />
           </div>
           <span className="font-syne text-[13px] font-bold tracking-wide text-foreground">
             {group.label}

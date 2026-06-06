@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, MessageCircle, Send, Check } from "lucide-react";
+import { RiFileCopyLine, RiWhatsappLine, RiTelegramLine, RiCheckLine } from "@remixicon/react";
 import {
   Dialog,
   DialogContent,
@@ -34,7 +34,7 @@ export function ShareDialog({ isOpen, onOpenChange, shareUrl, onRegenerate }: Sh
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md border-border/50 bg-card/95 backdrop-blur-md">
+      <DialogContent className="w-[calc(100%-2rem)] sm:w-full rounded-2xl sm:max-w-md border-border/50 bg-card/95 backdrop-blur-md">
         <DialogHeader>
           <DialogTitle className="text-foreground text-xl">Share Form</DialogTitle>
         </DialogHeader>
@@ -60,7 +60,7 @@ export function ShareDialog({ isOpen, onOpenChange, shareUrl, onRegenerate }: Sh
                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-all hover:bg-primary/90 shadow-sm"
                 title="Copy link"
               >
-                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                {copied ? <RiCheckLine className="size-4" /> : <RiFileCopyLine className="size-4" />}
               </button>
             </div>
           </div>
@@ -74,7 +74,7 @@ export function ShareDialog({ isOpen, onOpenChange, shareUrl, onRegenerate }: Sh
                 rel="noreferrer"
                 className="flex flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-[#25D366]/20 bg-[#25D366]/10 py-3 text-[#25D366] transition-colors hover:bg-[#25D366]/20"
               >
-                <MessageCircle className="size-6" />
+                <RiWhatsappLine className="size-6" />
                 <span className="text-xs font-semibold">WhatsApp</span>
               </a>
               <a
@@ -83,7 +83,7 @@ export function ShareDialog({ isOpen, onOpenChange, shareUrl, onRegenerate }: Sh
                 rel="noreferrer"
                 className="flex flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-[#0088cc]/20 bg-[#0088cc]/10 py-3 text-[#0088cc] transition-colors hover:bg-[#0088cc]/20"
               >
-                <Send className="size-6" />
+                <RiTelegramLine className="size-6" />
                 <span className="text-xs font-semibold">Telegram</span>
               </a>
             </div>

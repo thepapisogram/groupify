@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { Users } from "lucide-react";
+import { RiTeamLine } from "@remixicon/react";
 
 interface NamesInputPanelProps {
   names: string;
@@ -43,7 +43,7 @@ export function NamesInputPanel({
         
         {!names && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/40">
-            <Users className="mb-4 size-12 opacity-50" strokeWidth={1.5} />
+            <RiTeamLine className="mb-4 size-12 opacity-50" strokeWidth={1.5} />
             <p className="text-sm font-medium">No names yet</p>
             <p className="mt-1 text-xs text-center max-w-[200px]">
               Type here or paste a column directly from Excel

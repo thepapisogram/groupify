@@ -468,7 +468,7 @@ export default function AdminDashboardPage() {
         />
 
         <Dialog open={isRegenerateDialogOpen} onOpenChange={setIsRegenerateDialogOpen}>
-          <DialogContent className="sm:max-w-md border-border/50 bg-card/95 backdrop-blur-md">
+          <DialogContent className="w-[calc(100%-2rem)] sm:w-full rounded-2xl sm:max-w-md border-border/50 bg-card/95 backdrop-blur-md">
             <DialogHeader>
               <DialogTitle className="text-destructive text-xl">Regenerate Link?</DialogTitle>
               <DialogDescription>

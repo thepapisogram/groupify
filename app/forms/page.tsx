@@ -7,7 +7,7 @@ import { Footer } from "@/components/groupify/footer";
 import { FormCardActions } from "@/components/groupify/form-card-actions";
 import Link from "next/link";
 import { format } from "date-fns";
-import { PlusCircle, Settings, Users } from "lucide-react";
+import { RiAddCircleLine, RiSettings4Line, RiTeamLine } from "@remixicon/react";
 
 export const metadata = {
   title: "My Forms | Groupify",
@@ -71,7 +71,7 @@ export default async function FormsPage() {
               href="/forms/new"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:shadow-primary/25 active:scale-[0.98]"
             >
-              <PlusCircle className="size-5" />
+              <RiAddCircleLine className="size-5" />
               Create New Form
             </Link>
           </div>
@@ -79,7 +79,7 @@ export default async function FormsPage() {
           {forms.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-border/50 bg-card/40 p-12 text-center backdrop-blur-sm">
               <div className="flex size-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
-                <Settings className="size-8" />
+                <RiSettings4Line className="size-8" />
               </div>
               <h3 className="text-xl font-bold text-foreground">
                 No forms yet
@@ -92,7 +92,7 @@ export default async function FormsPage() {
                 href="/forms/new"
                 className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:bg-primary/90 active:scale-[0.98]"
               >
-                <PlusCircle className="size-5" />
+                <RiAddCircleLine className="size-5" />
                 Create your first form
               </Link>
             </div>
@@ -122,7 +122,7 @@ export default async function FormsPage() {
                           className="flex items-center gap-1.5"
                           title="Total submissions"
                         >
-                          <Users className="size-4" />
+                          <RiTeamLine className="size-4" />
                           <span>
                             {subCount} response{subCount !== 1 ? "s" : ""}
                           </span>

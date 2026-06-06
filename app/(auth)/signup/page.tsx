@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
-import { ChevronLeft } from "lucide-react";
+import { RiArrowLeftSLine } from "@remixicon/react";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -49,8 +49,12 @@ export default function SignupPage() {
         router.refresh();
         router.push("/");
       }
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error(String(error));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -67,7 +71,7 @@ export default function SignupPage() {
           href="/"
           className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
         >
-          <ChevronLeft className="size-4" />
+          <RiArrowLeftSLine className="mr-2 size-4" />
           Back to Home
         </Link>
       </div>

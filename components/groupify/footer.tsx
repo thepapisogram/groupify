@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Heart } from "lucide-react";
+import { RiHeartFill } from "@remixicon/react";
 import appMeta from "@/data/metadata";
 import dynamic from "next/dynamic";
 
@@ -41,7 +41,7 @@ export function Footer() {
               onClick={() => setShowDonate(true)}
               className="group relative flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-rose-500/10 to-pink-500/10 border border-rose-500/20 px-5 py-2.5 text-sm font-bold text-rose-500 transition-all hover:bg-rose-500/20 hover:scale-[1.02] active:scale-95 shadow-sm"
             >
-              <Heart className="size-4 transition-transform group-hover:scale-110 group-hover:fill-rose-500/20" />
+              <RiHeartFill className="size-4 transition-transform group-hover:scale-110 group-hover:fill-rose-500/20" />
               Support the project
             </button>
             

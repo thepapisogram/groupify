@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ModeToggle } from "@/components/theme-switcher";
 import { useSession, signOut } from "next-auth/react";
-import { LogOut, User, FileText } from "lucide-react";
+import { RiLogoutBoxRLine, RiUserLine, RiFileTextLine } from "@remixicon/react";
 import {
   Dialog,
   DialogContent,
@@ -54,7 +54,7 @@ export function PageHeader() {
                 href="/forms"
                 className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-primary/10 hover:text-primary"
               >
-                <FileText className="size-3.5" />
+                <RiFileTextLine className="size-3.5" />
                 <span className="hidden sm:inline">My Forms</span>
               </Link>
 
@@ -72,7 +72,7 @@ export function PageHeader() {
                 className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                 title="Sign out"
               >
-                <LogOut className="size-3.5" />
+                <RiLogoutBoxRLine className="size-3.5" />
               </button>
             </div>
           ) : (
@@ -80,7 +80,7 @@ export function PageHeader() {
               href="/login"
               className="flex items-center gap-1.5 rounded-xl border border-border/50 bg-primary/10 px-2.5 py-1.5 text-xs font-medium text-primary backdrop-blur-sm transition-colors hover:bg-primary/20 sm:gap-2 sm:px-3"
             >
-              <User className="size-3.5" />
+              <RiUserLine className="size-3.5" />
               Sign in
             </Link>
           )}

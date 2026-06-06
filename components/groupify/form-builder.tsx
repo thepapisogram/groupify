@@ -558,11 +558,20 @@ export function FormBuilder({
             </div>
           </div>
 
-          <div className="fixed bottom-4 left-4 right-4 z-50 sm:static sm:bottom-auto sm:left-auto sm:right-auto sm:z-auto sm:flex sm:justify-end sm:pt-4">
+          <div className="fixed bottom-4 left-4 right-4 z-50 flex gap-3 sm:static sm:bottom-auto sm:left-auto sm:right-auto sm:z-auto sm:justify-end sm:pt-4">
+            {isEdit && (
+              <button
+                type="button"
+                onClick={() => router.push(`/forms/${formId}/admin?token=${adminToken}`)}
+                className="flex-1 sm:flex-none sm:w-auto rounded-2xl border border-border/50 bg-card/80 backdrop-blur-md sm:bg-card px-8 py-3.5 font-syne text-sm font-bold tracking-wide text-foreground shadow-lg sm:shadow-sm transition-all active:scale-98 hover:bg-muted"
+              >
+                Cancel
+              </button>
+            )}
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className={`w-full sm:w-auto rounded-2xl px-8 py-3.5 font-syne text-sm font-bold tracking-wide text-primary-foreground shadow-lg transition-all active:scale-98 disabled:opacity-50 border border-primary/30 backdrop-blur-md sm:border-transparent sm:backdrop-blur-none ${
+              className={`flex-1 sm:flex-none sm:w-auto rounded-2xl px-8 py-3.5 font-syne text-sm font-bold tracking-wide text-primary-foreground shadow-lg transition-all active:scale-98 disabled:opacity-50 border border-primary/30 backdrop-blur-md sm:border-transparent sm:backdrop-blur-none ${
                 isSaving ? "btn-shimmer bg-primary/80 sm:bg-primary" : "bg-primary/80 hover:bg-primary/90 sm:bg-primary"
               }`}
             >

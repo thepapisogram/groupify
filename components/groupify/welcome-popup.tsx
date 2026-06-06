@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Users, ShieldCheck, MailQuestion } from "lucide-react";
+import { RiMagicLine, RiTeamLine, RiShieldCheckLine, RiQuestionAnswerLine } from "@remixicon/react";
 import appMeta from "@/data/metadata";
 
 export function WelcomePopup({ onFinished }: { onFinished?: () => void }) {
@@ -35,7 +35,7 @@ export function WelcomePopup({ onFinished }: { onFinished?: () => void }) {
       <DialogContent className="w-[calc(100%-2rem)] rounded-xl sm:w-full sm:max-w-md sm:rounded-lg">
         <DialogHeader>
           <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-            <Sparkles className="h-5 w-5 text-primary" />
+            <RiMagicLine className="h-5 w-5 text-primary" />
           </div>
           <DialogTitle className="text-center text-xl">
             What&apos;s New in Groupify 2.1
@@ -47,9 +47,7 @@ export function WelcomePopup({ onFinished }: { onFinished?: () => void }) {
 
         <div className="space-y-3 py-2">
           <div className="flex gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary">
-              <ShieldCheck className="h-4 w-4 text-secondary-foreground" />
-            </div>
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 group-hover:scale-110 transition-transform"><RiShieldCheckLine className="size-5" /></div>
             <div>
               <h3 className="text-sm font-medium text-foreground">
                 Accounts & Auth
@@ -61,9 +59,7 @@ export function WelcomePopup({ onFinished }: { onFinished?: () => void }) {
           </div>
 
           <div className="flex gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary">
-              <Users className="h-4 w-4 text-secondary-foreground" />
-            </div>
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform"><RiTeamLine className="size-5" /></div>
             <div>
               <h3 className="text-sm font-medium text-foreground">
                 Form Builder
@@ -76,9 +72,7 @@ export function WelcomePopup({ onFinished }: { onFinished?: () => void }) {
           </div>
 
           <div className="flex gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary">
-              <MailQuestion className="h-4 w-4 text-secondary-foreground" />
-            </div>
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary group-hover:scale-110 transition-transform"><RiQuestionAnswerLine className="size-5" /></div>
             <div>
               <h3 className="text-sm font-medium text-foreground">
                 Feedback System
