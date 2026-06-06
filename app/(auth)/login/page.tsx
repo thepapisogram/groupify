@@ -54,17 +54,17 @@ export default function LoginPage() {
         </Link>
       </div>
 
-      <div className="w-full max-w-md space-y-8 rounded-2xl border border-border/50 bg-card/50 p-8 shadow-xl backdrop-blur-sm">
+      <div className="w-full max-w-sm space-y-6 rounded-2xl border border-border/50 bg-card/50 p-6 shadow-xl backdrop-blur-sm">
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
             Sign in to access your saved lists and custom forms.
           </p>
         </div>
 
         <button
           onClick={handleGoogleLogin}
-          className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card/50 px-4 py-3 text-sm font-medium transition-colors hover:bg-card hover:shadow-sm"
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card/50 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-card hover:shadow-sm"
         >
           <svg className="size-5" viewBox="0 0 24 24">
             <path
@@ -98,7 +98,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1">
             <label className="text-sm font-medium text-foreground">Email</label>
             <input
@@ -125,7 +125,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 disabled:opacity-50"
+            className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 disabled:opacity-50"
           >
             {isLoading ? "Signing in..." : "Sign in"}
           </button>

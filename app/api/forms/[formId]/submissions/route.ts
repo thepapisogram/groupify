@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import clientPromise from "@/lib/mongodb";
 
+interface FormField {
+  id: string;
+  type: string;
+  label: string;
+  required?: boolean;
+  options?: string[];
+}
+
 interface FormDoc {
   _id: string;
   adminToken: string;
   title: string;
-  fields: Record<string, unknown>[];
+  fields: FormField[];
 }
 
 interface SubmissionDoc {
