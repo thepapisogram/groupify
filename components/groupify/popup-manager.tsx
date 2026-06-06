@@ -15,19 +15,23 @@ export function PopupManager() {
   useEffect(() => {
     if (status === "loading" || isInitialized) return;
 
-    const initialQueue: string[] = [];
-    if (!localStorage.getItem(`groupify_v${appMeta.app.version}_seen`)) {
-      initialQueue.push("welcome");
-    }
-    if (status === "unauthenticated" && !localStorage.getItem("groupify_create_account_seen")) {
-      initialQueue.push("create-account");
-    }
-    if (!localStorage.getItem("groupify_donate_seen")) {
-      initialQueue.push("donate");
-    }
+    const timer = setTimeout(() => {
+      const initialQueue: string[] = [];
+      if (!localStorage.getItem(`groupify_v${appMeta.app.version}_seen`)) {
+        initialQueue.push("welcome");
+      }
+      if (status === "unauthenticated" && !localStorage.getItem("groupify_create_account_seen")) {
+        initialQueue.push("create-account");
+      }
+      if (!localStorage.getItem("groupify_donate_seen")) {
+        initialQueue.push("donate");
+      }
 
-    setQueue(initialQueue);
-    setIsInitialized(true);
+      setQueue(initialQueue);
+      setIsInitialized(true);
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [status, isInitialized]);
 
   const advance = () => {

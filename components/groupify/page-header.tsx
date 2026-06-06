@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import appMeta from "@/data/metadata";
 import { ModeToggle } from "@/components/theme-switcher";
 import { useSession, signOut } from "next-auth/react";
 import { LogOut, User } from "lucide-react";

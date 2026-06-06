@@ -37,13 +37,13 @@ export function DonatePopup({ onFinished }: { onFinished?: () => void }) {
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-2 flex justify-center">
+        <div className="py-1 flex justify-center">
             <Image 
                 src="/thiings/donate.webp"
                 alt="Donate to Groupify"
-                width={200}
-                height={200}
-                className="rounded-xl object-cover shadow-sm"
+                width={160}
+                height={160}
+                className="h-32 w-32 sm:h-36 sm:w-36 rounded-xl object-cover shadow-sm"
                 priority
                 unoptimized
             />
@@ -52,7 +52,7 @@ export function DonatePopup({ onFinished }: { onFinished?: () => void }) {
           If Groupify has saved you time, consider buying us a coffee. Every donation helps cover server costs.
         </div>
 
-        <div className="mt-1 flex flex-col gap-2">
+        <div className="mt-1 flex flex-col sm:flex-row-reverse gap-2">
           <Button asChild className="w-full">
             <Link href="#" target="_blank">
                 Donate Now
@@ -61,6 +61,8 @@ export function DonatePopup({ onFinished }: { onFinished?: () => void }) {
           <Button variant="outline" onClick={handleClose} className="w-full">
             Maybe Later
           </Button>
+        </div>
+        <div className="text-center">
           <button 
             onClick={handleDontShowAgain}
             className="mt-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
