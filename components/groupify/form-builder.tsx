@@ -25,6 +25,7 @@ export type FormField = {
 
 interface FormBuilderProps {
   initialTitle?: string;
+  initialDescription?: string;
   initialFields?: FormField[];
   formId?: string;
   adminToken?: string;
@@ -90,6 +91,7 @@ function TagsInput({
 
 export function FormBuilder({
   initialTitle = "My Grouping Form",
+  initialDescription = "",
   initialFields = [
     {
       id: nanoid(6),
@@ -105,6 +107,7 @@ export function FormBuilder({
 }: FormBuilderProps) {
   const router = useRouter();
   const [title, setTitle] = useState(initialTitle);
+  const [description, setDescription] = useState(initialDescription);
   const [fields, setFields] = useState<FormField[]>(initialFields);
   const [isSaving, setIsSaving] = useState(false);
   const [saveResult, setSaveResult] = useState<{
@@ -211,7 +214,7 @@ export function FormBuilder({
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, fields }),
+        body: JSON.stringify({ title, description, fields }),
       });
 
       if (!response.ok) {
@@ -354,7 +357,7 @@ export function FormBuilder({
           <div className="space-y-4 rounded-2xl border border-border/50 bg-card/70 p-6 backdrop-blur-sm shadow-md">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-foreground">
-                Form Title
+                Form Title <span className="text-destructive">*</span>
               </label>
               <input
                 type="text"
@@ -362,6 +365,18 @@ export function FormBuilder({
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Hackathon Registration"
                 className="w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-3 text-sm text-foreground transition-all focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-foreground">
+                Description
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="e.g. Please fill out this form to register for the upcoming hackathon..."
+                rows={3}
+                className="w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-3 text-sm text-foreground transition-all focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50 resize-y"
               />
             </div>
           </div>

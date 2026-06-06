@@ -22,6 +22,7 @@ export default function FormFillerPage() {
   const [error, setError] = useState("");
   const [formConfig, setFormConfig] = useState<{
     title: string;
+    description?: string;
     fields: FormField[];
   } | null>(null);
 
@@ -184,8 +185,8 @@ export default function FormFillerPage() {
             <h1 className="text-3xl font-bold tracking-tight text-foreground">
               {formConfig.title}
             </h1>
-            <p className="text-muted-foreground">
-              Please fill out the details below to join.
+            <p className="text-muted-foreground whitespace-pre-wrap">
+              {formConfig.description || "Fill this form."}
             </p>
           </div>
 

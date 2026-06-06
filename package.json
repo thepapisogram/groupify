@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "commit": "node git-publish.js"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.11.2",

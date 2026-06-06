@@ -16,6 +16,7 @@ export default function EditFormPage() {
   const [error, setError] = useState("");
   const [formData, setFormData] = useState<{
     title: string;
+    description?: string;
     fields: FormField[];
   } | null>(null);
 
@@ -27,7 +28,7 @@ export default function EditFormPage() {
           throw new Error("Form not found");
         }
         const data = await res.json();
-        setFormData({ title: data.title, fields: data.fields });
+        setFormData({ title: data.title, description: data.description, fields: data.fields });
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "Failed to load form");
       } finally {
@@ -83,6 +84,7 @@ export default function EditFormPage() {
       formId={formId}
       adminToken={adminToken}
       initialTitle={formData.title}
+      initialDescription={formData.description}
       initialFields={formData.fields}
     />
   );

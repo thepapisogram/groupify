@@ -8,6 +8,7 @@ interface FormDoc {
   _id: string;
   adminToken: string;
   title: string;
+  description?: string;
   fields: Record<string, unknown>[];
   createdAt: Date;
   userId?: string;
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     const body = await req.json();
-    const { title, fields } = body;
+    const { title, description, fields } = body;
 
     if (!title || !fields || !Array.isArray(fields)) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -28,14 +29,16 @@ export async function POST(req: NextRequest) {
 
     const formId = nanoid(6);
     const adminToken = nanoid(16);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
 
     const newForm: FormDoc = {
       _id: formId,
       adminToken,
       title,
+      description,
       fields,
       createdAt: new Date(),
-      ...((session?.user as any)?.id ? { userId: (session?.user as any).id } : {}),
+      ...(userId ? { userId } : {}),
     };
 
     await db.collection<FormDoc>("forms").insertOne(newForm);

@@ -5,6 +5,7 @@ interface FormDoc {
   _id: string;
   adminToken: string;
   title: string;
+  description?: string;
   fields: Record<string, unknown>[];
   createdAt?: Date;
   updatedAt?: Date;
@@ -25,8 +26,8 @@ export async function GET(
       return NextResponse.json({ error: "Form not found" }, { status: 404 });
     }
 
-    // Omit adminToken for public view
     const { adminToken, ...publicForm } = form;
+    void adminToken;
 
     return NextResponse.json(publicForm, { status: 200 });
   } catch (error) {
@@ -64,7 +65,7 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const { title, fields } = body;
+    const { title, description, fields } = body;
 
     if (!title || !fields || !Array.isArray(fields)) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -75,6 +76,7 @@ export async function PUT(
       {
         $set: {
           title,
+          description,
           fields,
           updatedAt: new Date(),
         },
