@@ -558,12 +558,12 @@ export function FormBuilder({
             </div>
           </div>
 
-          <div className="flex justify-end pt-4">
+          <div className="fixed bottom-4 left-4 right-4 z-50 sm:static sm:bottom-auto sm:left-auto sm:right-auto sm:z-auto sm:flex sm:justify-end sm:pt-4">
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className={`rounded-2xl px-8 py-3.5 font-syne text-sm font-bold tracking-wide text-primary-foreground shadow-lg transition-all active:scale-98 disabled:opacity-50 ${
-                isSaving ? "btn-shimmer" : "bg-primary hover:bg-primary/90"
+              className={`w-full sm:w-auto rounded-2xl px-8 py-3.5 font-syne text-sm font-bold tracking-wide text-primary-foreground shadow-lg transition-all active:scale-98 disabled:opacity-50 border border-primary/30 backdrop-blur-md sm:border-transparent sm:backdrop-blur-none ${
+                isSaving ? "btn-shimmer bg-primary/80 sm:bg-primary" : "bg-primary/80 hover:bg-primary/90 sm:bg-primary"
               }`}
             >
               {isSaving ? "Saving..." : isEdit ? "Update Form" : "Create Form"}
