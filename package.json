@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "commit": "node git-publish.js"
+    "push": "node git-publish.js"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.11.2",
