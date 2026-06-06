@@ -4,11 +4,13 @@ import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import appMeta from "@/data/metadata";
+import { Heart } from "lucide-react";
 import { NamesInputPanel } from "@/components/groupify/names-input-panel";
 import { PageHeader } from "@/components/groupify/page-header";
 import { PanelSwitcher } from "@/components/groupify/panel-switcher";
 import { ResultsPanel } from "@/components/groupify/results-panel";
 import { Sidebar } from "@/components/groupify/sidebar";
+import { DonatePopup } from "@/components/groupify/donate-popup";
 import type {
   DistributionMode,
   ExportFormat,
@@ -28,6 +30,7 @@ export default function Page() {
   const [isWorking, setIsWorking] = useState(false);
   const [activePanel, setActivePanel] = useState<ActivePanel>("input");
   const [copiedText, setCopiedText] = useState(false);
+  const [showDonate, setShowDonate] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const nameCount = names
@@ -245,6 +248,13 @@ export default function Page() {
 
         <footer className="mt-16 flex flex-col items-center gap-4 text-center">
           <div className="flex flex-wrap justify-center gap-4">
+            <button
+              onClick={() => setShowDonate(true)}
+              className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary transition-all hover:bg-primary/10 hover:shadow-sm"
+            >
+              <Heart className="size-4" />
+              Donate
+            </button>
             <Link
               href="/documentation"
               className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary transition-all hover:bg-primary/10 hover:shadow-sm"
@@ -327,6 +337,7 @@ export default function Page() {
           </div>
         </footer>
       </div>
+      {showDonate && <DonatePopup onFinished={() => setShowDonate(false)} />}
     </div>
   );
 }
