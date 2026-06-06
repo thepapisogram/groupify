@@ -172,14 +172,6 @@ export default function Page() {
       <div className="relative z-10 mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <PageHeader />
 
-        <StatsBar
-          nameCount={nameCount}
-          size={size}
-          estGroups={estGroups}
-          hasResults={hasResults}
-          groupsCount={groups.length}
-        />
-
         <PanelSwitcher
           hasResults={hasResults}
           activePanel={activePanel}
@@ -188,7 +180,7 @@ export default function Page() {
         />
 
         <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-          <div>
+          <div className="flex flex-col gap-4">
             {activePanel === "input" || !hasResults ? (
               <NamesInputPanel
                 names={names}
@@ -203,6 +195,13 @@ export default function Page() {
                 onShuffle={handleShuffle}
               />
             )}
+            <StatsBar
+              nameCount={nameCount}
+              size={size}
+              estGroups={estGroups}
+              hasResults={hasResults}
+              groupsCount={groups.length}
+            />
           </div>
 
           <Sidebar
