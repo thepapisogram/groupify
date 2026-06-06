@@ -5,6 +5,6 @@ export interface Group {
   id: number;
   label: string;
   members: string[];
-  rawMembers?: Record<string, string>[];
+  rawMembers?: Record<string, string | string[]>[];
   hue: number;
 }

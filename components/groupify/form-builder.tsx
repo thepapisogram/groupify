@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/groupify/page-header";
+import { Footer } from "@/components/groupify/footer";
 import {
   Select,
   SelectContent,
@@ -13,14 +14,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export interface FormField {
+export type FormField = {
   id: string;
   label: string;
-  type: "text" | "number" | "select";
+  type: "text" | "number" | "select" | "radio" | "checklist";
   options?: string[];
   isPrimary?: boolean;
   required?: boolean;
-}
+};
 
 interface FormBuilderProps {
   initialTitle?: string;
@@ -30,9 +31,17 @@ interface FormBuilderProps {
   isEdit?: boolean;
 }
 
-function TagsInput({ value = [], onChange, placeholder }: { value?: string[], onChange: (v: string[]) => void, placeholder: string }) {
+function TagsInput({
+  value = [],
+  onChange,
+  placeholder,
+}: {
+  value?: string[];
+  onChange: (v: string[]) => void;
+  placeholder: string;
+}) {
   const [input, setInput] = useState("");
-  
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
@@ -53,9 +62,16 @@ function TagsInput({ value = [], onChange, placeholder }: { value?: string[], on
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/50 bg-muted/20 p-2 text-sm focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50">
       {value.map((tag, i) => (
-        <span key={i} className="flex items-center gap-1 rounded bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
+        <span
+          key={i}
+          className="flex items-center gap-1 rounded bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground"
+        >
           {tag}
-          <button type="button" onClick={() => removeTag(i)} className="text-primary-foreground/70 hover:text-primary-foreground">
+          <button
+            type="button"
+            onClick={() => removeTag(i)}
+            className="text-primary-foreground/70 hover:text-primary-foreground"
+          >
             &times;
           </button>
         </span>
@@ -74,7 +90,15 @@ function TagsInput({ value = [], onChange, placeholder }: { value?: string[], on
 
 export function FormBuilder({
   initialTitle = "My Grouping Form",
-  initialFields = [{ id: nanoid(6), label: "Name", type: "text", isPrimary: true, required: true }],
+  initialFields = [
+    {
+      id: nanoid(6),
+      label: "Name",
+      type: "text",
+      isPrimary: true,
+      required: true,
+    },
+  ],
   formId,
   adminToken,
   isEdit = false,
@@ -83,8 +107,11 @@ export function FormBuilder({
   const [title, setTitle] = useState(initialTitle);
   const [fields, setFields] = useState<FormField[]>(initialFields);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveResult, setSaveResult] = useState<{ formId: string; adminToken: string } | null>(null);
-  
+  const [saveResult, setSaveResult] = useState<{
+    formId: string;
+    adminToken: string;
+  } | null>(null);
+
   const [draggedId, setDraggedId] = useState<string | null>(null);
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
@@ -102,14 +129,19 @@ export function FormBuilder({
     const newFields = [...fields];
     const [draggedItem] = newFields.splice(draggedIndex, 1);
     newFields.splice(targetIndex, 0, draggedItem);
-    
+
     setFields(newFields);
   };
 
   const addField = () => {
     setFields([
       ...fields,
-      { id: nanoid(6), label: `Field ${fields.length + 1}`, type: "text", required: false },
+      {
+        id: nanoid(6),
+        label: `Field ${fields.length + 1}`,
+        type: "text",
+        required: false,
+      },
     ]);
   };
 
@@ -124,7 +156,9 @@ export function FormBuilder({
     }
     const field = fields.find((f) => f.id === id);
     if (field?.isPrimary) {
-      toast.error("Cannot remove the primary field. Set another field as primary first.");
+      toast.error(
+        "Cannot remove the primary field. Set another field as primary first.",
+      );
       return;
     }
     setFields(fields.filter((f) => f.id !== id));
@@ -135,7 +169,7 @@ export function FormBuilder({
       fields.map((f) => ({
         ...f,
         isPrimary: f.id === id,
-      }))
+      })),
     );
   };
 
@@ -147,7 +181,9 @@ export function FormBuilder({
 
     const primaryField = fields.find((f) => f.isPrimary);
     if (!primaryField) {
-      toast.error("Please designate one field as the primary identifier (e.g. Name)");
+      toast.error(
+        "Please designate one field as the primary identifier (e.g. Name)",
+      );
       return;
     }
 
@@ -156,15 +192,20 @@ export function FormBuilder({
         toast.error("All fields must have a label");
         return;
       }
-      if (f.type === "select" && (!f.options || f.options.length === 0)) {
-        toast.error(`Select field "${f.label}" must have at least one option`);
+      if (
+        (f.type === "select" || f.type === "radio" || f.type === "checklist") &&
+        (!f.options || f.options.length === 0)
+      ) {
+        toast.error(`Field "${f.label}" must have at least one option`);
         return;
       }
     }
 
     setIsSaving(true);
     try {
-      const url = isEdit ? `/api/forms/${formId}?token=${adminToken}` : "/api/forms";
+      const url = isEdit
+        ? `/api/forms/${formId}?token=${adminToken}`
+        : "/api/forms";
       const method = isEdit ? "PUT" : "POST";
 
       const response = await fetch(url, {
@@ -199,24 +240,45 @@ export function FormBuilder({
 
     return (
       <div className="mesh-bg relative min-h-dvh">
-        <div className="relative z-10 mx-auto max-w-2xl px-4 py-16">
+        <div className="relative z-10 mx-auto max-w-2xl px-4 pt-8 pb-28 sm:px-6 sm:py-16">
           <PageHeader />
           <div className="mt-12 space-y-8 rounded-2xl border border-border/50 bg-card/70 p-8 backdrop-blur-sm shadow-xl">
             <div className="text-center">
               <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
-                <svg className="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="size-8"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
-              <h2 className="mt-6 text-2xl font-bold text-foreground">Form created successfully!</h2>
-              <p className="mt-2 text-muted-foreground">Save these links. You won&apos;t be able to see the admin link again.</p>
+              <h2 className="mt-6 text-2xl font-bold text-foreground">
+                Form created successfully!
+              </h2>
+              <p className="mt-2 text-muted-foreground">
+                Save these links. You won&apos;t be able to see the admin link
+                again.
+              </p>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-foreground">Public Link (Share with respondents)</label>
+                <label className="text-sm font-semibold text-foreground">
+                  Public Link (Share with respondents)
+                </label>
                 <div className="flex gap-2">
-                  <input readOnly value={publicLink} className="flex-1 rounded-xl border border-border/50 bg-muted/20 px-4 py-2.5 text-sm text-foreground" />
+                  <input
+                    readOnly
+                    value={publicLink}
+                    className="flex-1 rounded-xl border border-border/50 bg-muted/20 px-4 py-2.5 text-sm text-foreground"
+                  />
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(publicLink);
@@ -230,9 +292,15 @@ export function FormBuilder({
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-destructive">Admin Link (Keep secret!)</label>
+                <label className="text-sm font-semibold text-destructive">
+                  Admin Link (Keep secret!)
+                </label>
                 <div className="flex gap-2">
-                  <input readOnly value={adminLink} className="flex-1 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-2.5 text-sm text-destructive" />
+                  <input
+                    readOnly
+                    value={adminLink}
+                    className="flex-1 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-2.5 text-sm text-destructive"
+                  />
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(adminLink);
@@ -243,13 +311,20 @@ export function FormBuilder({
                     Copy
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground">Use this link to view submissions, edit the form, and generate groups.</p>
+                <p className="text-xs text-muted-foreground">
+                  Use this link to view submissions, edit the form, and generate
+                  groups.
+                </p>
               </div>
             </div>
 
             <div className="flex justify-center pt-4">
               <button
-                onClick={() => router.push(`/forms/${saveResult.formId}/admin?token=${saveResult.adminToken}`)}
+                onClick={() =>
+                  router.push(
+                    `/forms/${saveResult.formId}/admin?token=${saveResult.adminToken}`,
+                  )
+                }
                 className="rounded-xl border border-border/50 bg-card px-6 py-3 text-sm font-semibold text-foreground transition-all hover:bg-muted"
               >
                 Go to Admin Dashboard
@@ -263,18 +338,24 @@ export function FormBuilder({
 
   return (
     <div className="mesh-bg relative min-h-dvh">
-      <div className="relative z-10 mx-auto max-w-3xl px-4 py-12">
+      <div className="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-28 sm:px-6 sm:py-12">
         <PageHeader />
-        
+
         <div className="mt-8 space-y-6">
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">{isEdit ? "Edit Form" : "Create New Form"}</h1>
-            <p className="text-muted-foreground">Design a custom form to collect structured data for your groups.</p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              {isEdit ? "Edit Form" : "Create New Form"}
+            </h1>
+            <p className="text-muted-foreground">
+              Design a custom form to collect structured data for your groups.
+            </p>
           </div>
 
           <div className="space-y-4 rounded-2xl border border-border/50 bg-card/70 p-6 backdrop-blur-sm shadow-md">
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-foreground">Form Title</label>
+              <label className="text-sm font-semibold text-foreground">
+                Form Title
+              </label>
               <input
                 type="text"
                 value={title}
@@ -287,14 +368,26 @@ export function FormBuilder({
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">Form Fields</h2>
+              <h2 className="text-lg font-semibold text-foreground">
+                Form Fields
+              </h2>
               <button
                 type="button"
                 onClick={addField}
                 className="flex items-center gap-2 rounded-xl bg-muted px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-muted/80"
               >
-                <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" />
+                <svg
+                  className="size-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    d="M12 5v14M5 12h14"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
                 Add Field
               </button>
@@ -302,8 +395,8 @@ export function FormBuilder({
 
             <div className="space-y-4 ml-4">
               {fields.map((field) => (
-                <div 
-                  key={field.id} 
+                <div
+                  key={field.id}
                   draggable
                   onDragStart={(e) => handleDragStart(e, field.id)}
                   onDragOver={(e) => handleDragOver(e, field.id)}
@@ -311,9 +404,19 @@ export function FormBuilder({
                   className={`relative space-y-4 rounded-xl border border-border/50 bg-card/40 p-5 backdrop-blur-sm transition-all ${draggedId === field.id ? "opacity-40 border-primary/50 scale-[0.98]" : ""}`}
                 >
                   <div className="absolute top-1/2 -left-6 -translate-y-1/2 cursor-grab text-muted-foreground/30 hover:text-foreground active:cursor-grabbing p-1">
-                    <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/>
-                      <circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/>
+                    <svg
+                      className="size-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <circle cx="9" cy="5" r="1" />
+                      <circle cx="9" cy="12" r="1" />
+                      <circle cx="9" cy="19" r="1" />
+                      <circle cx="15" cy="5" r="1" />
+                      <circle cx="15" cy="12" r="1" />
+                      <circle cx="15" cy="19" r="1" />
                     </svg>
                   </div>
 
@@ -322,32 +425,44 @@ export function FormBuilder({
                       Primary Identifier
                     </div>
                   )}
-                  
+
                   <div className="flex items-start justify-between gap-4">
                     <div className="grid flex-1 gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <label className="text-xs font-medium text-muted-foreground">Field Label</label>
+                        <label className="text-xs font-medium text-muted-foreground">
+                          Field Label
+                        </label>
                         <input
                           type="text"
                           value={field.label}
-                          onChange={(e) => updateField(field.id, { label: e.target.value })}
+                          onChange={(e) =>
+                            updateField(field.id, { label: e.target.value })
+                          }
                           className="w-full rounded-lg border border-border/50 bg-muted/20 px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none"
                         />
                       </div>
-                      
+
                       <div className="space-y-2">
-                        <label className="text-xs font-medium text-muted-foreground">Field Type</label>
+                        <label className="text-xs font-medium text-muted-foreground">
+                          Field Type
+                        </label>
                         <Select
                           value={field.type}
-                          onValueChange={(value) => updateField(field.id, { type: value as FormField["type"] })}
+                          onValueChange={(value) =>
+                            updateField(field.id, {
+                              type: value as FormField["type"],
+                            })
+                          }
                         >
                           <SelectTrigger className="w-full rounded-lg border border-border/50 bg-muted/20 px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none h-[38px]">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="text">Short Text</SelectItem>
+                            <SelectItem value="text">Text (Short Answer)</SelectItem>
                             <SelectItem value="number">Number</SelectItem>
-                            <SelectItem value="select">Dropdown</SelectItem>
+                            <SelectItem value="select">Dropdown Select</SelectItem>
+                            <SelectItem value="radio">Multiple Choice (Radio)</SelectItem>
+                            <SelectItem value="checklist">Checkboxes (Multiple)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -358,9 +473,17 @@ export function FormBuilder({
                         type="button"
                         onClick={() => setPrimaryField(field.id)}
                         className={`rounded-lg p-2 transition-colors ${field.isPrimary ? "text-amber-500 hover:text-amber-600" : "text-muted-foreground/30 hover:text-amber-500 hover:bg-amber-500/10"}`}
-                        title={field.isPrimary ? "Primary Field" : "Set as Primary"}
+                        title={
+                          field.isPrimary ? "Primary Field" : "Set as Primary"
+                        }
                       >
-                        <svg className="size-5" viewBox="0 0 24 24" fill={field.isPrimary ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                        <svg
+                          className="size-5"
+                          viewBox="0 0 24 24"
+                          fill={field.isPrimary ? "currentColor" : "none"}
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
                           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                         </svg>
                       </button>
@@ -370,20 +493,34 @@ export function FormBuilder({
                         className="rounded-lg p-2 text-muted-foreground/40 transition-colors hover:bg-destructive/10 hover:text-destructive"
                         title="Remove field"
                       >
-                        <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
+                        <svg
+                          className="size-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
                         </svg>
                       </button>
                     </div>
                   </div>
 
-                  {field.type === "select" && (
+                  {(field.type === "select" || field.type === "radio" || field.type === "checklist") && (
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground">Options</label>
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Options
+                      </label>
                       <TagsInput
                         value={field.options}
-                        onChange={(options) => updateField(field.id, { options })}
-                        placeholder="e.g. Engineering, Marketing (Press Enter to add)"
+                        onChange={(options) =>
+                          updateField(field.id, { options })
+                        }
+                        placeholder="e.g. Option 1, Option 2 (Press Enter to add)"
                       />
                     </div>
                   )}
@@ -393,7 +530,9 @@ export function FormBuilder({
                       <input
                         type="checkbox"
                         checked={field.required}
-                        onChange={(e) => updateField(field.id, { required: e.target.checked })}
+                        onChange={(e) =>
+                          updateField(field.id, { required: e.target.checked })
+                        }
                         className="rounded border-border/50 bg-muted/20 text-primary focus:ring-primary/50"
                       />
                       Required
@@ -416,6 +555,7 @@ export function FormBuilder({
             </button>
           </div>
         </div>
+        <Footer />
       </div>
     </div>
   );

@@ -44,7 +44,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="mesh-bg relative flex min-h-dvh flex-col items-center justify-center bg-background p-4 text-foreground">
+    <div className="mesh-bg relative flex min-h-dvh flex-col items-center justify-center bg-background p-4 sm:px-6 text-foreground">
       <div className="absolute left-4 top-4 sm:left-8 sm:top-8">
         <Link
           href="/"

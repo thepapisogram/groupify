@@ -1,13 +1,28 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/groupify/form-builder";
 import { PageHeader } from "@/components/groupify/page-header";
+import { Footer } from "@/components/groupify/footer";
 import { Sidebar } from "@/components/groupify/sidebar";
 import { ResultsPanel } from "@/components/groupify/results-panel";
+import { ShareDialog } from "@/components/groupify/share-dialog";
 import { buildGroups, exportGroups } from "@/components/groupify/utils";
-import { DistributionMode, Group, ExportFormat } from "@/components/groupify/types";
+import {
+  DistributionMode,
+  Group,
+  ExportFormat,
+} from "@/components/groupify/types";
 import { toast } from "sonner";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
@@ -17,13 +32,23 @@ export default function AdminDashboardPage() {
   const searchParams = useSearchParams();
   const formId = params.formId as string;
   const adminToken = searchParams.get("token") || "";
+  const router = useRouter();
+
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
+  const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/forms/${formId}` : "";
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  
-  const [formConfig, setFormConfig] = useState<{ title: string; fields: FormField[] } | null>(null);
-  const [submissions, setSubmissions] = useState<any[]>([]);
-  
+
+  const [formConfig, setFormConfig] = useState<{
+    title: string;
+    fields: FormField[];
+  } | null>(null);
+  const [submissions, setSubmissions] = useState<{ _id: string; submittedAt: string; data: Record<string, string | string[]> }[]>([]);
+
   // Grouping state
   const [size, setSize] = useState(4);
   const [groupCount, setGroupCount] = useState(2);
@@ -42,8 +67,8 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       setFormConfig(data.form);
       setSubmissions(data.submissions || []);
-    } catch (err: any) {
-      setError(err.message || "Failed to load admin data");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load admin data");
     } finally {
       setLoading(false);
     }
@@ -54,18 +79,22 @@ export default function AdminDashboardPage() {
   }, [fetchSubmissions]);
 
   const handleDeleteSubmission = async (submissionId: string) => {
-    if (!window.confirm("Are you sure you want to delete this response?")) return;
+    if (!window.confirm("Are you sure you want to delete this response?"))
+      return;
 
     try {
-      const res = await fetch(`/api/forms/${formId}/submissions/${submissionId}?token=${adminToken}`, {
-        method: "DELETE"
-      });
+      const res = await fetch(
+        `/api/forms/${formId}/submissions/${submissionId}?token=${adminToken}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       if (!res.ok) throw new Error("Failed to delete");
 
-      setSubmissions(submissions.filter(s => s._id !== submissionId));
+      setSubmissions(submissions.filter((s) => s._id !== submissionId));
       toast.success("Submission deleted");
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete submission");
     }
   };
@@ -73,7 +102,10 @@ export default function AdminDashboardPage() {
   // Handlers for synchronization (same as homepage)
   const nameCount = submissions.length;
   const hasResults = groups.length > 0;
-  const totalGrouped = groups.reduce((sum, group) => sum + group.members.length, 0);
+  const totalGrouped = groups.reduce(
+    (sum, group) => sum + group.members.length,
+    0,
+  );
   const estGroups = nameCount >= 2 ? groupCount : 0;
 
   const handleSizeChange = (newSize: number) => {
@@ -113,11 +145,16 @@ export default function AdminDashboardPage() {
     setIsWorking(true);
     setTimeout(() => {
       // Map submissions to the expected structured format
-      const primaryField = formConfig.fields.find(f => f.isPrimary) || formConfig.fields[0];
-      const items = submissions.map(sub => ({
-        label: sub.data[primaryField.id] || "Unknown",
-        data: sub.data
-      }));
+      const primaryField =
+        formConfig.fields.find((f) => f.isPrimary) || formConfig.fields[0];
+      const items = submissions.map((sub) => {
+        const val = sub.data[primaryField.id];
+        const label = val ? (Array.isArray(val) ? val.join(", ") : val) : "Unknown";
+        return {
+          label,
+          data: sub.data,
+        };
+      });
 
       const result = buildGroups(
         items,
@@ -125,10 +162,12 @@ export default function AdminDashboardPage() {
         groupBy === "size" ? size : groupCount,
         mode,
       );
-      
+
       setGroups(result);
       setIsWorking(false);
-      toast.success(`${result.length} group${result.length !== 1 ? "s" : ""} created`);
+      toast.success(
+        `${result.length} group${result.length !== 1 ? "s" : ""} created`,
+      );
     }, 380);
   }, [mode, nameCount, submissions, size, groupCount, groupBy, formConfig]);
 
@@ -139,7 +178,9 @@ export default function AdminDashboardPage() {
   const handleExport = async (format: ExportFormat) => {
     if (groups.length === 0 || !formConfig) return;
 
-    const id = toast.loading(`Preparing ${format === "excel" ? "Excel" : "Word"} file...`);
+    const id = toast.loading(
+      `Preparing ${format === "excel" ? "Excel" : "Word"} file...`,
+    );
 
     try {
       await exportGroups(groups, format, formConfig.fields);
@@ -154,7 +195,8 @@ export default function AdminDashboardPage() {
   const handleCopyText = async () => {
     if (groups.length === 0 || !formConfig) return;
 
-    const primaryField = formConfig.fields.find(f => f.isPrimary) || formConfig.fields[0];
+    const primaryField =
+      formConfig.fields.find((f) => f.isPrimary) || formConfig.fields[0];
 
     const text = groups
       .map(
@@ -173,10 +215,34 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleRegenerateLink = async () => {
+    setIsRegenerating(true);
+    try {
+      const res = await fetch(`/api/forms/${formId}/regenerate?token=${adminToken}`, {
+        method: "POST"
+      });
+      if (!res.ok) throw new Error("Failed to regenerate");
+      const data = await res.json();
+      
+      toast.success("Link regenerated successfully");
+      setIsRegenerateDialogOpen(false);
+      setIsShareDialogOpen(false);
+      
+      // Redirect to the new admin URL
+      router.push(`/forms/${data.newFormId}/admin?token=${adminToken}`);
+    } catch {
+      toast.error("Failed to regenerate link");
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="mesh-bg relative min-h-dvh flex items-center justify-center">
-        <p className="text-muted-foreground animate-pulse">Loading dashboard...</p>
+        <p className="text-muted-foreground animate-pulse">
+          Loading dashboard...
+        </p>
       </div>
     );
   }
@@ -184,12 +250,13 @@ export default function AdminDashboardPage() {
   if (error || !formConfig) {
     return (
       <div className="mesh-bg relative min-h-dvh">
-        <div className="relative z-10 mx-auto max-w-3xl px-4 py-12">
+        <div className="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-28 sm:px-6 sm:py-12">
           <PageHeader />
           <div className="mt-8 rounded-2xl border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive backdrop-blur-sm">
             <h2 className="text-lg font-semibold">Error</h2>
             <p className="mt-2 text-sm">{error}</p>
           </div>
+          <Footer />
         </div>
       </div>
     );
@@ -197,15 +264,25 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="mesh-bg relative min-h-dvh pb-20">
-      <div className="relative z-10 mx-auto max-w-5xl px-4 py-12">
+      <div className="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-28 sm:px-6 sm:py-12">
         <PageHeader />
-        
-        <div className="mt-8 mb-8 flex items-center justify-between">
+
+        <div className="mt-8 mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">{formConfig.title}</h1>
-            <p className="text-sm text-muted-foreground">Admin Dashboard &bull; {submissions.length} responses</p>
+            <h1 className="text-2xl font-bold text-foreground">
+              {formConfig.title}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Admin Dashboard &bull; {submissions.length} responses
+            </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <button
+              onClick={() => setIsShareDialogOpen(true)}
+              className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-all hover:bg-primary/20"
+            >
+              Share Form
+            </button>
             <Link
               href={`/forms/${formId}/edit?token=${adminToken}`}
               className="rounded-xl border border-border/50 bg-card px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-muted"
@@ -216,9 +293,23 @@ export default function AdminDashboardPage() {
               onClick={fetchSubmissions}
               className="rounded-xl border border-border/50 bg-card px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-muted flex items-center gap-2"
             >
-              <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M21 3v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+              <svg
+                className="size-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M21 3v5h-5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
               Refresh
             </button>
@@ -230,15 +321,27 @@ export default function AdminDashboardPage() {
             {!hasResults ? (
               <div className="rounded-2xl border border-border/50 bg-card/70 p-6 backdrop-blur-sm shadow-md">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-foreground">Recent Submissions</h2>
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Recent Submissions
+                  </h2>
                   {submissions.length > 0 && (
                     <button
                       onClick={handleGenerate}
                       className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 shadow-sm animate-fade-in"
                     >
                       Generate Groups
-                      <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                      <svg
+                        className="size-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                      >
+                        <path
+                          d="M5 12h14M12 5l7 7-7 7"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
                       </svg>
                     </button>
                   )}
@@ -246,44 +349,77 @@ export default function AdminDashboardPage() {
                 {submissions.length === 0 ? (
                   <div className="py-12 text-center text-muted-foreground">
                     <p>No responses yet.</p>
-                    <p className="text-sm mt-1">Share the public link to start collecting data.</p>
+                    <p className="text-sm mt-1">
+                      Share the public link to start collecting data.
+                    </p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                       <thead className="text-xs text-muted-foreground uppercase bg-muted/20 border-b border-border/50">
                         <tr>
-                          {formConfig.fields.map(f => (
+                          {formConfig.fields.map((f) => (
                             <th key={f.id} className="px-4 py-3 font-medium">
                               {f.label}
-                              {f.isPrimary && <span className="ml-1 text-[10px] text-primary">(Primary)</span>}
+                              {f.isPrimary && (
+                                <span className="ml-1 text-[10px] text-primary">
+                                  (Primary)
+                                </span>
+                              )}
                             </th>
                           ))}
-                          <th className="px-4 py-3 font-medium text-right">Time</th>
+                          <th className="px-4 py-3 font-medium text-right">
+                            Time
+                          </th>
                           <th className="px-4 py-3 font-medium w-12"></th>
                         </tr>
                       </thead>
                       <tbody>
                         {submissions.map((sub) => (
-                          <tr key={sub._id} className="border-b border-border/20 last:border-0 hover:bg-muted/10 transition-colors">
-                            {formConfig.fields.map(f => (
-                              <td key={f.id} className="px-4 py-3 text-foreground whitespace-nowrap">
-                                {sub.data[f.id] || "-"}
+                          <tr
+                            key={sub._id}
+                            className="border-b border-border/20 last:border-0 hover:bg-muted/10 transition-colors"
+                          >
+                            {formConfig.fields.map((f) => (
+                              <td
+                                key={f.id}
+                                className="px-4 py-3 text-foreground whitespace-nowrap"
+                              >
+                                {Array.isArray(sub.data[f.id]) 
+                                  ? (sub.data[f.id] as string[]).join(", ") 
+                                  : sub.data[f.id] || "-"}
                               </td>
                             ))}
                             <td className="px-4 py-3 text-muted-foreground text-right whitespace-nowrap">
-                              <span title={new Date(sub.submittedAt).toLocaleString()}>
-                                {formatDistanceToNow(new Date(sub.submittedAt), { addSuffix: true })}
+                              <span
+                                title={new Date(
+                                  sub.submittedAt,
+                                ).toLocaleString()}
+                              >
+                                {formatDistanceToNow(
+                                  new Date(sub.submittedAt),
+                                  { addSuffix: true },
+                                )}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <button 
+                              <button
                                 onClick={() => handleDeleteSubmission(sub._id)}
                                 className="p-1.5 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
                                 title="Delete submission"
                               >
-                                <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
+                                <svg
+                                  className="size-4"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
                                 </svg>
                               </button>
                             </td>
@@ -323,6 +459,34 @@ export default function AdminDashboardPage() {
             onCopyText={handleCopyText}
           />
         </div>
+        
+        <ShareDialog
+          isOpen={isShareDialogOpen}
+          onOpenChange={setIsShareDialogOpen}
+          shareUrl={publicUrl}
+          onRegenerate={() => setIsRegenerateDialogOpen(true)}
+        />
+
+        <Dialog open={isRegenerateDialogOpen} onOpenChange={setIsRegenerateDialogOpen}>
+          <DialogContent className="sm:max-w-md border-border/50 bg-card/95 backdrop-blur-md">
+            <DialogHeader>
+              <DialogTitle className="text-destructive text-xl">Regenerate Link?</DialogTitle>
+              <DialogDescription>
+                This will generate a new public link for this form. <strong>The old link will immediately stop working</strong>, and anyone using it will get a 404 error.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-4 sm:justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsRegenerateDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleRegenerateLink} disabled={isRegenerating}>
+                {isRegenerating ? "Regenerating..." : "Regenerate Link"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Footer />
       </div>
     </div>
   );

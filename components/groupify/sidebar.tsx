@@ -183,7 +183,7 @@ export function Sidebar({
         </button>
       </div>
 
-      {hasResults ? (
+      {hasResults && (
         <div className="space-y-3 rounded-2xl border border-border/50 bg-card/70 p-5 backdrop-blur-sm shadow-md animate-slide-up stagger-3">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
             Export
@@ -241,23 +241,6 @@ export function Sidebar({
               {copiedText ? "Copied!" : "Copy as text"}
             </button>
           </div>
-        </div>
-      ) : (
-        <div className="space-y-3 rounded-2xl shadow-md border border-border/40 bg-card/40 p-4 backdrop-blur-sm animate-slide-up stagger-4">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-            How to use
-          </p>
-
-          <ol className="space-y-2.5">
-            {HOW_TO_USE_STEPS.map((step, index) => (
-              <li key={step} className="flex items-start gap-3">
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-border/60 bg-muted/50 text-[10px] font-bold text-muted-foreground">
-                  {index + 1}
-                </span>
-                <span className="text-xs leading-relaxed text-muted-foreground">{step}</span>
-              </li>
-            ))}
-          </ol>
         </div>
       )}
     </div>

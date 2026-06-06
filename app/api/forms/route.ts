@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import clientPromise from "@/lib/mongodb";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 interface FormDoc {
   _id: string;
@@ -8,10 +10,12 @@ interface FormDoc {
   title: string;
   fields: Record<string, unknown>[];
   createdAt: Date;
+  userId?: string;
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
     const body = await req.json();
     const { title, fields } = body;
 
@@ -25,12 +29,13 @@ export async function POST(req: NextRequest) {
     const formId = nanoid(6);
     const adminToken = nanoid(16);
 
-    const newForm = {
+    const newForm: FormDoc = {
       _id: formId,
       adminToken,
       title,
       fields,
       createdAt: new Date(),
+      ...((session?.user as any)?.id ? { userId: (session?.user as any).id } : {}),
     };
 
     await db.collection<FormDoc>("forms").insertOne(newForm);

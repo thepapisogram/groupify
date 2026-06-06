@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,50 +16,62 @@ export function WelcomePopup({ onFinished }: { onFinished?: () => void }) {
   const [isOpen, setIsOpen] = useState(true);
 
   const handleClose = () => {
-    setIsOpen(false);
-    setTimeout(() => onFinished?.(), 300);
-  };
-
-  const handleDontShowAgain = () => {
     localStorage.setItem(`groupify_v${appMeta.app.version}_seen`, "true");
     setIsOpen(false);
     setTimeout(() => onFinished?.(), 300);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
         setIsOpen(open);
-        if (!open) setTimeout(() => onFinished?.(), 300);
-    }}>
+        if (!open) {
+          localStorage.setItem(`groupify_v${appMeta.app.version}_seen`, "true");
+          setTimeout(() => onFinished?.(), 300);
+        }
+      }}
+    >
       <DialogContent className="w-[calc(100%-2rem)] rounded-xl sm:w-full sm:max-w-md sm:rounded-lg">
         <DialogHeader>
           <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
             <Sparkles className="h-5 w-5 text-primary" />
           </div>
-          <DialogTitle className="text-center text-xl">What&apos;s New in Groupify 2.1</DialogTitle>
+          <DialogTitle className="text-center text-xl">
+            What&apos;s New in Groupify 2.1
+          </DialogTitle>
           <DialogDescription className="text-center text-sm">
             Powerful new features to make grouping even better!
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-3 py-2">
           <div className="flex gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary">
               <ShieldCheck className="h-4 w-4 text-secondary-foreground" />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-foreground">Accounts & Auth</h3>
-              <p className="text-xs text-muted-foreground">Save your groups and lists securely in the cloud.</p>
+              <h3 className="text-sm font-medium text-foreground">
+                Accounts & Auth
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Save your groups and lists securely in the cloud.
+              </p>
             </div>
           </div>
-          
+
           <div className="flex gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary">
               <Users className="h-4 w-4 text-secondary-foreground" />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-foreground">Form Builder</h3>
-              <p className="text-xs text-muted-foreground">Create custom forms to collect details before grouping.</p>
+              <h3 className="text-sm font-medium text-foreground">
+                Form Builder
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Create custom forms to collect details before grouping. Only
+                available with accounts.
+              </p>
             </div>
           </div>
 
@@ -68,8 +80,12 @@ export function WelcomePopup({ onFinished }: { onFinished?: () => void }) {
               <MailQuestion className="h-4 w-4 text-secondary-foreground" />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-foreground">Feedback System</h3>
-              <p className="text-xs text-muted-foreground">Found a bug or have a suggestion? Reach out instantly.</p>
+              <h3 className="text-sm font-medium text-foreground">
+                Feedback System
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Found a bug or have a suggestion? Reach out instantly.
+              </p>
             </div>
           </div>
         </div>
@@ -78,12 +94,6 @@ export function WelcomePopup({ onFinished }: { onFinished?: () => void }) {
           <Button onClick={handleClose} className="w-full">
             Awesome, let&apos;s go!
           </Button>
-          <button 
-            onClick={handleDontShowAgain}
-            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Don&apos;t show this again
-          </button>
         </div>
       </DialogContent>
     </Dialog>

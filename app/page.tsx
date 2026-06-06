@@ -1,20 +1,13 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
-import appMeta from "@/data/metadata";
-import { Heart } from "lucide-react";
 import { NamesInputPanel } from "@/components/groupify/names-input-panel";
 import { PageHeader } from "@/components/groupify/page-header";
 import { PanelSwitcher } from "@/components/groupify/panel-switcher";
 import { ResultsPanel } from "@/components/groupify/results-panel";
 import { Sidebar } from "@/components/groupify/sidebar";
-import dynamic from "next/dynamic";
-const DonatePopup = dynamic(
-  () => import("@/components/groupify/donate-popup").then((mod) => mod.DonatePopup),
-  { ssr: false }
-);
+import { Footer } from "@/components/groupify/footer";
 import type {
   DistributionMode,
   ExportFormat,
@@ -34,7 +27,6 @@ export default function Page() {
   const [isWorking, setIsWorking] = useState(false);
   const [activePanel, setActivePanel] = useState<ActivePanel>("input");
   const [copiedText, setCopiedText] = useState(false);
-  const [showDonate, setShowDonate] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const nameCount = names
@@ -250,98 +242,8 @@ export default function Page() {
           />
         </div>
 
-        <footer className="mt-16 flex flex-col items-center gap-4 text-center">
-          <div className="flex flex-wrap justify-center gap-4">
-            <button
-              onClick={() => setShowDonate(true)}
-              className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary transition-all hover:bg-primary/10 hover:shadow-sm"
-            >
-              <Heart className="size-4" />
-              Donate
-            </button>
-            <Link
-              href="/documentation"
-              className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary transition-all hover:bg-primary/10 hover:shadow-sm"
-            >
-              <svg
-                className="size-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path
-                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M14 2v6h6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M16 13H8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M16 17H8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M10 9H8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              View Documentation
-            </Link>
-            <Link
-              href="/forms/new"
-              className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary transition-all hover:bg-primary/10 hover:shadow-sm"
-            >
-              <svg
-                className="size-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path
-                  d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              Create a custom form
-            </Link>
-          </div>
-
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground/50">
-              Developed by{" "}
-              <Link
-                href={appMeta.author.url}
-                target="_blank"
-                className="text-muted-foreground/70 transition-colors underline-offset-2 hover:text-primary hover:underline"
-              >
-                {appMeta.author.name}
-              </Link>
-            </p>
-            <p className="text-[11px] text-muted-foreground/30">
-              Groupify v{appMeta.app.version} - {new Date().getFullYear()}
-            </p>
-          </div>
-        </footer>
+        <Footer />
       </div>
-      {showDonate && <DonatePopup onFinished={() => setShowDonate(false)} />}
     </div>
   );
 }

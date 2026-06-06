@@ -4,12 +4,12 @@ import type { FormField } from "@/components/groupify/form-builder";
 const HUES = [185, 200, 220, 260, 160, 340, 35, 280];
 
 export function buildGroups(
-  rawOrItems: string | { label: string; data: Record<string, string> }[],
+  rawOrItems: string | { label: string; data: Record<string, string | string[]> }[],
   groupBy: "size" | "count",
   value: number,
   mode: DistributionMode,
 ): Group[] {
-  let pool: { label: string; data?: Record<string, string> }[] = [];
+  let pool: { label: string; data?: Record<string, string | string[]> }[] = [];
 
   if (typeof rawOrItems === "string") {
     const names = rawOrItems
@@ -35,7 +35,7 @@ export function buildGroups(
     const baseSize = Math.floor(pool.length / count);
     const extra = pool.length % count;
 
-    const buckets: { label: string; data?: Record<string, string> }[][] = Array.from({ length: count }, (_, index) =>
+    const buckets: { label: string; data?: Record<string, string | string[]> }[][] = Array.from({ length: count }, (_, index) =>
       pool.slice(index * baseSize, index * baseSize + baseSize),
     );
 
@@ -56,7 +56,7 @@ export function buildGroups(
   const size = value;
   const count = Math.floor(pool.length / size);
   const extra = pool.length % size;
-  const buckets: { label: string; data?: Record<string, string> }[][] = Array.from({ length: count }, (_, index) =>
+  const buckets: { label: string; data?: Record<string, string | string[]> }[][] = Array.from({ length: count }, (_, index) =>
     pool.slice(index * size, index * size + size),
   );
 
@@ -96,7 +96,11 @@ export async function exportGroups(groups: Group[], format: ExportFormat, fields
         headerRow.font = { bold: true, size: 12 };
         
         group.rawMembers?.forEach((member) => {
-          const row = sheet.addRow(fields.map(f => member[f.id] || ""));
+          const row = sheet.addRow(fields.map(f => {
+            const val = member[f.id];
+            if (!val) return "";
+            return Array.isArray(val) ? val.join(", ") : val;
+          }));
           row.font = { size: 12 };
         });
       } else {
@@ -134,7 +138,11 @@ export async function exportGroups(groups: Group[], format: ExportFormat, fields
             (member, memberIndex) => {
               if (hasFields && group.rawMembers) {
                 const rawMember = group.rawMembers[memberIndex];
-                const parts = fields.map(f => `${f.label}: ${rawMember[f.id] || ""}`).join(" | ");
+                const parts = fields.map(f => {
+                  const val = rawMember[f.id];
+                  const strVal = val ? (Array.isArray(val) ? val.join(", ") : val) : "";
+                  return `${f.label}: ${strVal}`;
+                }).join(" | ");
                 return new Paragraph({
                   children: [new TextRun({ text: parts, size: 26 })],
                 });
