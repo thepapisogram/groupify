@@ -5,7 +5,12 @@ import { useSession } from "next-auth/react";
 import appMeta from "@/data/metadata";
 import { WelcomePopup } from "./welcome-popup";
 import { CreateAccountPopup } from "./create-account-popup";
-import { DonatePopup } from "./donate-popup";
+import dynamic from "next/dynamic";
+
+const DonatePopup = dynamic(
+  () => import("./donate-popup").then((mod) => mod.DonatePopup),
+  { ssr: false }
+);
 
 export function PopupManager() {
   const { status } = useSession();

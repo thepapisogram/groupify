@@ -10,7 +10,11 @@ import { PageHeader } from "@/components/groupify/page-header";
 import { PanelSwitcher } from "@/components/groupify/panel-switcher";
 import { ResultsPanel } from "@/components/groupify/results-panel";
 import { Sidebar } from "@/components/groupify/sidebar";
-import { DonatePopup } from "@/components/groupify/donate-popup";
+import dynamic from "next/dynamic";
+const DonatePopup = dynamic(
+  () => import("@/components/groupify/donate-popup").then((mod) => mod.DonatePopup),
+  { ssr: false }
+);
 import type {
   DistributionMode,
   ExportFormat,
