@@ -8,6 +8,7 @@ import {
   RiDownloadLine,
   RiSettings4Line,
   RiDatabase2Line,
+  RiUserAddLine,
 } from "@remixicon/react";
 
 export const metadata = {
@@ -152,6 +153,44 @@ export default function DocumentationPage() {
             </div>
           </section>
 
+          {/* Section: Team Collaboration */}
+          <section className="space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500">
+                <RiUserAddLine className="size-5" />
+              </div>
+              <h2 className="text-2xl font-semibold tracking-tight">
+                Team Collaboration
+              </h2>
+            </div>
+
+            <div className="prose prose-neutral dark:prose-invert max-w-none space-y-4">
+              <p className="text-muted-foreground">
+                Groupify forms are built for teams. You can securely invite colleagues or co-organizers to manage your form and access its submissions.
+              </p>
+
+              <div className="space-y-4">
+                <div className="rounded-xl border border-border/50 bg-card/30 p-6 backdrop-blur-sm">
+                  <h3 className="mb-3 font-medium text-foreground">
+                    Inviting Collaborators
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    From your form&apos;s Admin Dashboard, open the <strong>Manage Collaborators</strong> dialog. Enter the email address of the person you want to invite. They will receive a secure, token-based invitation email that expires in 7 days.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-border/50 bg-card/30 p-6 backdrop-blur-sm">
+                  <h3 className="mb-3 font-medium text-foreground">
+                    Collaborator Permissions
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Once accepted, collaborators can view submissions, generate groups, export data, and toggle the form&apos;s open/closed status. Only the original form owner retains the right to invite new people or revoke existing access.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* Section: Exporting */}
           <section className="space-y-6">
             <div className="flex items-center gap-3">
@@ -216,9 +255,8 @@ export default function DocumentationPage() {
                   Are my form submissions private?
                 </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Yes. Form submissions are tied strictly to your admin account.
-                  Only you can view, export, or convert the collected names into
-                  groups.
+                  Yes. Form submissions are tied strictly to your account.
+                  Only you and the collaborators you explicitly invite can view, export, or convert the collected names into groups.
                 </p>
               </div>
               <div>

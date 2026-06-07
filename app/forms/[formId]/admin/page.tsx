@@ -34,6 +34,7 @@ import {
 import { toast } from "sonner";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { useSession } from "next-auth/react";
 
 interface PendingInvite {
   _id: string;
@@ -50,8 +51,11 @@ export default function AdminDashboardPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const formId = params.formId as string;
-  const adminToken = searchParams.get("token") || "";
+  const initialToken = searchParams.get("token") || "";
   const router = useRouter();
+  const { data: session } = useSession();
+
+  const [adminToken, setAdminToken] = useState(initialToken);
 
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
@@ -66,6 +70,8 @@ export default function AdminDashboardPage() {
     title: string;
     fields: FormField[];
     isClosed?: boolean;
+    adminToken?: string;
+    userId?: string;
   } | null>(null);
   const [submissions, setSubmissions] = useState<{ _id: string; submittedAt: string; data: Record<string, string | string[]> }[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
@@ -77,7 +83,10 @@ export default function AdminDashboardPage() {
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [isUpdatingAdmins, setIsUpdatingAdmins] = useState(false);
 
+  const isOwner = !!(formConfig?.userId && session?.user && (session.user as any).id === formConfig.userId);
+
   const fetchInvites = useCallback(async () => {
+    if (!adminToken) return;
     try {
       const res = await fetch(`/api/forms/${formId}/invites?token=${adminToken}`);
       if (res.ok) {
@@ -102,16 +111,20 @@ export default function AdminDashboardPage() {
   const toggleFormStatus = async () => {
     if (!formConfig) return;
     setIsUpdatingStatus(true);
-    const newStatus = !formConfig.isClosed;
     try {
       const res = await fetch(`/api/forms/${formId}/status?token=${adminToken}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isClosed: newStatus }),
+        body: JSON.stringify({ isClosed: !formConfig.isClosed }),
       });
       if (!res.ok) throw new Error("Failed to update status");
-      setFormConfig({ ...formConfig, isClosed: newStatus });
-      toast.success(`Form is now ${newStatus ? "closed" : "open"}`);
+      const data = await res.json();
+      setFormConfig({ ...formConfig, isClosed: data.isClosed });
+      toast.success(
+        data.isClosed
+          ? "Form closed to new responses"
+          : "Form open for responses",
+      );
     } catch {
       toast.error("Failed to update form status");
     } finally {
@@ -169,11 +182,17 @@ export default function AdminDashboardPage() {
 
   const fetchSubmissions = useCallback(async () => {
     try {
-      const res = await fetch(`/api/forms/${formId}/admin?token=${adminToken}`);
+      const tokenQuery = initialToken ? `?token=${initialToken}` : "";
+      const res = await fetch(`/api/forms/${formId}/admin${tokenQuery}`);
       if (!res.ok) {
         throw new Error("Unauthorized or form not found");
       }
       const data = await res.json();
+      
+      if (data.form.adminToken && !adminToken) {
+        setAdminToken(data.form.adminToken);
+      }
+      
       setFormConfig(data.form);
       setSubmissions(data.submissions || []);
     } catch (err: unknown) {
@@ -181,7 +200,7 @@ export default function AdminDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [formId, adminToken]);
+  }, [formId, initialToken, adminToken]);
 
   useEffect(() => {
     fetchSubmissions();
@@ -766,7 +785,10 @@ export default function AdminDashboardPage() {
         </Dialog>
 
         <Dialog open={isAdminsDialogOpen} onOpenChange={setIsAdminsDialogOpen}>
-          <DialogContent className="w-[calc(100%-2rem)] sm:w-full rounded-2xl sm:max-w-md border-border/50 bg-card/95 backdrop-blur-md">
+          <DialogContent 
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            className="w-[calc(100%-2rem)] sm:w-full rounded-2xl sm:max-w-md border-border/50 bg-card/95 backdrop-blur-md"
+          >
             <DialogHeader>
               <DialogTitle className="text-xl">Manage Collaborators</DialogTitle>
               <DialogDescription>
@@ -774,25 +796,27 @@ export default function AdminDashboardPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-6 py-4 max-h-[60vh] overflow-y-auto">
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  placeholder="Invite by email..."
-                  className="flex-1 rounded-xl border border-border/50 bg-muted/20 px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50"
-                  value={newAdminEmail}
-                  onChange={(e) => setNewAdminEmail(e.target.value)}
-                  disabled={isUpdatingAdmins}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddAdmin();
-                    }
-                  }}
-                />
-                <Button onClick={handleAddAdmin} disabled={isUpdatingAdmins} variant="secondary" className="rounded-xl">
-                  {isUpdatingAdmins ? "Sending..." : "Invite"}
-                </Button>
-              </div>
+              {isOwner && (
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    placeholder="Invite by email..."
+                    className="flex-1 rounded-xl border border-border/50 bg-muted/20 px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    value={newAdminEmail}
+                    onChange={(e) => setNewAdminEmail(e.target.value)}
+                    disabled={isUpdatingAdmins}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddAdmin();
+                      }
+                    }}
+                  />
+                  <Button onClick={handleAddAdmin} disabled={isUpdatingAdmins} variant="secondary" className="rounded-xl">
+                    {isUpdatingAdmins ? "Sending..." : "Invite"}
+                  </Button>
+                </div>
+              )}
 
               {pendingInvites.length > 0 && (
                 <div className="space-y-3">
@@ -808,12 +832,14 @@ export default function AdminDashboardPage() {
                               {isExpired ? 'Expired' : 'Pending'}
                             </span>
                           </div>
-                          <button
-                            onClick={() => handleRevokeOrRemove(invite._id)}
-                            className="text-muted-foreground hover:text-destructive transition-colors text-xs font-medium px-2 py-1"
-                          >
-                            Revoke
-                          </button>
+                          {isOwner && (
+                            <button
+                              onClick={() => handleRevokeOrRemove(invite._id)}
+                              className="text-muted-foreground hover:text-destructive transition-colors text-xs font-medium px-2 py-1"
+                            >
+                              Revoke
+                            </button>
+                          )}
                         </li>
                       );
                     })}
@@ -827,13 +853,17 @@ export default function AdminDashboardPage() {
                   <ul className="space-y-2">
                     {activeAdmins.map((admin) => (
                       <li key={admin.email} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm">
-                        <span className="text-foreground">{admin.email}</span>
-                        <button
-                          onClick={() => handleRevokeOrRemove(admin.inviteId)}
-                          className="text-muted-foreground hover:text-destructive transition-colors text-xs font-medium px-2 py-1"
-                        >
-                          Remove
-                        </button>
+                        <span className="text-foreground">
+                          {admin.email} {session?.user?.email === admin.email && <span className="text-muted-foreground ml-1">(you)</span>}
+                        </span>
+                        {isOwner && session?.user?.email !== admin.email && (
+                          <button
+                            onClick={() => handleRevokeOrRemove(admin.inviteId)}
+                            className="text-muted-foreground hover:text-destructive transition-colors text-xs font-medium px-2 py-1"
+                          >
+                            Remove
+                          </button>
+                        )}
                       </li>
                     ))}
                   </ul>

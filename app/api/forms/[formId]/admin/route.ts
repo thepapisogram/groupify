@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 interface FormDoc {
   _id: string;
   adminToken: string;
   title: string;
+  userId?: string;
+  confirmedAdmins?: string[];
   fields: Record<string, unknown>[];
 }
 
@@ -23,21 +27,28 @@ export async function GET(
     const { formId } = await params;
     const adminToken = req.nextUrl.searchParams.get("token");
 
-    if (!adminToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const client = await clientPromise;
     const db = client.db("groupify");
 
-    const form = await db.collection<FormDoc>("forms").findOne({ _id: formId });
+    const form = await db.collection<FormDoc>("forms").findOne({ _id: formId as any });
 
     if (!form) {
       return NextResponse.json({ error: "Form not found" }, { status: 404 });
     }
 
-    if (form.adminToken !== adminToken) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    const userEmail = session?.user?.email;
+
+    const isOwner = !!(form.userId && userId === form.userId);
+    const isSharedAdmin = !!(userEmail && form.confirmedAdmins && form.confirmedAdmins.includes(userEmail));
+    
+    // Auth check: either the provided token is correct, OR they are authenticated as owner/collaborator
+    const hasValidToken = adminToken && form.adminToken === adminToken;
+    const hasSessionAccess = isOwner || isSharedAdmin;
+
+    if (!hasValidToken && !hasSessionAccess) {
+      return NextResponse.json({ error: "Unauthorized or Forbidden" }, { status: 403 });
     }
 
     const submissions = await db

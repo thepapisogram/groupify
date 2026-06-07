@@ -96,6 +96,14 @@ export async function POST(
       );
     }
 
+    const userExists = await db.collection("users").findOne({ email });
+    if (!userExists) {
+      return NextResponse.json(
+        { error: "User with this email does not exist on Groupify" },
+        { status: 404 }
+      );
+    }
+
     const confirmedAdmins = form.confirmedAdmins || [];
     if (confirmedAdmins.includes(email)) {
       return NextResponse.json(
