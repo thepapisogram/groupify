@@ -3,49 +3,49 @@ import clientPromise from "@/lib/mongodb";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-interface FormDoc {
-  _id: string;
-  adminToken: string;
-  title: string;
-  description?: string;
-  fields: Record<string, unknown>[];
-  createdAt?: Date;
-  updatedAt?: Date;
-  userId?: string;
-  adminEmails?: string[];
-}
+  interface FormDoc {
+    _id: string;
+    adminToken: string;
+    title: string;
+    description?: string;
+    fields: Record<string, unknown>[];
+    createdAt?: Date;
+    updatedAt?: Date;
+    userId?: string;
+    confirmedAdmins?: string[];
+  }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ formId: string }> }
-) {
-  try {
-    const { formId } = await params;
-    const client = await clientPromise;
-    const db = client.db("groupify");
+  export async function GET(
+    req: NextRequest,
+    { params }: { params: Promise<{ formId: string }> }
+  ) {
+    try {
+      const { formId } = await params;
+      const client = await clientPromise;
+      const db = client.db("groupify");
 
-    const form = await db.collection<FormDoc>("forms").findOne({ _id: formId });
+      const form = await db.collection<FormDoc>("forms").findOne({ _id: formId as any });
 
-    if (!form) {
-      return NextResponse.json({ error: "Form not found" }, { status: 404 });
-    }
+      if (!form) {
+        return NextResponse.json({ error: "Form not found" }, { status: 404 });
+      }
 
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id?: string } | undefined)?.id;
-    const userEmail = session?.user?.email;
+      const session = await getServerSession(authOptions);
+      const userId = (session?.user as { id?: string } | undefined)?.id;
+      const userEmail = session?.user?.email;
 
-    const isOwner = !!(form.userId && userId === form.userId);
-    const isSharedAdmin = !!(userEmail && form.adminEmails && form.adminEmails.includes(userEmail));
-    const isAdmin = isOwner || isSharedAdmin;
+      const isOwner = !!(form.userId && userId === form.userId);
+      const isSharedAdmin = !!(userEmail && form.confirmedAdmins && form.confirmedAdmins.includes(userEmail));
+      const isAdmin = isOwner || isSharedAdmin;
 
-    const { adminToken, adminEmails, ...publicForm } = form;
-    
-    if (isAdmin) {
-      return NextResponse.json({ ...publicForm, adminToken, adminEmails: adminEmails || [], isOwner }, { status: 200 });
-    }
+      const { adminToken, confirmedAdmins, ...publicForm } = form;
+      
+      if (isAdmin) {
+        return NextResponse.json({ ...publicForm, adminToken, confirmedAdmins: confirmedAdmins || [], isOwner }, { status: 200 });
+      }
 
-    void adminToken;
-    void adminEmails;
+      void adminToken;
+      void confirmedAdmins;
 
     return NextResponse.json(publicForm, { status: 200 });
   } catch (error) {

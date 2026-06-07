@@ -35,6 +35,17 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 
+interface PendingInvite {
+  _id: string;
+  invitedEmail: string;
+  expiresAt: string | Date;
+}
+
+interface ActiveAdmin {
+  email: string;
+  inviteId: string;
+}
+
 export default function AdminDashboardPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -61,9 +72,29 @@ export default function AdminDashboardPage() {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const [isAdminsDialogOpen, setIsAdminsDialogOpen] = useState(false);
-  const [adminEmails, setAdminEmails] = useState<string[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [activeAdmins, setActiveAdmins] = useState<ActiveAdmin[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [isUpdatingAdmins, setIsUpdatingAdmins] = useState(false);
+
+  const fetchInvites = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/forms/${formId}/invites?token=${adminToken}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPendingInvites(data.pending || []);
+        setActiveAdmins(data.active || []);
+      }
+    } catch {
+      console.error("Failed to fetch invites");
+    }
+  }, [formId, adminToken]);
+
+  useEffect(() => {
+    if (isAdminsDialogOpen) {
+      fetchInvites();
+    }
+  }, [isAdminsDialogOpen, fetchInvites]);
 
   // Confirm-dialog state for submission deletion
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -144,7 +175,6 @@ export default function AdminDashboardPage() {
       }
       const data = await res.json();
       setFormConfig(data.form);
-      setAdminEmails(data.form.adminEmails || []);
       setSubmissions(data.submissions || []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load admin data");
@@ -328,38 +358,52 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleAddAdmin = () => {
+  const handleAddAdmin = async () => {
     if (!newAdminEmail || !newAdminEmail.includes("@")) {
       toast.error("Please enter a valid email");
       return;
     }
-    if (adminEmails.includes(newAdminEmail)) {
-      toast.error("Admin already added");
+    
+    // Check if they are already in pending or active
+    if (activeAdmins.some((a) => a.email === newAdminEmail)) {
+      toast.error("User is already an active collaborator");
       return;
     }
-    setAdminEmails([...adminEmails, newAdminEmail]);
-    setNewAdminEmail("");
-  };
+    if (pendingInvites.some((i) => i.invitedEmail === newAdminEmail && new Date(i.expiresAt) > new Date())) {
+      toast.error("An active invite has already been sent to this email");
+      return;
+    }
 
-  const handleRemoveAdmin = (email: string) => {
-    setAdminEmails(adminEmails.filter((e) => e !== email));
-  };
-
-  const handleSaveAdmins = async () => {
     setIsUpdatingAdmins(true);
     try {
-      const res = await fetch(`/api/forms/${formId}/admins?token=${adminToken}`, {
-        method: "PATCH",
+      const res = await fetch(`/api/forms/${formId}/invites?token=${adminToken}`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminEmails }),
+        body: JSON.stringify({ email: newAdminEmail }),
       });
-      if (!res.ok) throw new Error("Failed to update admins");
-      toast.success("Admins updated successfully");
-      setIsAdminsDialogOpen(false);
-    } catch {
-      toast.error("Failed to update admins");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send invite");
+      
+      toast.success("Invite sent successfully");
+      setNewAdminEmail("");
+      fetchInvites(); // Refresh lists
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to send invite");
     } finally {
       setIsUpdatingAdmins(false);
+    }
+  };
+
+  const handleRevokeOrRemove = async (inviteId: string) => {
+    try {
+      const res = await fetch(`/api/forms/${formId}/invites/${inviteId}?token=${adminToken}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to remove");
+      toast.success("Collaborator removed");
+      fetchInvites(); // Refresh lists
+    } catch {
+      toast.error("Failed to remove collaborator");
     }
   };
 
@@ -724,19 +768,20 @@ export default function AdminDashboardPage() {
         <Dialog open={isAdminsDialogOpen} onOpenChange={setIsAdminsDialogOpen}>
           <DialogContent className="w-[calc(100%-2rem)] sm:w-full rounded-2xl sm:max-w-md border-border/50 bg-card/95 backdrop-blur-md">
             <DialogHeader>
-              <DialogTitle className="text-xl">Manage Admins</DialogTitle>
+              <DialogTitle className="text-xl">Manage Collaborators</DialogTitle>
               <DialogDescription>
-                Admins will be able to view responses, generate groups, and manage the form settings. They will see this form in their &quot;My Forms&quot; dashboard.
+                Collaborators can view responses, generate groups, and manage form settings.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-6 py-4 max-h-[60vh] overflow-y-auto">
               <div className="flex gap-2">
                 <input
                   type="email"
-                  placeholder="admin@example.com"
+                  placeholder="Invite by email..."
                   className="flex-1 rounded-xl border border-border/50 bg-muted/20 px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50"
                   value={newAdminEmail}
                   onChange={(e) => setNewAdminEmail(e.target.value)}
+                  disabled={isUpdatingAdmins}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -744,34 +789,90 @@ export default function AdminDashboardPage() {
                     }
                   }}
                 />
-                <Button onClick={handleAddAdmin} variant="secondary" className="rounded-xl">
-                  Add
+                <Button onClick={handleAddAdmin} disabled={isUpdatingAdmins} variant="secondary" className="rounded-xl">
+                  {isUpdatingAdmins ? "Sending..." : "Invite"}
                 </Button>
               </div>
-              {adminEmails.length > 0 ? (
-                <ul className="space-y-2">
-                  {adminEmails.map((email) => (
-                    <li key={email} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm">
-                      <span className="text-foreground">{email}</span>
-                      <button
-                        onClick={() => handleRemoveAdmin(email)}
-                        className="text-muted-foreground hover:text-destructive transition-colors"
-                      >
-                        <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-2">No admins added yet.</p>
+
+              {pendingInvites.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-foreground">Pending Invites</h4>
+                  <ul className="space-y-2">
+                    {pendingInvites.map((invite) => {
+                      const isExpired = new Date(invite.expiresAt) <= new Date();
+                      return (
+                        <li key={invite._id} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm">
+                          <div className="flex flex-col">
+                            <span className="text-foreground">{invite.invitedEmail}</span>
+                            <span className={`text-xs ${isExpired ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                              {isExpired ? 'Expired' : 'Pending'}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleRevokeOrRemove(invite._id)}
+                            className="text-muted-foreground hover:text-destructive transition-colors text-xs font-medium px-2 py-1"
+                          >
+                            Revoke
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
               )}
+
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-foreground">Active Collaborators</h4>
+                {activeAdmins.length > 0 ? (
+                  <ul className="space-y-2">
+                    {activeAdmins.map((admin) => (
+                      <li key={admin.email} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm">
+                        <span className="text-foreground">{admin.email}</span>
+                        <button
+                          onClick={() => handleRevokeOrRemove(admin.inviteId)}
+                          className="text-muted-foreground hover:text-destructive transition-colors text-xs font-medium px-2 py-1"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground py-2">No active collaborators yet.</p>
+                )}
+              </div>
             </div>
-            <DialogFooter className="mt-4 sm:justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsAdminsDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveAdmins} disabled={isUpdatingAdmins}>
-                {isUpdatingAdmins ? "Saving..." : "Save Admins"}
+            <DialogFooter className="mt-2 sm:justify-between items-center gap-4">
+              {process.env.NODE_ENV === "development" && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  disabled={isUpdatingAdmins}
+                  onClick={async () => {
+                    const testEmail = "thepapisogram@gmail.com";
+                    setIsUpdatingAdmins(true);
+                    try {
+                      const res = await fetch(`/api/forms/${formId}/invites?token=${adminToken}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email: testEmail }),
+                      });
+                      if (!res.ok) throw new Error("Failed to send invite");
+                      toast.success(`Test invite sent to ${testEmail}`);
+                      fetchInvites();
+                    } catch (err: unknown) {
+                      toast.error(err instanceof Error ? err.message : "Failed to send test invite");
+                    } finally {
+                      setIsUpdatingAdmins(false);
+                    }
+                  }}
+                  className="mr-auto border-dashed border-primary/50 text-primary hover:bg-primary/10"
+                >
+                  Test Invite
+                </Button>
+              )}
+              <Button onClick={() => setIsAdminsDialogOpen(false)}>
+                Done
               </Button>
             </DialogFooter>
           </DialogContent>

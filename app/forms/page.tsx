@@ -33,12 +33,12 @@ export default async function FormsPage({ searchParams }: { searchParams: Promis
   if (filter === "owned") {
     query = { userId: userId };
   } else if (filter === "shared") {
-    query = { adminEmails: userEmail, userId: { $ne: userId } };
+    query = { confirmedAdmins: userEmail, userId: { $ne: userId } };
   } else {
     query = {
       $or: [
         { userId: userId },
-        { adminEmails: userEmail }
+        { confirmedAdmins: userEmail }
       ]
     };
   }
@@ -167,6 +167,12 @@ export default async function FormsPage({ searchParams }: { searchParams: Promis
                         >
                           {form.title}
                         </h3>
+                        {form.userId !== userId && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-secondary/50 px-2 py-1 text-xs font-medium text-secondary-foreground">
+                            <RiTeamLine className="size-3" />
+                            Shared
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
