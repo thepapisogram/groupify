@@ -3,9 +3,9 @@ const { execSync } = require('child_process');
 const readline = require('readline');
 
 // Helper to handle interactive arrow-key selection
-function selectOption(options, promptText) {
+function selectOption(options, promptText, defaultIndex = 0) {
     return new Promise((resolve) => {
-        let index = 0;
+        let index = defaultIndex;
         let firstRender = true;
 
         // Hide the terminal cursor
@@ -85,7 +85,8 @@ async function run() {
     }
 
     if (action === "Push to branch") {
-        const targetBranch = await selectOption(branches, "Select the target branch to push to");
+        const defaultBranchIndex = Math.max(0, branches.indexOf(currentBranch));
+        const targetBranch = await selectOption(branches, "Select the target branch to push to", defaultBranchIndex);
         
         const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
         const msg = await new Promise(resolve => rl.question('📝 Enter commit message: ', m => { rl.close(); resolve(m.trim()); }));
@@ -107,7 +108,8 @@ async function run() {
             process.exit(1);
         }
     } else if (action === "Push and merge") {
-        const fetchBranch = await selectOption(branches, "Select the branch to fetch from (source)");
+        const defaultBranchIndex = Math.max(0, branches.indexOf(currentBranch));
+        const fetchBranch = await selectOption(branches, "Select the branch to fetch from (source)", defaultBranchIndex);
         const pullIntoBranch = await selectOption(branches, "Select the branch to pull into (target)");
 
         const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
