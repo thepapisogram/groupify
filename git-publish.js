@@ -89,8 +89,8 @@ async function run() {
         const targetBranch = await selectOption(branches, "Select the target branch to push to", defaultBranchIndex);
         
         const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-        const msg = await new Promise(resolve => rl.question('📝 Enter commit message: ', m => { rl.close(); resolve(m.trim()); }));
-        if (!msg) { console.log('❌ Commit message cannot be empty.'); process.exit(1); }
+        let msg = await new Promise(resolve => rl.question('📝 Enter commit message [default: "minor changes"]: ', m => { rl.close(); resolve(m.trim()); }));
+        if (!msg) { msg = "minor changes"; }
 
         try {
             console.log('\n📦 Staging files...');
@@ -113,8 +113,8 @@ async function run() {
         const pullIntoBranch = await selectOption(branches, "Select the branch to pull into (target)");
 
         const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-        const msg = await new Promise(resolve => rl.question('📝 Enter commit message: ', m => { rl.close(); resolve(m.trim()); }));
-        if (!msg) { console.log('❌ Commit message cannot be empty.'); process.exit(1); }
+        let msg = await new Promise(resolve => rl.question('📝 Enter commit message [default: "minor changes"]: ', m => { rl.close(); resolve(m.trim()); }));
+        if (!msg) { msg = "minor changes"; }
 
         try {
             console.log('\n📦 Staging files...');
