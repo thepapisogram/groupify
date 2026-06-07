@@ -11,6 +11,14 @@ const DonatePopup = dynamic(
   { ssr: false }
 );
 
+/**
+ * Popup sequencing rules:
+ *  1. Welcome is shown if the current version hasn't been seen yet.
+ *  2. Donate is shown only if the *welcome was already seen in a previous session*
+ *     (i.e. the donate key was NOT set AND the welcome key IS already set before
+ *     this session starts). This prevents both modals appearing back-to-back on
+ *     a first visit.
+ */
 export function PopupManager() {
   const { status } = useSession();
   const [queue, setQueue] = useState<string[]>([]);
@@ -20,17 +28,28 @@ export function PopupManager() {
     if (status === "loading" || isInitialized) return;
 
     const timer = setTimeout(() => {
+      const welcomeKey = `groupify_v${appMeta.app.version}_seen`;
+      const donateKey = "groupify_donate_seen";
+
+      const welcomeAlreadySeen = !!localStorage.getItem(welcomeKey);
+      const donateAlreadySeen = !!localStorage.getItem(donateKey);
+
       const initialQueue: string[] = [];
-      if (!localStorage.getItem(`groupify_v${appMeta.app.version}_seen`)) {
+
+      // Show welcome if this version hasn't been seen
+      if (!welcomeAlreadySeen) {
         initialQueue.push("welcome");
       }
-      if (!localStorage.getItem("groupify_donate_seen")) {
+
+      // Show donate ONLY if welcome was seen in a *previous* session
+      // (not queued above, meaning welcomeAlreadySeen must be true before this run)
+      if (!donateAlreadySeen && welcomeAlreadySeen) {
         initialQueue.push("donate");
       }
 
       setQueue(initialQueue);
       setIsInitialized(true);
-    }, 0);
+    }, 800); // small delay so the page renders first
 
     return () => clearTimeout(timer);
   }, [status, isInitialized]);

@@ -17,14 +17,14 @@ export function NamesInputPanel({
   return (
     <div className="space-y-3 animate-fade-in">
       <div className="flex items-center justify-between">
-        <label className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Names - one per line
         </label>
         {names && (
           <button
             type="button"
             onClick={onClear}
-            className="text-[11px] text-muted-foreground/60 transition-colors hover:text-destructive"
+            className="text-xs text-muted-foreground/60 transition-colors hover:text-destructive"
           >
             Clear all
           </button>
@@ -52,7 +52,7 @@ export function NamesInputPanel({
         )}
       </div>
 
-      <p className="text-[11px] text-muted-foreground/50">
+      <p className="text-xs text-muted-foreground/50">
         Tip: paste a column from Excel - each cell becomes a name automatically.
       </p>
     </div>

@@ -13,7 +13,7 @@ export function StatPill({ value, label, delay = 0 }: StatPillProps) {
       <span className="font-syne text-2xl font-bold tabular-nums text-foreground">
         {value}
       </span>
-      <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+      <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
         {label}
       </span>
     </div>

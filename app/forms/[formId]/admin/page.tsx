@@ -24,7 +24,8 @@ import { Footer } from "@/components/groupify/footer";
 import { Sidebar } from "@/components/groupify/sidebar";
 import { ResultsPanel } from "@/components/groupify/results-panel";
 import { ShareDialog } from "@/components/groupify/share-dialog";
-import { buildGroups, exportGroups, exportResponses } from "@/components/groupify/utils";
+import { buildGroupsAsync, exportGroups, exportResponses } from "@/components/groupify/utils";
+import { ConfirmDialog } from "@/components/groupify/confirm-dialog";
 import {
   DistributionMode,
   Group,
@@ -63,6 +64,9 @@ export default function AdminDashboardPage() {
   const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [isUpdatingAdmins, setIsUpdatingAdmins] = useState(false);
+
+  // Confirm-dialog state for submission deletion
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const toggleFormStatus = async () => {
     if (!formConfig) return;
@@ -154,15 +158,10 @@ export default function AdminDashboardPage() {
   }, [fetchSubmissions]);
 
   const handleDeleteSubmission = async (submissionId: string) => {
-    if (!window.confirm("Are you sure you want to delete this response?"))
-      return;
-
     try {
       const res = await fetch(
         `/api/forms/${formId}/submissions/${submissionId}?token=${adminToken}`,
-        {
-          method: "DELETE",
-        },
+        { method: "DELETE" },
       );
 
       if (!res.ok) throw new Error("Failed to delete");
@@ -214,24 +213,20 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleGenerate = useCallback(() => {
+  const handleGenerate = useCallback(async () => {
     if (nameCount === 0 || !formConfig) return;
 
     setIsWorking(true);
-    setTimeout(() => {
-      // Map submissions to the expected structured format
+    try {
       const primaryField =
         formConfig.fields.find((f) => f.isPrimary) || formConfig.fields[0];
       const items = submissions.map((sub) => {
         const val = sub.data[primaryField.id];
         const label = val ? (Array.isArray(val) ? val.join(", ") : val) : "Unknown";
-        return {
-          label,
-          data: sub.data,
-        };
+        return { label, data: sub.data };
       });
 
-      const result = buildGroups(
+      const result = await buildGroupsAsync(
         items,
         groupBy,
         groupBy === "size" ? size : groupCount,
@@ -240,11 +235,14 @@ export default function AdminDashboardPage() {
 
       setGroups(result);
       setActiveTab("groups");
-      setIsWorking(false);
       toast.success(
         `${result.length} group${result.length !== 1 ? "s" : ""} created`,
       );
-    }, 380);
+    } catch {
+      toast.error("Failed to generate groups");
+    } finally {
+      setIsWorking(false);
+    }
   }, [mode, nameCount, submissions, size, groupCount, groupBy, formConfig]);
 
   const handleShuffle = useCallback(() => {
@@ -367,10 +365,43 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="mesh-bg relative min-h-dvh flex items-center justify-center">
-        <p className="text-muted-foreground animate-pulse">
-          Loading dashboard...
-        </p>
+      <div className="mesh-bg relative min-h-dvh">
+        <div className="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-28 sm:px-6 sm:py-12">
+          <PageHeader />
+
+          {/* Header skeleton */}
+          <div className="mt-8 mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-2">
+              <div className="h-7 w-56 animate-pulse rounded-xl bg-muted/40" />
+              <div className="h-4 w-36 animate-pulse rounded-xl bg-muted/30" />
+            </div>
+            <div className="flex gap-2">
+              <div className="h-9 w-36 animate-pulse rounded-xl bg-muted/30" />
+              <div className="h-9 w-24 animate-pulse rounded-xl bg-muted/30" />
+              <div className="h-9 w-16 animate-pulse rounded-xl bg-muted/30" />
+            </div>
+          </div>
+
+          {/* Table skeleton */}
+          <div className="rounded-2xl border border-border/50 bg-card/70 p-6 backdrop-blur-sm shadow-md">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="h-5 w-40 animate-pulse rounded-xl bg-muted/40" />
+              <div className="h-8 w-28 animate-pulse rounded-xl bg-muted/30" />
+            </div>
+            <div className="space-y-3">
+              {/* Table header */}
+              <div className="h-9 w-full animate-pulse rounded-xl bg-muted/30" />
+              {/* Skeleton rows */}
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-10 w-full animate-pulse rounded-xl bg-muted/20"
+                  style={{ animationDelay: `${i * 0.08}s` }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -405,8 +436,9 @@ export default function AdminDashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-card px-4 py-2">
-              <span className="text-sm font-medium text-foreground">
+            {/* Status toggle — always visible */}
+            <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-card px-3 py-2">
+              <span className="text-sm font-medium text-foreground hidden sm:inline">
                 Accepting Responses
               </span>
               <Switch
@@ -415,48 +447,40 @@ export default function AdminDashboardPage() {
                 disabled={isUpdatingStatus}
               />
             </div>
+
+            {/* Share — always visible (primary action) */}
             <button
               onClick={() => setIsShareDialogOpen(true)}
               className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-all hover:bg-primary/20"
             >
               Share Form
             </button>
-            <button
-              onClick={() => setIsAdminsDialogOpen(true)}
-              className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-all hover:bg-primary/20"
-            >
-              Manage Admins
-            </button>
-            <Link
-              href={`/forms/${formId}/edit?token=${adminToken}`}
-              className="rounded-xl border border-border/50 bg-card px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-muted"
-            >
-              Edit Form
-            </Link>
-            <button
-              onClick={fetchSubmissions}
-              className="rounded-xl border border-border/50 bg-card px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-muted flex items-center gap-2"
-            >
-              <svg
-                className="size-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path
-                  d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M21 3v5h-5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              Refresh
-            </button>
+
+            {/* More — secondary actions collapsed into dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-1.5 rounded-xl border border-border/50 bg-card px-3 py-2 text-sm font-medium text-foreground transition-all hover:bg-muted">
+                  More
+                  <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={fetchSubmissions} className="cursor-pointer gap-2">
+                  <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 3v5h-5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  Refresh
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="cursor-pointer gap-2">
+                  <Link href={`/forms/${formId}/edit?token=${adminToken}`}>
+                    <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Edit Form
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsAdminsDialogOpen(true)} className="cursor-pointer gap-2">
+                  <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  Manage Admins
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -555,12 +579,12 @@ export default function AdminDashboardPage() {
                               <div className="flex items-center gap-1">
                                 {f.label}
                                 {f.isPrimary && (
-                                  <span className="ml-1 text-[10px] text-primary">
+                                  <span className="ml-1 text-xs text-primary">
                                     (Primary)
                                   </span>
                                 )}
                                 {f.isPrimary && sortConfig?.key === f.id && (
-                                  <span className="text-primary text-[10px]">
+                                  <span className="text-primary text-xs">
                                     {sortConfig.direction === "asc" ? "▲" : "▼"}
                                   </span>
                                 )}
@@ -574,7 +598,7 @@ export default function AdminDashboardPage() {
                             <div className="flex items-center justify-end gap-1">
                               Time
                               {sortConfig?.key === "time" && (
-                                <span className="text-primary text-[10px]">
+                                <span className="text-primary text-xs">
                                   {sortConfig.direction === "asc" ? "▲" : "▼"}
                                 </span>
                               )}
@@ -613,7 +637,7 @@ export default function AdminDashboardPage() {
                             </td>
                             <td className="px-4 py-3 text-right">
                               <button
-                                onClick={() => handleDeleteSubmission(sub._id)}
+                                onClick={() => setConfirmDeleteId(sub._id)}
                                 className="p-1.5 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
                                 title="Delete submission"
                               >
@@ -755,6 +779,20 @@ export default function AdminDashboardPage() {
 
         <Footer />
       </div>
+
+      {/* Confirm delete dialog */}
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}
+        title="Delete response?"
+        description="This will permanently remove this submission. This action cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={() => {
+          if (confirmDeleteId) handleDeleteSubmission(confirmDeleteId);
+          setConfirmDeleteId(null);
+        }}
+      />
     </div>
   );
 }

@@ -13,7 +13,7 @@ import type {
   ExportFormat,
   Group,
 } from "@/components/groupify/types";
-import { buildGroups, exportGroups } from "@/components/groupify/utils";
+import { buildGroupsAsync, exportGroups } from "@/components/groupify/utils";
 
 type ActivePanel = "input" | "results";
 
@@ -92,7 +92,7 @@ export default function Page() {
     }
   };
 
-  const handleGenerate = useCallback(() => {
+  const handleGenerate = useCallback(async () => {
     if (nameCount === 0) {
       toast.error("Enter at least one name to start");
       textareaRef.current?.focus();
@@ -105,33 +105,40 @@ export default function Page() {
     }
 
     setIsWorking(true);
-    setTimeout(() => {
-      const result = buildGroups(
+    try {
+      const result = await buildGroupsAsync(
         names,
         lastChanged,
         lastChanged === "size" ? size : groupCount,
         mode,
       );
       setGroups(result);
-      setIsWorking(false);
       setActivePanel("results");
       toast.success(
         `${result.length} group${result.length !== 1 ? "s" : ""} created from ${nameCount} names`,
       );
-    }, 380);
+    } catch {
+      toast.error("Failed to generate groups");
+    } finally {
+      setIsWorking(false);
+    }
   }, [mode, nameCount, names, size, groupCount, lastChanged]);
 
-  const handleShuffle = useCallback(() => {
+  const handleShuffle = useCallback(async () => {
     if (nameCount === 0 || size < 2) return;
 
-    const result = buildGroups(
-      names,
-      lastChanged,
-      lastChanged === "size" ? size : groupCount,
-      mode,
-    );
-    setGroups(result);
-    toast.success("Reshuffled!");
+    try {
+      const result = await buildGroupsAsync(
+        names,
+        lastChanged,
+        lastChanged === "size" ? size : groupCount,
+        mode,
+      );
+      setGroups(result);
+      toast.success("Reshuffled!");
+    } catch {
+      toast.error("Shuffle failed");
+    }
   }, [mode, nameCount, names, size, groupCount, lastChanged]);
 
   const handleExport = async (format: ExportFormat) => {

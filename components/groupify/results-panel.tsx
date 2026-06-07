@@ -11,14 +11,14 @@ export function ResultsPanel({ groups, totalGrouped, onShuffle }: ResultsPanelPr
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           {groups.length} groups - {totalGrouped} members
         </p>
 
         <button
           type="button"
           onClick={onShuffle}
-          className="flex items-center gap-1.5 rounded-xl border border-border/50 bg-card/60 px-3 py-1.5 text-[11px] font-medium text-muted-foreground backdrop-blur-sm transition-all hover:border-primary/40 hover:text-primary"
+          className="flex items-center gap-1.5 rounded-xl border border-border/50 bg-card/60 px-3 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur-sm transition-all hover:border-primary/40 hover:text-primary"
         >
           <svg
             className="size-3"

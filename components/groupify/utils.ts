@@ -1,8 +1,13 @@
 import type { DistributionMode, ExportFormat, Group } from "@/components/groupify/types";
 import type { FormField } from "@/components/groupify/form-builder";
+import { loadExcelJS, loadDocx } from "@/lib/export";
 
 const HUES = [185, 200, 220, 260, 160, 340, 35, 280];
 
+/**
+ * buildGroups — synchronous fallback used server-side or in tests.
+ * On the client, prefer buildGroupsAsync() which runs in a Web Worker.
+ */
 export function buildGroups(
   rawOrItems: string | { label: string; data: Record<string, string | string[]> }[],
   groupBy: "size" | "count",
@@ -78,12 +83,44 @@ export function buildGroups(
   }));
 }
 
+/**
+ * buildGroupsAsync — runs buildGroups in a Web Worker so the main thread
+ * stays unblocked on large inputs. Falls back to the synchronous version
+ * if the Worker API is unavailable (e.g. during SSR).
+ */
+export function buildGroupsAsync(
+  rawOrItems: string | { label: string; data: Record<string, string | string[]> }[],
+  groupBy: "size" | "count",
+  value: number,
+  mode: DistributionMode,
+): Promise<Group[]> {
+  if (typeof Worker === "undefined") {
+    return Promise.resolve(buildGroups(rawOrItems, groupBy, value, mode));
+  }
+
+  return new Promise((resolve, reject) => {
+    const worker = new Worker("/groupify.worker.js");
+    worker.onmessage = (e) => {
+      worker.terminate();
+      if (e.data.error) {
+        reject(new Error(e.data.error));
+      } else {
+        resolve(e.data.groups);
+      }
+    };
+    worker.onerror = (err) => {
+      worker.terminate();
+      reject(err);
+    };
+    worker.postMessage({ rawOrItems, groupBy, value, mode });
+  });
+}
+
 export async function exportGroups(groups: Group[], format: ExportFormat, fields?: FormField[]) {
   const hasFields = fields && fields.length > 0;
-  
+
   if (format === "excel") {
-    const ExcelJS = (await import("exceljs")).default;
-    const { saveAs } = await import("file-saver");
+    const { ExcelJS, saveAs } = await loadExcelJS();
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Groups");
 
@@ -94,7 +131,7 @@ export async function exportGroups(groups: Group[], format: ExportFormat, fields
       if (hasFields) {
         const headerRow = sheet.addRow(fields.map(f => f.label));
         headerRow.font = { bold: true, size: 12 };
-        
+
         group.rawMembers?.forEach((member) => {
           const row = sheet.addRow(fields.map(f => {
             const val = member[f.id];
@@ -115,17 +152,14 @@ export async function exportGroups(groups: Group[], format: ExportFormat, fields
       }
     });
 
-    sheet.columns.forEach((column) => {
-      column.width = 26;
-    });
+    sheet.columns.forEach((column) => { column.width = 26; });
 
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer], { type: "application/octet-stream" }), "Groupify.xlsx");
     return;
   }
 
-  const { Document, Packer, Paragraph, TextRun } = await import("docx");
-  const { saveAs } = await import("file-saver");
+  const { Document, Packer, Paragraph, TextRun, saveAs } = await loadDocx();
   const document = new Document({
     sections: [
       {
@@ -134,25 +168,23 @@ export async function exportGroups(groups: Group[], format: ExportFormat, fields
             children: [new TextRun({ text: group.label, bold: true, size: 36 })],
             spacing: { after: 160 },
           }),
-          ...group.members.map(
-            (member, memberIndex) => {
-              if (hasFields && group.rawMembers) {
-                const rawMember = group.rawMembers[memberIndex];
-                const parts = fields.map(f => {
-                  const val = rawMember[f.id];
-                  const strVal = val ? (Array.isArray(val) ? val.join(", ") : val) : "";
-                  return `${f.label}: ${strVal}`;
-                }).join(" | ");
-                return new Paragraph({
-                  children: [new TextRun({ text: parts, size: 26 })],
-                });
-              } else {
-                return new Paragraph({
-                  children: [new TextRun({ text: member, size: 26 })],
-                });
-              }
+          ...group.members.map((member, memberIndex) => {
+            if (hasFields && group.rawMembers) {
+              const rawMember = group.rawMembers[memberIndex];
+              const parts = fields.map(f => {
+                const val = rawMember[f.id];
+                const strVal = val ? (Array.isArray(val) ? val.join(", ") : val) : "";
+                return `${f.label}: ${strVal}`;
+              }).join(" | ");
+              return new Paragraph({
+                children: [new TextRun({ text: parts, size: 26 })],
+              });
+            } else {
+              return new Paragraph({
+                children: [new TextRun({ text: member, size: 26 })],
+              });
             }
-          ),
+          }),
           new Paragraph(""),
         ]),
       },
@@ -169,8 +201,7 @@ export async function exportResponses(
   fields: FormField[]
 ) {
   if (format === "excel") {
-    const ExcelJS = (await import("exceljs")).default;
-    const { saveAs } = await import("file-saver");
+    const { ExcelJS, saveAs } = await loadExcelJS();
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Responses");
 
@@ -189,18 +220,15 @@ export async function exportResponses(
       row.font = { size: 12 };
     });
 
-    sheet.columns.forEach((column) => {
-      column.width = 26;
-    });
+    sheet.columns.forEach((column) => { column.width = 26; });
 
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer], { type: "application/octet-stream" }), "Responses.xlsx");
     return;
   }
 
-  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell } = await import("docx");
-  const { saveAs } = await import("file-saver");
-  
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, saveAs } = await loadDocx();
+
   const tableRows = [
     new TableRow({
       children: [...fields.map(f => f.label), "Time"].map(

@@ -25,6 +25,25 @@
     --ring: 185 80% 35%;
     --radius: 0.625rem;
 
+    /* ─────────────────────────────────────────────────────────────────────────
+     * DESIGN TOKENS — single source of truth for layout conventions
+     *
+     * Border radius
+     *   rounded-xl  (0.75rem / 12px) — interactive elements: buttons, inputs,
+     *                                  tags, dropdowns, inline cards
+     *   rounded-2xl (1rem / 16px)    — page-level containers, modals, sheet
+     *                                  panels, section cards
+     *   rounded-full                 — avatars, badges, pills only
+     *
+     * Typography label scale (use only these three sizes for UI labels)
+     *   text-xs   (12px) — meta labels, table headers, tracking-widest caps
+     *   text-sm   (14px) — body copy, form labels, list items
+     *   text-base (16px) — section headings inside cards, primary emphasis
+     *
+     * Do NOT use arbitrary sizes like text-[9px], text-[10px], text-[11px],
+     * text-[13px]. Map them to the nearest token above.
+     * ───────────────────────────────────────────────────────────────────────── */
+
     --glow-teal: rgba(13, 148, 136, 0.12);
     --glow-cyan: rgba(8, 145, 178, 0.10);
     --mesh-opacity: 0.05;

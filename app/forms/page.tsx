@@ -43,25 +43,27 @@ export default async function FormsPage({ searchParams }: { searchParams: Promis
     };
   }
 
-  const forms = await db
+  // Fetch forms and submission counts in parallel.
+  // Since formIds come from the forms result, we project only _id in the first pass,
+  // then fire both the full forms fetch and the aggregation simultaneously.
+  const formIdsCursor = db
     .collection("forms")
     .find(query)
-    .sort({ createdAt: -1 })
-    .toArray();
+    .project({ _id: 1 });
+  const formIds = (await formIdsCursor.toArray()).map((f) => String(f._id));
 
-  // Get submission counts for each form
-  const formIds = forms.map((f) => String(f._id));
+  const [forms, submissionCountsRaw] = await Promise.all([
+    db.collection("forms").find(query).sort({ createdAt: -1 }).toArray(),
+    db
+      .collection("submissions")
+      .aggregate([
+        { $match: { formId: { $in: formIds } } },
+        { $group: { _id: "$formId", count: { $sum: 1 } } },
+      ])
+      .toArray(),
+  ]);
 
-  const submissionsPipeline = [
-    { $match: { formId: { $in: formIds } } },
-    { $group: { _id: "$formId", count: { $sum: 1 } } },
-  ];
-
-  const submissionCountsArray = await db
-    .collection("submissions")
-    .aggregate(submissionsPipeline)
-    .toArray();
-  const submissionCounts = submissionCountsArray.reduce(
+  const submissionCounts = submissionCountsRaw.reduce(
     (acc, curr) => {
       acc[String(curr._id)] = curr.count;
       return acc;

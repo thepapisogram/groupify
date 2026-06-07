@@ -80,7 +80,7 @@ export function Footer() {
               {appMeta.author.name}
             </Link>
           </p>
-          <div className="flex items-center gap-3 text-[11px] font-bold text-muted-foreground/40 tracking-wider">
+          <div className="flex items-center gap-3 text-xs font-bold text-muted-foreground/40 tracking-wider">
             <span>v{appMeta.app.version}</span>
             <span className="h-1 w-1 rounded-full bg-border/80"></span>
             <span>&copy; {new Date().getFullYear()}</span>

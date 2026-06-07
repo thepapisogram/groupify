@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/groupify/page-header";
 import { Footer } from "@/components/groupify/footer";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -116,6 +117,22 @@ export function FormBuilder({
   } | null>(null);
 
   const [draggedId, setDraggedId] = useState<string | null>(null);
+
+  // IntersectionObserver sentinel — sticky footer appears only when the
+  // sentinel (placed at end of fields) scrolls out of view on mobile.
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [stickyFooter, setStickyFooter] = useState(false);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setStickyFooter(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedId(id);
@@ -436,7 +453,7 @@ export function FormBuilder({
                   </div>
 
                   {field.isPrimary && (
-                    <div className="absolute -top-3 left-4 rounded-full bg-primary px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground shadow-sm">
+                    <div className="absolute -top-3 left-4 rounded-full bg-primary px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-sm">
                       Primary Identifier
                     </div>
                   )}
@@ -558,26 +575,58 @@ export function FormBuilder({
             </div>
           </div>
 
-          <div className="fixed bottom-4 left-4 right-4 z-50 flex gap-3 sm:static sm:bottom-auto sm:left-auto sm:right-auto sm:z-auto sm:justify-end sm:pt-4">
+          {/* Sentinel: when this scrolls out of view, sticky footer activates */}
+          <div ref={sentinelRef} aria-hidden="true" />
+
+          {/* Inline buttons (always visible on sm+; hidden on mobile when sentinel is visible) */}
+          <div className={`sm:flex justify-end gap-3 pt-4 ${stickyFooter ? "hidden" : "flex"}`}>
             {isEdit && (
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="xl"
                 onClick={() => router.push(`/forms/${formId}/admin?token=${adminToken}`)}
-                className="flex-1 sm:flex-none sm:w-auto rounded-2xl border border-border/50 bg-card/80 backdrop-blur-md sm:bg-card px-8 py-3.5 font-syne text-sm font-bold tracking-wide text-foreground shadow-lg sm:shadow-sm transition-all active:scale-98 hover:bg-muted"
+                className="flex-1 sm:flex-none"
               >
                 Cancel
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               onClick={handleSave}
               disabled={isSaving}
-              className={`flex-1 sm:flex-none sm:w-auto rounded-2xl px-8 py-3.5 font-syne text-sm font-bold tracking-wide text-primary-foreground shadow-lg transition-all active:scale-98 disabled:opacity-50 border border-primary/30 backdrop-blur-md sm:border-transparent sm:backdrop-blur-none ${
-                isSaving ? "btn-shimmer bg-primary/80 sm:bg-primary" : "bg-primary/80 hover:bg-primary/90 sm:bg-primary"
-              }`}
+              variant={isSaving ? "shimmer" : "default"}
+              size="xl"
+              className="flex-1 sm:flex-none"
             >
               {isSaving ? "Saving..." : isEdit ? "Update Form" : "Create Form"}
-            </button>
+            </Button>
           </div>
+
+          {/* Sticky footer — appears only on mobile when scrolled past the sentinel */}
+          {stickyFooter && (
+            <div className="fixed bottom-0 left-0 right-0 z-50 flex gap-3 border-t border-border/50 bg-card/80 px-4 py-3 backdrop-blur-md sm:hidden animate-slide-up">
+              {isEdit && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  onClick={() => router.push(`/forms/${formId}/admin?token=${adminToken}`)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              )}
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                variant={isSaving ? "shimmer" : "default"}
+                size="lg"
+                className="flex-1"
+              >
+                {isSaving ? "Saving..." : isEdit ? "Update Form" : "Create Form"}
+              </Button>
+            </div>
+          )}
         </div>
         <Footer />
       </div>
