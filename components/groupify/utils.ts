@@ -162,3 +162,77 @@ export async function exportGroups(groups: Group[], format: ExportFormat, fields
   const blob = await Packer.toBlob(document);
   saveAs(blob, "Groupify.docx");
 }
+
+export async function exportResponses(
+  submissions: { _id: string; submittedAt: string; data: Record<string, string | string[]> }[],
+  format: ExportFormat,
+  fields: FormField[]
+) {
+  if (format === "excel") {
+    const ExcelJS = (await import("exceljs")).default;
+    const { saveAs } = await import("file-saver");
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Responses");
+
+    const headerRow = sheet.addRow([...fields.map((f) => f.label), "Time"]);
+    headerRow.font = { bold: true, size: 12 };
+
+    submissions.forEach((sub) => {
+      const row = sheet.addRow([
+        ...fields.map((f) => {
+          const val = sub.data[f.id];
+          if (!val) return "";
+          return Array.isArray(val) ? val.join(", ") : val;
+        }),
+        new Date(sub.submittedAt).toLocaleString(),
+      ]);
+      row.font = { size: 12 };
+    });
+
+    sheet.columns.forEach((column) => {
+      column.width = 26;
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer], { type: "application/octet-stream" }), "Responses.xlsx");
+    return;
+  }
+
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell } = await import("docx");
+  const { saveAs } = await import("file-saver");
+  
+  const tableRows = [
+    new TableRow({
+      children: [...fields.map(f => f.label), "Time"].map(
+        text => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text, bold: true })] })] })
+      )
+    }),
+    ...submissions.map(sub => new TableRow({
+      children: [
+        ...fields.map(f => {
+          const val = sub.data[f.id];
+          const strVal = val ? (Array.isArray(val) ? val.join(", ") : val) : "";
+          return new TableCell({ children: [new Paragraph(strVal)] });
+        }),
+        new TableCell({ children: [new Paragraph(new Date(sub.submittedAt).toLocaleString())] })
+      ]
+    }))
+  ];
+
+  const document = new Document({
+    sections: [
+      {
+        children: [
+          new Paragraph({
+            children: [new TextRun({ text: "Responses", bold: true, size: 36 })],
+            spacing: { after: 160 },
+          }),
+          new Table({ rows: tableRows })
+        ],
+      },
+    ],
+  });
+
+  const blob = await Packer.toBlob(document);
+  saveAs(blob, "Responses.docx");
+}

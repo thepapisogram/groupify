@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 interface FormDoc {
   _id: string;
@@ -9,6 +11,8 @@ interface FormDoc {
   fields: Record<string, unknown>[];
   createdAt?: Date;
   updatedAt?: Date;
+  userId?: string;
+  adminEmails?: string[];
 }
 
 export async function GET(
@@ -26,8 +30,22 @@ export async function GET(
       return NextResponse.json({ error: "Form not found" }, { status: 404 });
     }
 
-    const { adminToken, ...publicForm } = form;
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    const userEmail = session?.user?.email;
+
+    const isOwner = !!(form.userId && userId === form.userId);
+    const isSharedAdmin = !!(userEmail && form.adminEmails && form.adminEmails.includes(userEmail));
+    const isAdmin = isOwner || isSharedAdmin;
+
+    const { adminToken, adminEmails, ...publicForm } = form;
+    
+    if (isAdmin) {
+      return NextResponse.json({ ...publicForm, adminToken, adminEmails: adminEmails || [], isOwner }, { status: 200 });
+    }
+
     void adminToken;
+    void adminEmails;
 
     return NextResponse.json(publicForm, { status: 200 });
   } catch (error) {

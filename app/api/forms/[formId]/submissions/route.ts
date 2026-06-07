@@ -15,6 +15,7 @@ interface FormDoc {
   adminToken: string;
   title: string;
   fields: FormField[];
+  isClosed?: boolean;
 }
 
 interface SubmissionDoc {
@@ -43,6 +44,10 @@ export async function POST(
 
     if (!form) {
       return NextResponse.json({ error: "Form not found" }, { status: 404 });
+    }
+
+    if (form.isClosed) {
+      return NextResponse.json({ error: "This form is no longer accepting responses" }, { status: 403 });
     }
 
     // Basic validation based on form fields

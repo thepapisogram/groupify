@@ -65,7 +65,10 @@ export function DonatePopup({ onFinished }: { onFinished?: () => void }) {
         setIsOpen(open);
         if (!open) setTimeout(() => onFinished?.(), 300);
     }}>
-      <DialogContent className="w-[calc(100%-2rem)] rounded-xl sm:w-full sm:max-w-md sm:rounded-lg">
+      <DialogContent 
+        className="w-[calc(100%-2rem)] rounded-xl sm:w-full sm:max-w-md sm:rounded-lg"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
               <RiHeartFill className="size-5 text-rose-500" />

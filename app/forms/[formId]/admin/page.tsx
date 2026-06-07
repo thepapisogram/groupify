@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import {
   Dialog,
@@ -10,14 +10,21 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { FormField } from "@/components/groupify/form-builder";
 import { PageHeader } from "@/components/groupify/page-header";
 import { Footer } from "@/components/groupify/footer";
 import { Sidebar } from "@/components/groupify/sidebar";
 import { ResultsPanel } from "@/components/groupify/results-panel";
 import { ShareDialog } from "@/components/groupify/share-dialog";
-import { buildGroups, exportGroups } from "@/components/groupify/utils";
+import { buildGroups, exportGroups, exportResponses } from "@/components/groupify/utils";
 import {
   DistributionMode,
   Group,
@@ -46,8 +53,74 @@ export default function AdminDashboardPage() {
   const [formConfig, setFormConfig] = useState<{
     title: string;
     fields: FormField[];
+    isClosed?: boolean;
   } | null>(null);
   const [submissions, setSubmissions] = useState<{ _id: string; submittedAt: string; data: Record<string, string | string[]> }[]>([]);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  const [isAdminsDialogOpen, setIsAdminsDialogOpen] = useState(false);
+  const [adminEmails, setAdminEmails] = useState<string[]>([]);
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [isUpdatingAdmins, setIsUpdatingAdmins] = useState(false);
+
+  const toggleFormStatus = async () => {
+    if (!formConfig) return;
+    setIsUpdatingStatus(true);
+    const newStatus = !formConfig.isClosed;
+    try {
+      const res = await fetch(`/api/forms/${formId}/status?token=${adminToken}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isClosed: newStatus }),
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      setFormConfig({ ...formConfig, isClosed: newStatus });
+      toast.success(`Form is now ${newStatus ? "closed" : "open"}`);
+    } catch {
+      toast.error("Failed to update form status");
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const requestSort = (key: string) => {
+    let direction: "asc" | "desc" = "asc";
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedSubmissions = useMemo(() => {
+    const sortableItems = [...submissions];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue, bValue;
+        if (sortConfig.key === "time") {
+          aValue = new Date(a.submittedAt).getTime();
+          bValue = new Date(b.submittedAt).getTime();
+        } else {
+          aValue = a.data[sortConfig.key] || "";
+          bValue = b.data[sortConfig.key] || "";
+        }
+
+        if (Array.isArray(aValue)) aValue = aValue.join(", ");
+        if (Array.isArray(bValue)) bValue = bValue.join(", ");
+
+        if (aValue < bValue) {
+          return sortConfig.direction === "asc" ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === "asc" ? 1 : -1;
+        }
+        return 0;
+      });
+    } else {
+       sortableItems.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+    }
+    return sortableItems;
+  }, [submissions, sortConfig]);
 
   // Grouping state
   const [size, setSize] = useState(4);
@@ -57,6 +130,7 @@ export default function AdminDashboardPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [isWorking, setIsWorking] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
+  const [activeTab, setActiveTab] = useState<"submissions" | "groups">("submissions");
 
   const fetchSubmissions = useCallback(async () => {
     try {
@@ -66,6 +140,7 @@ export default function AdminDashboardPage() {
       }
       const data = await res.json();
       setFormConfig(data.form);
+      setAdminEmails(data.form.adminEmails || []);
       setSubmissions(data.submissions || []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load admin data");
@@ -164,6 +239,7 @@ export default function AdminDashboardPage() {
       );
 
       setGroups(result);
+      setActiveTab("groups");
       setIsWorking(false);
       toast.success(
         `${result.length} group${result.length !== 1 ? "s" : ""} created`,
@@ -189,6 +265,23 @@ export default function AdminDashboardPage() {
     } catch {
       toast.dismiss(id);
       toast.error("Export failed - please try again");
+    }
+  };
+
+  const handleExportResponses = async (format: ExportFormat) => {
+    if (submissions.length === 0 || !formConfig) return;
+
+    const id = toast.loading(
+      `Preparing ${format === "excel" ? "Excel" : "Word"} file...`,
+    );
+
+    try {
+      await exportResponses(submissions, format, formConfig.fields);
+      toast.dismiss(id);
+      toast.success("File downloaded!");
+    } catch {
+      toast.dismiss(id);
+      toast.error("Export responses failed - please try again");
     }
   };
 
@@ -237,6 +330,41 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleAddAdmin = () => {
+    if (!newAdminEmail || !newAdminEmail.includes("@")) {
+      toast.error("Please enter a valid email");
+      return;
+    }
+    if (adminEmails.includes(newAdminEmail)) {
+      toast.error("Admin already added");
+      return;
+    }
+    setAdminEmails([...adminEmails, newAdminEmail]);
+    setNewAdminEmail("");
+  };
+
+  const handleRemoveAdmin = (email: string) => {
+    setAdminEmails(adminEmails.filter((e) => e !== email));
+  };
+
+  const handleSaveAdmins = async () => {
+    setIsUpdatingAdmins(true);
+    try {
+      const res = await fetch(`/api/forms/${formId}/admins?token=${adminToken}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminEmails }),
+      });
+      if (!res.ok) throw new Error("Failed to update admins");
+      toast.success("Admins updated successfully");
+      setIsAdminsDialogOpen(false);
+    } catch {
+      toast.error("Failed to update admins");
+    } finally {
+      setIsUpdatingAdmins(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="mesh-bg relative min-h-dvh flex items-center justify-center">
@@ -276,12 +404,28 @@ export default function AdminDashboardPage() {
               Admin Dashboard &bull; {submissions.length} responses
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 sm:gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-card px-4 py-2">
+              <span className="text-sm font-medium text-foreground">
+                Accepting Responses
+              </span>
+              <Switch
+                checked={!formConfig.isClosed}
+                onCheckedChange={toggleFormStatus}
+                disabled={isUpdatingStatus}
+              />
+            </div>
             <button
               onClick={() => setIsShareDialogOpen(true)}
               className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-all hover:bg-primary/20"
             >
               Share Form
+            </button>
+            <button
+              onClick={() => setIsAdminsDialogOpen(true)}
+              className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-all hover:bg-primary/20"
+            >
+              Manage Admins
             </button>
             <Link
               href={`/forms/${formId}/edit?token=${adminToken}`}
@@ -317,33 +461,77 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-          <div className="space-y-6">
-            {!hasResults ? (
-              <div className="rounded-2xl border border-border/50 bg-card/70 p-6 backdrop-blur-sm shadow-md">
-                <div className="flex items-center justify-between mb-4">
+          <div className="space-y-6 min-w-0">
+            {hasResults && (
+              <div className="flex p-1 space-x-1 bg-muted/30 border border-border/50 rounded-xl w-fit">
+                <button
+                  onClick={() => setActiveTab("submissions")}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                    activeTab === "submissions"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  Submissions
+                </button>
+                <button
+                  onClick={() => setActiveTab("groups")}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                    activeTab === "groups"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  Generated Groups
+                </button>
+              </div>
+            )}
+
+            {(!hasResults || activeTab === "submissions") && (
+              <div className="rounded-2xl border border-border/50 bg-card/70 p-6 backdrop-blur-sm shadow-md animate-fade-in">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                   <h2 className="text-lg font-semibold text-foreground">
                     Recent Submissions
                   </h2>
                   {submissions.length > 0 && (
-                    <button
-                      onClick={handleGenerate}
-                      className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 shadow-sm animate-fade-in"
-                    >
-                      Generate Groups
-                      <svg
-                        className="size-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
+                    <div className="flex flex-wrap items-center gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="flex items-center gap-2 rounded-xl bg-muted px-4 py-2 text-sm font-semibold text-foreground transition-all hover:bg-muted/80 shadow-sm animate-fade-in">
+                            Export
+                            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleExportResponses("excel")} className="cursor-pointer">
+                            Export as Excel
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleExportResponses("word")} className="cursor-pointer">
+                            Export as Word
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      <button
+                        onClick={handleGenerate}
+                        className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 shadow-sm animate-fade-in"
                       >
-                        <path
-                          d="M5 12h14M12 5l7 7-7 7"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
+                        Generate Groups
+                        <svg
+                          className="size-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                        >
+                          <path
+                            d="M5 12h14M12 5l7 7-7 7"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   )}
                 </div>
                 {submissions.length === 0 ? (
@@ -359,23 +547,44 @@ export default function AdminDashboardPage() {
                       <thead className="text-xs text-muted-foreground uppercase bg-muted/20 border-b border-border/50">
                         <tr>
                           {formConfig.fields.map((f) => (
-                            <th key={f.id} className="px-4 py-3 font-medium">
-                              {f.label}
-                              {f.isPrimary && (
-                                <span className="ml-1 text-[10px] text-primary">
-                                  (Primary)
-                                </span>
-                              )}
+                            <th 
+                              key={f.id} 
+                              className={`px-4 py-3 font-medium whitespace-nowrap ${f.isPrimary ? 'cursor-pointer hover:bg-muted/30 select-none' : ''}`}
+                              onClick={f.isPrimary ? () => requestSort(f.id) : undefined}
+                            >
+                              <div className="flex items-center gap-1">
+                                {f.label}
+                                {f.isPrimary && (
+                                  <span className="ml-1 text-[10px] text-primary">
+                                    (Primary)
+                                  </span>
+                                )}
+                                {f.isPrimary && sortConfig?.key === f.id && (
+                                  <span className="text-primary text-[10px]">
+                                    {sortConfig.direction === "asc" ? "▲" : "▼"}
+                                  </span>
+                                )}
+                              </div>
                             </th>
                           ))}
-                          <th className="px-4 py-3 font-medium text-right">
-                            Time
+                          <th 
+                            className="px-4 py-3 font-medium text-right cursor-pointer hover:bg-muted/30 select-none whitespace-nowrap"
+                            onClick={() => requestSort("time")}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              Time
+                              {sortConfig?.key === "time" && (
+                                <span className="text-primary text-[10px]">
+                                  {sortConfig.direction === "asc" ? "▲" : "▼"}
+                                </span>
+                              )}
+                            </div>
                           </th>
                           <th className="px-4 py-3 font-medium w-12"></th>
                         </tr>
                       </thead>
                       <tbody>
-                        {submissions.map((sub) => (
+                        {sortedSubmissions.map((sub) => (
                           <tr
                             key={sub._id}
                             className="border-b border-border/20 last:border-0 hover:bg-muted/10 transition-colors"
@@ -430,7 +639,9 @@ export default function AdminDashboardPage() {
                   </div>
                 )}
               </div>
-            ) : (
+            )}
+            
+            {hasResults && activeTab === "groups" && (
               <ResultsPanel
                 groups={groups}
                 totalGrouped={totalGrouped}
@@ -481,6 +692,62 @@ export default function AdminDashboardPage() {
               </Button>
               <Button variant="destructive" onClick={handleRegenerateLink} disabled={isRegenerating}>
                 {isRegenerating ? "Regenerating..." : "Regenerate Link"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isAdminsDialogOpen} onOpenChange={setIsAdminsDialogOpen}>
+          <DialogContent className="w-[calc(100%-2rem)] sm:w-full rounded-2xl sm:max-w-md border-border/50 bg-card/95 backdrop-blur-md">
+            <DialogHeader>
+              <DialogTitle className="text-xl">Manage Admins</DialogTitle>
+              <DialogDescription>
+                Admins will be able to view responses, generate groups, and manage the form settings. They will see this form in their &quot;My Forms&quot; dashboard.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  placeholder="admin@example.com"
+                  className="flex-1 rounded-xl border border-border/50 bg-muted/20 px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  value={newAdminEmail}
+                  onChange={(e) => setNewAdminEmail(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddAdmin();
+                    }
+                  }}
+                />
+                <Button onClick={handleAddAdmin} variant="secondary" className="rounded-xl">
+                  Add
+                </Button>
+              </div>
+              {adminEmails.length > 0 ? (
+                <ul className="space-y-2">
+                  {adminEmails.map((email) => (
+                    <li key={email} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm">
+                      <span className="text-foreground">{email}</span>
+                      <button
+                        onClick={() => handleRemoveAdmin(email)}
+                        className="text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-2">No admins added yet.</p>
+              )}
+            </div>
+            <DialogFooter className="mt-4 sm:justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsAdminsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveAdmins} disabled={isUpdatingAdmins}>
+                {isUpdatingAdmins ? "Saving..." : "Save Admins"}
               </Button>
             </DialogFooter>
           </DialogContent>

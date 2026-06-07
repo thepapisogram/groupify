@@ -14,8 +14,9 @@ export const metadata = {
   description: "View and manage your Groupify forms",
 };
 
-export default async function FormsPage() {
+export default async function FormsPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
   const session = await getServerSession(authOptions);
+  const filter = (await searchParams).filter || "all";
 
   if (!(session?.user as { id?: string })?.id) {
     redirect("/login?callbackUrl=/forms");
@@ -23,12 +24,28 @@ export default async function FormsPage() {
 
   const userId = (session?.user as { id: string }).id;
 
+  const userEmail = (session?.user as { email?: string }).email;
+
   const client = await clientPromise;
   const db = client.db("groupify");
 
+  let query: Record<string, unknown> = {};
+  if (filter === "owned") {
+    query = { userId: userId };
+  } else if (filter === "shared") {
+    query = { adminEmails: userEmail, userId: { $ne: userId } };
+  } else {
+    query = {
+      $or: [
+        { userId: userId },
+        { adminEmails: userEmail }
+      ]
+    };
+  }
+
   const forms = await db
     .collection("forms")
-    .find({ userId: userId })
+    .find(query)
     .sort({ createdAt: -1 })
     .toArray();
 
@@ -73,6 +90,39 @@ export default async function FormsPage() {
             >
               <RiAddCircleLine className="size-5" />
               Create New Form
+            </Link>
+          </div>
+
+          <div className="flex gap-2 border-b border-border/50 pb-4 overflow-x-auto">
+            <Link
+              href="?filter=all"
+              className={`px-4 py-2 text-sm font-medium rounded-xl whitespace-nowrap transition-colors ${
+                filter === "all"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted/30 text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+              }`}
+            >
+              All Forms
+            </Link>
+            <Link
+              href="?filter=owned"
+              className={`px-4 py-2 text-sm font-medium rounded-xl whitespace-nowrap transition-colors ${
+                filter === "owned"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted/30 text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+              }`}
+            >
+              Owned by me
+            </Link>
+            <Link
+              href="?filter=shared"
+              className={`px-4 py-2 text-sm font-medium rounded-xl whitespace-nowrap transition-colors ${
+                filter === "shared"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted/30 text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+              }`}
+            >
+              Shared with me
             </Link>
           </div>
 
