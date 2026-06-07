@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { NamesInputPanel } from "@/components/groupify/names-input-panel";
 import { PageHeader } from "@/components/groupify/page-header";
@@ -28,6 +28,14 @@ export default function Page() {
   const [activePanel, setActivePanel] = useState<ActivePanel>("input");
   const [copiedText, setCopiedText] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Preload the worker script on mount so the first generate is instant
+  useEffect(() => {
+    if (typeof Worker !== "undefined") {
+      const worker = new Worker("/groupify.worker.js");
+      worker.terminate();
+    }
+  }, []);
 
   const nameCount = names
     .split("\n")

@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { HeaderAuthSkeleton } from "@/components/groupify/skeletons";
 
 export function PageHeader() {
   const { data: session, status } = useSession();
@@ -48,7 +49,9 @@ export function PageHeader() {
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {status === "loading" ? null : session ? (
+          {status === "loading" ? (
+            <HeaderAuthSkeleton />
+          ) : session ? (
             <div className="flex items-center gap-1 sm:gap-2 rounded-xl border border-border/50 bg-card/60 px-2 py-1 backdrop-blur-sm sm:px-3 sm:py-1.5">
               <Link
                 href="/forms"
