@@ -2,9 +2,11 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
+import { unstable_cache } from "next/cache";
 import { PageHeader } from "@/components/groupify/page-header";
 import { Footer } from "@/components/groupify/footer";
 import { FormFiller } from "@/components/groupify/form-filler";
+import { FormField } from "@/components/groupify/form-builder";
 
 export default async function FormFillerPage({ params }: { params: Promise<{ formId: string }> }) {
   const { formId } = await params;
@@ -16,15 +18,39 @@ export default async function FormFillerPage({ params }: { params: Promise<{ for
   }
   const userEmail = session?.user?.email || null;
 
-  const client = await clientPromise;
-  const db = client.db("groupify");
+  const getForm = unstable_cache(
+    async (id: string) => {
+      const client = await clientPromise;
+      const db = client.db("groupify");
+      interface FormDoc {
+        _id: ObjectId | string;
+        userId?: string;
+        confirmedAdmins?: string[];
+        title: string;
+        description?: string;
+        fields: FormField[];
+        adminToken?: string;
+        isClosed?: boolean;
+      }
+      let form: FormDoc | null = null;
+      try {
+        form = await db.collection<FormDoc>("forms").findOne({ _id: new ObjectId(id) });
+      } catch {
+        form = await db.collection<FormDoc>("forms").findOne({ _id: id as unknown as ObjectId });
+      }
+      if (form) {
+        return {
+          ...form,
+          _id: form._id.toString(),
+        };
+      }
+      return null;
+    },
+    ["form", formId],
+    { tags: [`form-${formId}`] }
+  );
 
-  let form;
-  try {
-    form = await db.collection("forms").findOne({ _id: new ObjectId(formId) });
-  } catch {
-    form = await db.collection("forms").findOne({ _id: formId as unknown as ObjectId });
-  }
+  const form = await getForm(formId);
 
   if (!form) {
     return (
@@ -41,7 +67,7 @@ export default async function FormFillerPage({ params }: { params: Promise<{ for
     );
   }
 
-  const isOwner = Boolean(userId === form.userId || (userEmail && form.adminEmails?.includes(userEmail)));
+  const isOwner = Boolean(userId === form.userId || (userEmail && form.confirmedAdmins?.includes(userEmail)));
 
   const formConfig = {
     title: form.title,

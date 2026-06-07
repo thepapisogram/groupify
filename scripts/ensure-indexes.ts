@@ -39,6 +39,19 @@ async function main() {
   );
   console.log("✓  forms: { adminEmails: 1 }");
 
+  // ── invites ──────────────────────────────────────────────────────────────
+  await db.collection("invites").createIndex(
+    { formId: 1, status: 1 },
+    { name: "invites_formId_status", background: true }
+  );
+  console.log("✓  invites: { formId: 1, status: 1 }");
+
+  await db.collection("invites").createIndex(
+    { invitedEmail: 1, status: 1 },
+    { name: "invites_invitedEmail_status", background: true }
+  );
+  console.log("✓  invites: { invitedEmail: 1, status: 1 }");
+
   console.log("\nAll indexes ensured successfully.");
   process.exit(0);
 }

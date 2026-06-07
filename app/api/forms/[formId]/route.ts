@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import clientPromise from "@/lib/mongodb";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
@@ -24,7 +25,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
       const client = await clientPromise;
       const db = client.db("groupify");
 
-      const form = await db.collection<FormDoc>("forms").findOne({ _id: formId as any });
+      const form = await db.collection<FormDoc>("forms").findOne({ _id: formId as unknown as string });
 
       if (!form) {
         return NextResponse.json({ error: "Form not found" }, { status: 404 });
@@ -100,6 +101,9 @@ export async function PUT(
         },
       }
     );
+
+    // @ts-expect-error Next.js 14 typings mismatch
+    revalidateTag(`form-${formId}`);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import clientPromise from "@/lib/mongodb";
 
 export async function PATCH(
@@ -42,6 +43,9 @@ export async function PATCH(
         },
       }
     );
+
+    // @ts-expect-error Next.js 14 typings mismatch
+    revalidateTag(`form-${formId}`);
 
     return NextResponse.json({ success: true, isClosed }, { status: 200 });
   } catch (error) {
