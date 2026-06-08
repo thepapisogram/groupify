@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -85,11 +85,32 @@ export function AdminDashboard({
   const [isAdminsDialogOpen, setIsAdminsDialogOpen] = useState(false);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [activeAdmins, setActiveAdmins] = useState<ActiveAdmin[]>([]);
+  const [isLoadingAdmins, setIsLoadingAdmins] = useState(true);
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [isUpdatingAdmins, setIsUpdatingAdmins] = useState(false);
+  
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeletingForm, setIsDeletingForm] = useState(false);
+
+  const handleDeleteForm = async () => {
+    setIsDeletingForm(true);
+    try {
+      const res = await fetch(`/api/forms/${formId}?token=${adminToken}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete form");
+      toast.success("Form deleted successfully");
+      router.push("/forms");
+    } catch {
+      toast.error("Failed to delete form");
+      setIsDeletingForm(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
 
   const fetchInvites = useCallback(async () => {
     if (!adminToken) return;
+    setIsLoadingAdmins(true);
     try {
       const res = await fetch(`/api/forms/${formId}/invites?token=${adminToken}`);
       if (res.ok) {
@@ -99,12 +120,18 @@ export function AdminDashboard({
       }
     } catch {
       console.error("Failed to fetch invites");
+    } finally {
+      setIsLoadingAdmins(false);
     }
   }, [formId, adminToken]);
 
   useEffect(() => {
+    fetchInvites(); // Load on mount so it's ready
+  }, [fetchInvites]);
+
+  useEffect(() => {
     if (isAdminsDialogOpen) {
-      fetchInvites();
+      fetchInvites(); // Refresh when opened
     }
   }, [isAdminsDialogOpen, fetchInvites]);
 
@@ -479,6 +506,12 @@ export function AdminDashboard({
                   <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                   Manage Admins
                 </DropdownMenuItem>
+                {isOwner && (
+                  <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="cursor-pointer gap-2 text-destructive focus:text-destructive focus:bg-destructive/10">
+                    <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    Delete Form
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -755,88 +788,123 @@ export function AdminDashboard({
                 </div>
               )}
 
-              {pendingInvites.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold text-foreground">Pending Invites</h4>
-                  <ul className="space-y-2">
-                    {pendingInvites.map((invite) => {
-                      const isExpired = new Date(invite.expiresAt) <= new Date();
-                      return (
-                        <li key={invite._id} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm">
-                          <div className="flex flex-col">
-                            <span className="text-foreground">{invite.invitedEmail}</span>
-                            <span className={`text-xs ${isExpired ? 'text-amber-500' : 'text-muted-foreground'}`}>
-                              {isExpired ? 'Expired' : 'Pending'}
-                            </span>
-                          </div>
-                          {isOwner && (
-                            <button
-                              onClick={() => handleRevokeOrRemove(invite._id)}
-                              className="text-muted-foreground hover:text-destructive transition-colors text-xs font-medium px-2 py-1"
-                            >
-                              Revoke
-                            </button>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
+              {isLoadingAdmins ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
                 </div>
-              )}
+              ) : (
+                <>
+                  {pendingInvites.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-foreground">Pending Invites</h4>
+                      <ul className="space-y-2">
+                        {pendingInvites.map((invite) => {
+                          const isExpired = new Date(invite.expiresAt) <= new Date();
+                          return (
+                            <li key={invite._id} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm">
+                              <div className="flex flex-col">
+                                <span className="text-foreground">{invite.invitedEmail}</span>
+                                <span className={`text-xs ${isExpired ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                                  {isExpired ? 'Expired' : 'Pending'}
+                                </span>
+                              </div>
+                              {isOwner && (
+                                <button
+                                  onClick={() => handleRevokeOrRemove(invite._id)}
+                                  className="text-muted-foreground hover:text-destructive transition-colors text-xs font-medium px-2 py-1"
+                                >
+                                  Revoke
+                                </button>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
 
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-foreground">Active Collaborators</h4>
-                {activeAdmins.length > 0 ? (
-                  <ul className="space-y-2">
-                    {activeAdmins.map((admin) => (
-                      <li key={admin.email} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm">
-                        <span className="text-foreground">
-                          {admin.email} {session?.user?.email === admin.email && <span className="text-muted-foreground ml-1">(you)</span>}
-                        </span>
-                        {isOwner && session?.user?.email !== admin.email && (
-                          <button
-                            onClick={() => handleRevokeOrRemove(admin.inviteId)}
-                            className="text-muted-foreground hover:text-destructive transition-colors text-xs font-medium px-2 py-1"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-muted-foreground py-2">No active collaborators yet.</p>
-                )}
-              </div>
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold text-foreground">Active Collaborators</h4>
+                    {activeAdmins.length > 0 ? (
+                      <ul className="space-y-2">
+                        {activeAdmins.map((admin) => (
+                          <li key={admin.email} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm">
+                            <span className="text-foreground">
+                              {admin.email} {session?.user?.email === admin.email && <span className="text-muted-foreground ml-1">(you)</span>}
+                            </span>
+                            {isOwner && session?.user?.email !== admin.email && (
+                              <button
+                                onClick={() => handleRevokeOrRemove(admin.inviteId)}
+                                className="text-muted-foreground hover:text-destructive transition-colors text-xs font-medium px-2 py-1"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground py-2 italic text-center rounded-lg border border-border/30 bg-muted/10">No active collaborators yet.</p>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
             <DialogFooter className="mt-2 sm:justify-between items-center gap-4">
               {process.env.NODE_ENV === "development" && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  disabled={isUpdatingAdmins}
-                  onClick={async () => {
-                    const testEmail = "thepapisogram@gmail.com";
-                    setIsUpdatingAdmins(true);
-                    try {
-                      const res = await fetch(`/api/forms/${formId}/invites?token=${adminToken}`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ email: testEmail }),
-                      });
-                      if (!res.ok) throw new Error("Failed to send invite");
-                      toast.success(`Test invite sent to ${testEmail}`);
-                      fetchInvites();
-                    } catch (err: unknown) {
-                      toast.error(err instanceof Error ? err.message : "Failed to send test invite");
-                    } finally {
-                      setIsUpdatingAdmins(false);
-                    }
-                  }}
-                  className="mr-auto border-dashed border-primary/50 text-primary hover:bg-primary/10"
-                >
-                  Test Invite
-                </Button>
+                <div className="flex gap-2 mr-auto">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    disabled={isUpdatingAdmins}
+                    onClick={async () => {
+                      const testEmail = "thepapisogram@gmail.com";
+                      setIsUpdatingAdmins(true);
+                      try {
+                        const res = await fetch(`/api/forms/${formId}/invites?token=${adminToken}`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ email: testEmail }),
+                        });
+                        if (!res.ok) throw new Error("Failed to send invite");
+                        toast.success(`Test invite sent to ${testEmail}`);
+                        fetchInvites();
+                      } catch (err: unknown) {
+                        toast.error(err instanceof Error ? err.message : "Failed to send test invite");
+                      } finally {
+                        setIsUpdatingAdmins(false);
+                      }
+                    }}
+                    className="border-dashed border-primary/50 text-primary hover:bg-primary/10"
+                  >
+                    Test Invite
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    disabled={isUpdatingAdmins}
+                    onClick={async () => {
+                      const testEmail = "thepapisogram@gmail.com";
+                      setIsUpdatingAdmins(true);
+                      try {
+                        const res = await fetch(`/api/forms/${formId}/invites/test-accept?token=${adminToken}`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ email: testEmail }),
+                        });
+                        if (!res.ok) throw new Error("Failed to send test accepted email");
+                        toast.success(`Test accepted email sent to ${testEmail}`);
+                      } catch (err: unknown) {
+                        toast.error(err instanceof Error ? err.message : "Failed to send test accepted email");
+                      } finally {
+                        setIsUpdatingAdmins(false);
+                      }
+                    }}
+                    className="border-dashed border-green-500/50 text-green-600 hover:bg-green-500/10 dark:text-green-400"
+                  >
+                    Test Accepted
+                  </Button>
+                </div>
               )}
               <Button onClick={() => setIsAdminsDialogOpen(false)}>
                 Done
@@ -860,6 +928,17 @@ export function AdminDashboard({
           if (confirmDeleteId) handleDeleteSubmission(confirmDeleteId);
           setConfirmDeleteId(null);
         }}
+      />
+
+      {/* Confirm delete form dialog */}
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title="Delete Form?"
+        description="This will permanently delete this form, its link, and all collected responses. This action cannot be undone."
+        confirmLabel={isDeletingForm ? "Deleting..." : "Delete Form"}
+        variant="destructive"
+        onConfirm={handleDeleteForm}
       />
     </div>
   );

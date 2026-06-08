@@ -3,6 +3,10 @@ import clientPromise from "@/lib/mongodb";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
+import { resend } from "@/lib/resend";
+import { InviteAcceptedEmail } from "@/lib/emails/invite-accepted";
+import { ObjectId } from "mongodb";
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -42,11 +46,43 @@ export async function POST(
       { $set: { status: "accepted", acceptedAt: new Date() } }
     );
 
+    // Fetch form to get admin token for the email link
+    let form;
+    try {
+      form = await db.collection("forms").findOne({ _id: new ObjectId(invite.formId) });
+    } catch {
+      form = await db.collection("forms").findOne({ _id: invite.formId });
+    }
+
     // Add user to confirmedAdmins
+    let updateQuery;
+    try {
+      updateQuery = { _id: new ObjectId(invite.formId) };
+    } catch {
+      updateQuery = { _id: invite.formId };
+    }
+
     await db.collection("forms").updateOne(
-      { _id: invite.formId as unknown as import("mongodb").ObjectId },
+      updateQuery,
       { $addToSet: { confirmedAdmins: session.user.email } as unknown as import("mongodb").UpdateFilter<Document> }
     );
+
+    // Send notification email to the owner
+    if (form && invite.invitedBy && process.env.RESEND_API_KEY) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://groupify.vercel.app";
+      const formUrl = `${appUrl}/forms/${invite.formId}/admin?token=${form.adminToken}`;
+      
+      await resend.emails.send({
+        from: process.env.EMAIL_FROM || "Groupify <noreply@groupify.app>",
+        to: invite.invitedBy,
+        subject: `${session.user.email} accepted your invitation!`,
+        react: InviteAcceptedEmail({
+          collaboratorEmail: session.user.email,
+          formTitle: invite.formTitle,
+          formUrl,
+        }),
+      });
+    }
 
     return NextResponse.json({ success: true, formId: invite.formId });
   } catch (error) {

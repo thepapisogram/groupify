@@ -22,7 +22,7 @@ export default async function AdminDashboardServerPage({
   try {
     form = await db.collection("forms").findOne({ _id: new ObjectId(formId) });
   } catch {
-    form = null;
+    form = await db.collection("forms").findOne({ _id: formId as unknown as ObjectId });
   }
 
   if (!form) {
@@ -30,7 +30,7 @@ export default async function AdminDashboardServerPage({
   }
 
   const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id;
+  const userId = (session?.user as { id?: string })?.id;
   const userEmail = session?.user?.email;
 
   const isOwner = !!(form.userId && userId === form.userId);

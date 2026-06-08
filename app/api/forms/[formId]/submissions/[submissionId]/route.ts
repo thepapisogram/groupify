@@ -19,14 +19,26 @@ export async function DELETE(
     const client = await clientPromise;
     const db = client.db("groupify");
 
-    const form = await db.collection("forms").findOne({ _id: new ObjectId(formId) });
+    let form;
+    try {
+      form = await db.collection("forms").findOne({ _id: new ObjectId(formId) });
+    } catch {
+      form = await db.collection("forms").findOne({ _id: formId as unknown as ObjectId });
+    }
     
     if (!form || form.adminToken !== token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    let subIdQuery;
+    try {
+      subIdQuery = new ObjectId(submissionId);
+    } catch {
+      subIdQuery = submissionId;
+    }
+
     const result = await db.collection("submissions").deleteOne({
-      _id: new ObjectId(submissionId),
+      _id: subIdQuery as unknown as ObjectId,
       formId: formId,
     });
 
