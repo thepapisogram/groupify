@@ -27,9 +27,8 @@ export function Footer() {
                   width={24}
                   height={24}
                   alt="Groupify"
-                  className="size-6"
+                  className="size-5 sm:size-6 opacity-80 transition-opacity hover:opacity-100"
                   priority
-                  unoptimized
                 />
               </div>
               <span className="text-foreground font-syne font-bold text-xl">Groupify</span>

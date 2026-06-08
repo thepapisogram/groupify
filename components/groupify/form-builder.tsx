@@ -174,14 +174,45 @@ export function FormBuilder({
       toast.error("Form must have at least one field");
       return;
     }
-    const field = fields.find((f) => f.id === id);
+    const fieldIndex = fields.findIndex((f) => f.id === id);
+    const field = fields[fieldIndex];
     if (field?.isPrimary) {
       toast.error(
         "Cannot remove the primary field. Set another field as primary first.",
       );
       return;
     }
-    setFields(fields.filter((f) => f.id !== id));
+    
+    setFields((prev) => prev.filter((f) => f.id !== id));
+    
+    toast.success(`Removed field "${field.label}"`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setFields((prev) => {
+            const newFields = [...prev];
+            newFields.splice(fieldIndex, 0, field);
+            return newFields;
+          });
+        },
+      },
+      duration: 5000,
+    });
+  };
+
+  const moveField = (id: string, direction: "up" | "down") => {
+    setFields((prev) => {
+      const idx = prev.findIndex((f) => f.id === id);
+      if (idx === -1) return prev;
+      if (direction === "up" && idx === 0) return prev;
+      if (direction === "down" && idx === prev.length - 1) return prev;
+      const newFields = [...prev];
+      const targetIdx = idx + (direction === "up" ? -1 : 1);
+      const temp = newFields[idx];
+      newFields[idx] = newFields[targetIdx];
+      newFields[targetIdx] = temp;
+      return newFields;
+    });
   };
 
   const setPrimaryField = (id: string) => {
@@ -400,8 +431,18 @@ export function FormBuilder({
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 Form Fields
+                <div className="group relative cursor-help">
+                  <svg className="size-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                  <div className="pointer-events-none absolute left-0 sm:left-1/2 sm:-translate-x-1/2 bottom-full mb-2 hidden w-64 rounded-lg bg-popover p-3 text-xs text-popover-foreground shadow-md group-hover:block z-50 whitespace-normal">
+                    The Primary Identifier (★) is the main field used to group respondents. The final generated groups will be lists of these primary identifiers.
+                  </div>
+                </div>
               </h2>
               <button
                 type="button"
@@ -425,7 +466,7 @@ export function FormBuilder({
               </button>
             </div>
 
-            <div className="space-y-4 ml-4">
+            <div className="space-y-4 ml-0 sm:ml-4">
               {fields.map((field) => (
                 <div
                   key={field.id}
@@ -435,7 +476,7 @@ export function FormBuilder({
                   onDragEnd={() => setDraggedId(null)}
                   className={`relative space-y-4 rounded-xl border border-border/50 bg-card/40 p-5 backdrop-blur-sm transition-all ${draggedId === field.id ? "opacity-40 border-primary/50 scale-[0.98]" : ""}`}
                 >
-                  <div className="absolute top-1/2 -left-6 -translate-y-1/2 cursor-grab text-muted-foreground/30 hover:text-foreground active:cursor-grabbing p-1">
+                  <div className="hidden sm:block absolute top-1/2 -left-6 -translate-y-1/2 cursor-grab text-muted-foreground/30 hover:text-foreground active:cursor-grabbing p-1">
                     <svg
                       className="size-5"
                       viewBox="0 0 24 24"
@@ -500,7 +541,25 @@ export function FormBuilder({
                       </div>
                     </div>
 
-                    <div className="flex gap-1 mt-6">
+                    <div className="flex gap-1 mt-6 items-center">
+                      <div className="flex flex-col gap-0.5 mr-2 sm:hidden">
+                        <button
+                          type="button"
+                          onClick={() => moveField(field.id, "up")}
+                          className="rounded-md p-1 hover:bg-muted/50 text-muted-foreground/60 hover:text-foreground transition-colors"
+                          title="Move up"
+                        >
+                          <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 15l-6-6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveField(field.id, "down")}
+                          className="rounded-md p-1 hover:bg-muted/50 text-muted-foreground/60 hover:text-foreground transition-colors"
+                          title="Move down"
+                        >
+                          <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </button>
+                      </div>
                       <button
                         type="button"
                         onClick={() => setPrimaryField(field.id)}

@@ -3,8 +3,12 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import appMeta from "@/data/metadata";
-import { WelcomePopup } from "./welcome-popup";
 import dynamic from "next/dynamic";
+
+const WelcomePopup = dynamic(
+  () => import("./welcome-popup").then((mod) => mod.WelcomePopup),
+  { ssr: false }
+);
 
 const DonatePopup = dynamic(
   () => import("./donate-popup").then((mod) => mod.DonatePopup),

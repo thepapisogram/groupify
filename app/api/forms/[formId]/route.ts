@@ -39,14 +39,11 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
       const isSharedAdmin = !!(userEmail && form.confirmedAdmins && form.confirmedAdmins.includes(userEmail));
       const isAdmin = isOwner || isSharedAdmin;
 
-      const { adminToken, confirmedAdmins, ...publicForm } = form;
+      const { adminToken: _adminToken, confirmedAdmins: _confirmedAdmins, ...publicForm } = form;
       
       if (isAdmin) {
-        return NextResponse.json({ ...publicForm, adminToken, confirmedAdmins: confirmedAdmins || [], isOwner }, { status: 200 });
+        return NextResponse.json({ ...publicForm, adminToken: form.adminToken, confirmedAdmins: form.confirmedAdmins || [], isOwner }, { status: 200 });
       }
-
-      void adminToken;
-      void confirmedAdmins;
 
     return NextResponse.json(publicForm, { status: 200 });
   } catch (error) {

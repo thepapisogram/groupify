@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { useSession } from "next-auth/react";
+import { RiArrowUpSLine, RiArrowDownSLine, RiInbox2Line } from "@remixicon/react";
 
 interface PendingInvite {
   _id: string;
@@ -100,6 +101,7 @@ export function AdminDashboard({
       });
       if (!res.ok) throw new Error("Failed to delete form");
       toast.success("Form deleted successfully");
+      setIsDeleteDialogOpen(false);
       router.push("/forms");
     } catch {
       toast.error("Failed to delete form");
@@ -292,7 +294,7 @@ export function AdminDashboard({
       const items = submissions.map((sub) => {
         const val = sub.data[primaryField.id];
         const label = val ? (Array.isArray(val) ? val.join(", ") : val) : "Unknown";
-        return { label, data: sub.data };
+        return { label, originalId: sub._id };
       });
 
       const result = await buildGroupsAsync(
@@ -302,7 +304,15 @@ export function AdminDashboard({
         mode,
       );
 
-      setGroups(result);
+      const finalGroups = result.map(g => {
+        const fullMembers = g.originalIds?.map(id => {
+          const sub = submissions.find(s => s._id === id);
+          return sub ? sub.data : {};
+        }) || [];
+        return { ...g, rawMembers: fullMembers };
+      });
+
+      setGroups(finalGroups);
       setActiveTab("groups");
       toast.success(
         `${result.length} group${result.length !== 1 ? "s" : ""} created`,
@@ -389,7 +399,7 @@ export function AdminDashboard({
       setIsShareDialogOpen(false);
       
       // Redirect to the new admin URL
-      router.push(`/forms/${data.newFormId}/admin?token=${adminToken}`);
+      router.push(`/forms/${data.newFormId}/admin?token=${data.newAdminToken || adminToken}`);
     } catch {
       toast.error("Failed to regenerate link");
     } finally {
@@ -463,9 +473,9 @@ export function AdminDashboard({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {/* Status toggle — always visible */}
-            <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-card px-3 py-2">
-              <span className="text-sm font-medium text-foreground hidden sm:inline">
+            {/* Status toggle — always visible on desktop */}
+            <div className="hidden sm:flex items-center gap-2 rounded-xl border border-border/50 bg-card px-3 py-2">
+              <span className="text-sm font-medium text-foreground">
                 Accepting Responses
               </span>
               <Switch
@@ -492,6 +502,17 @@ export function AdminDashboard({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                {/* Status toggle - mobile only */}
+                <div className="sm:hidden px-2 py-1.5 mb-1 flex items-center justify-between border-b border-border/50">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {formConfig.isClosed ? "Closed" : "Accepting"}
+                  </span>
+                  <Switch
+                    checked={!formConfig.isClosed}
+                    onCheckedChange={toggleFormStatus}
+                    disabled={isUpdatingStatus}
+                  />
+                </div>
                 <DropdownMenuItem onClick={fetchSubmissions} className="cursor-pointer gap-2">
                   <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 3v5h-5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   Refresh
@@ -504,7 +525,7 @@ export function AdminDashboard({
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setIsAdminsDialogOpen(true)} className="cursor-pointer gap-2">
                   <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                  Manage Admins
+                  Manage Collaborators
                 </DropdownMenuItem>
                 {isOwner && (
                   <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="cursor-pointer gap-2 text-destructive focus:text-destructive focus:bg-destructive/10">
@@ -519,30 +540,32 @@ export function AdminDashboard({
 
         <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
           <div className="space-y-6 min-w-0">
-            {hasResults && (
-              <div className="flex p-1 space-x-1 bg-muted/30 border border-border/50 rounded-xl w-fit">
-                <button
-                  onClick={() => setActiveTab("submissions")}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                    activeTab === "submissions"
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  Submissions
-                </button>
-                <button
-                  onClick={() => setActiveTab("groups")}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                    activeTab === "groups"
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  Generated Groups
-                </button>
-              </div>
-            )}
+            <div className="flex p-1 space-x-1 bg-muted/30 border border-border/50 rounded-xl w-fit">
+              <button
+                onClick={() => setActiveTab("submissions")}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                  activeTab === "submissions"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                }`}
+              >
+                Submissions
+              </button>
+              <button
+                onClick={() => hasResults && setActiveTab("groups")}
+                disabled={!hasResults}
+                title={!hasResults ? "Generate groups to see results" : undefined}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                  activeTab === "groups"
+                    ? "bg-card text-foreground shadow-sm"
+                    : !hasResults
+                    ? "text-muted-foreground/50 cursor-not-allowed"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                }`}
+              >
+                Generated Groups
+              </button>
+            </div>
 
             {(!hasResults || activeTab === "submissions") && (
               <div className="rounded-2xl border border-border/50 bg-card/70 p-6 backdrop-blur-sm shadow-md animate-fade-in">
@@ -592,8 +615,9 @@ export function AdminDashboard({
                   )}
                 </div>
                 {submissions.length === 0 ? (
-                  <div className="py-12 text-center text-muted-foreground">
-                    <p>No responses yet.</p>
+                  <div className="py-16 text-center flex flex-col items-center justify-center text-muted-foreground">
+                    <RiInbox2Line className="size-12 opacity-20 mb-4" />
+                    <p className="font-medium text-foreground">No responses yet.</p>
                     <p className="text-sm mt-1">
                       Share the public link to start collecting data.
                     </p>
@@ -618,7 +642,7 @@ export function AdminDashboard({
                                 )}
                                 {f.isPrimary && sortConfig?.key === f.id && (
                                   <span className="text-primary text-xs">
-                                    {sortConfig.direction === "asc" ? "▲" : "▼"}
+                                    {sortConfig.direction === "asc" ? <RiArrowUpSLine className="size-4" /> : <RiArrowDownSLine className="size-4" />}
                                   </span>
                                 )}
                               </div>
@@ -632,7 +656,7 @@ export function AdminDashboard({
                               Time
                               {sortConfig?.key === "time" && (
                                 <span className="text-primary text-xs">
-                                  {sortConfig.direction === "asc" ? "▲" : "▼"}
+                                  {sortConfig.direction === "asc" ? <RiArrowUpSLine className="size-4" /> : <RiArrowDownSLine className="size-4" />}
                                 </span>
                               )}
                             </div>

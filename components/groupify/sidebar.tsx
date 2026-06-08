@@ -163,7 +163,7 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="fixed bottom-4 left-4 right-4 z-50 sm:static sm:bottom-auto sm:left-auto sm:right-auto sm:z-auto">
+      <div className="fixed bottom-4 left-4 right-4 z-50 pb-[env(safe-area-inset-bottom)] sm:static sm:bottom-auto sm:left-auto sm:right-auto sm:z-auto sm:pb-0">
         <Button
           type="button"
           onClick={onGenerate}

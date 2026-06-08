@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import clientPromise from "@/lib/mongodb";
 import { AdminDashboard } from "@/components/groupify/admin-dashboard";
 import { ObjectId } from "mongodb";
+import { safeObjectId } from "@/lib/mongodb";
 
 export default async function AdminDashboardServerPage({
   params,
@@ -18,12 +19,7 @@ export default async function AdminDashboardServerPage({
   const client = await clientPromise;
   const db = client.db("groupify");
 
-  let form;
-  try {
-    form = await db.collection("forms").findOne({ _id: new ObjectId(formId) });
-  } catch {
-    form = await db.collection("forms").findOne({ _id: formId as unknown as ObjectId });
-  }
+  const form = await db.collection("forms").findOne({ _id: safeObjectId(formId) as unknown as ObjectId });
 
   if (!form) {
     redirect("/");

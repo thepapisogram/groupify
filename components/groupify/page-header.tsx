@@ -17,9 +17,52 @@ import {
 import { Button } from "@/components/ui/button";
 import { HeaderAuthSkeleton } from "@/components/groupify/skeletons";
 
+function SignOutButton() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        onClick={() => setIsOpen(true)}
+        className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+        title="Sign out"
+      >
+        <RiLogoutBoxRLine className="size-3.5" />
+      </button>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] rounded-xl sm:w-full sm:max-w-md sm:rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Sign out</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to sign out of your account?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:gap-0 mt-4 sm:mt-0">
+            <Button
+              variant="outline"
+              onClick={() => setIsOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setIsOpen(false);
+                signOut();
+              }}
+            >
+              Sign out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 export function PageHeader() {
   const { data: session, status } = useSession();
-  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
   return (
     <header className="mb-6 sm:mb-10 animate-fade-in">
@@ -35,7 +78,6 @@ export function PageHeader() {
                   alt="Groupify"
                   className="size-7 sm:size-9"
                   priority
-                  unoptimized
                 />
               </div>
             </Link>
@@ -70,13 +112,7 @@ export function PageHeader() {
                 {session.user?.name || session.user?.email}
               </span>
 
-              <button
-                onClick={() => setIsLogoutDialogOpen(true)}
-                className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                title="Sign out"
-              >
-                <RiLogoutBoxRLine className="size-3.5" />
-              </button>
+              <SignOutButton />
             </div>
           ) : (
             <Link
@@ -91,34 +127,6 @@ export function PageHeader() {
           <ModeToggle />
         </div>
       </div>
-
-      <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
-        <DialogContent className="w-[calc(100%-2rem)] rounded-xl sm:w-full sm:max-w-md sm:rounded-lg">
-          <DialogHeader>
-            <DialogTitle>Sign out</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to sign out of your account?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex gap-2 sm:gap-0 mt-4 sm:mt-0">
-            <Button
-              variant="outline"
-              onClick={() => setIsLogoutDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setIsLogoutDialogOpen(false);
-                signOut();
-              }}
-            >
-              Sign out
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </header>
   );
 }

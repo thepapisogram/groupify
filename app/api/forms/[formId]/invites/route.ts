@@ -50,7 +50,7 @@ export async function GET(
       };
     });
 
-    return NextResponse.json({ pending: [...pending, ...expired], active });
+    return NextResponse.json({ pending, active });
   } catch (error) {
     console.error("Error fetching invites:", error);
     return NextResponse.json(

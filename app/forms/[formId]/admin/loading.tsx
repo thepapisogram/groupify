@@ -20,22 +20,34 @@ export default function AdminDashboardLoading() {
         </div>
 
         {/* Table skeleton */}
-        <div className="rounded-2xl border border-border/50 bg-card/70 p-6 backdrop-blur-sm shadow-md">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="h-5 w-40 animate-pulse rounded-xl bg-muted/40" />
-            <div className="h-8 w-28 animate-pulse rounded-xl bg-muted/30" />
+        <div className="rounded-2xl border border-border/50 bg-card/70 backdrop-blur-sm shadow-md overflow-hidden">
+          <div className="flex items-center justify-between p-6 pb-4 border-b border-border/50">
+            <div className="h-5 w-32 animate-pulse rounded-lg bg-muted/40" />
+            <div className="h-8 w-24 animate-pulse rounded-lg bg-muted/30" />
           </div>
-          <div className="space-y-3">
-            {/* Table header */}
-            <div className="h-9 w-full animate-pulse rounded-xl bg-muted/30" />
-            {/* Skeleton rows */}
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-10 w-full animate-pulse rounded-xl bg-muted/20"
-                style={{ animationDelay: `${i * 0.08}s` }}
-              />
-            ))}
+          <div className="p-0">
+            <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-4 bg-muted/10 px-6 py-3 border-b border-border/50">
+              <div className="h-4 w-4 animate-pulse rounded bg-muted/30" />
+              <div className="h-4 w-24 animate-pulse rounded bg-muted/30" />
+              <div className="h-4 w-32 animate-pulse rounded bg-muted/30" />
+              <div className="h-4 w-20 animate-pulse rounded bg-muted/30" />
+              <div className="h-4 w-12 animate-pulse rounded bg-muted/30" />
+            </div>
+            <div className="divide-y divide-border/50">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-4 px-6 py-4 items-center"
+                  style={{ animationDelay: `${i * 0.08}s` }}
+                >
+                  <div className="h-4 w-4 animate-pulse rounded bg-muted/20" />
+                  <div className="h-4 w-3/4 animate-pulse rounded-lg bg-muted/20" />
+                  <div className="h-4 w-5/6 animate-pulse rounded-lg bg-muted/20" />
+                  <div className="h-4 w-24 animate-pulse rounded-lg bg-muted/20" />
+                  <div className="h-6 w-16 animate-pulse rounded-full bg-muted/20" />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

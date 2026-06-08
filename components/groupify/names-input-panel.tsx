@@ -44,10 +44,13 @@ export function NamesInputPanel({
         {!names && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/40">
             <RiTeamLine className="mb-4 size-12 opacity-50" strokeWidth={1.5} />
-            <p className="text-sm font-medium">No names yet</p>
-            <p className="mt-1 text-xs text-center max-w-[200px]">
-              Type here or paste a column directly from Excel
-            </p>
+            <p className="text-sm font-medium mb-3">Paste your list</p>
+            <div className="flex flex-col items-center gap-1.5 text-xs text-muted-foreground/30 font-dm">
+              <span className="animate-fade-in" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>Michael Scott</span>
+              <span className="animate-fade-in" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>Jim Halpert</span>
+              <span className="animate-fade-in" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>Pam Beesly</span>
+              <span className="animate-fade-in" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>Dwight Schrute</span>
+            </div>
           </div>
         )}
       </div>

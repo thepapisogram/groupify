@@ -226,6 +226,13 @@ export function FormFiller({ formId, formConfig }: FormFillerProps) {
                     value={(formData[field.id] as string) || ""}
                     onChange={(e) => handleChange(field.id, e.target.value)}
                     required={field.required}
+                    autoComplete={
+                      field.label.toLowerCase().includes("email")
+                        ? "email"
+                        : field.label.toLowerCase().includes("name")
+                        ? "name"
+                        : "on"
+                    }
                     className="w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-3 text-sm text-foreground transition-all focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50"
                   />
                 )}

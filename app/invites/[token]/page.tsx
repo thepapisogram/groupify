@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { PageHeader } from "@/components/groupify/page-header";
 import { Footer } from "@/components/groupify/footer";
 import { Button } from "@/components/ui/button";
@@ -163,10 +163,15 @@ export default function InvitePage() {
           <PageHeader />
           <div className="mt-12 rounded-2xl border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive backdrop-blur-sm max-w-lg mx-auto">
             <h2 className="text-xl font-bold mb-2">Wrong Account</h2>
-            <p className="text-sm">
+            <p className="text-sm mb-6">
               This invite was sent to <strong>{invite.invitedEmail}</strong>, but you are logged in as <strong>{session.user.email}</strong>.
-              Please sign out and sign in with the correct account.
             </p>
+            <Button
+              variant="destructive"
+              onClick={() => signOut({ callbackUrl: `/login?callbackUrl=/invites/${token}` })}
+            >
+              Sign out and switch account
+            </Button>
           </div>
           <Footer />
         </div>

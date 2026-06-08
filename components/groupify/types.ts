@@ -6,5 +6,6 @@ export interface Group {
   label: string;
   members: string[];
   rawMembers?: Record<string, string | string[]>[];
+  originalIds?: (string | undefined)[];
   hue: number;
 }

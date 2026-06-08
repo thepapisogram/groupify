@@ -74,18 +74,19 @@ export const InviteAcceptedEmail = ({
 export default InviteAcceptedEmail;
 
 const main = {
-  backgroundColor: "#f6f9fc",
+  backgroundColor: "#080a0f",
   fontFamily:
     '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif',
 };
 
 const container = {
-  backgroundColor: "#ffffff",
+  backgroundColor: "#0e121a",
   margin: "0 auto",
   padding: "20px 0 48px",
   marginBottom: "64px",
-  borderRadius: "8px",
-  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+  borderRadius: "16px",
+  border: "1px solid #1e293b",
+  boxShadow: "0 4px 24px -1px rgba(0, 0, 0, 0.5)",
 };
 
 const logoContainer = {
@@ -99,7 +100,7 @@ const logo = {
 };
 
 const text = {
-  color: "#525f7f",
+  color: "#f8fafc",
   fontSize: "16px",
   lineHeight: "24px",
   padding: "0 40px",
@@ -111,9 +112,9 @@ const buttonContainer = {
 };
 
 const button = {
-  backgroundColor: "#000000",
-  borderRadius: "5px",
-  color: "#fff",
+  backgroundColor: "#1cbac8",
+  borderRadius: "12px",
+  color: "#080a0f",
   fontSize: "16px",
   fontWeight: "bold",
   textDecoration: "none",
@@ -124,16 +125,16 @@ const button = {
 };
 
 const anchor = {
-  color: "#2563eb",
+  color: "#38bdf8",
 };
 
 const hr = {
-  borderColor: "#e6ebf1",
+  borderColor: "#1e293b",
   margin: "20px 0",
 };
 
 const footer = {
-  color: "#8898aa",
+  color: "#94a3b8",
   fontSize: "14px",
   padding: "0 40px",
 };

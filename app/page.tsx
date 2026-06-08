@@ -29,13 +29,7 @@ export default function Page() {
   const [copiedText, setCopiedText] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Preload the worker script on mount so the first generate is instant
-  useEffect(() => {
-    if (typeof Worker !== "undefined") {
-      const worker = new Worker("/groupify.worker.js");
-      worker.terminate();
-    }
-  }, []);
+
 
   const nameCount = names
     .split("\n")

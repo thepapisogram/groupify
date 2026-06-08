@@ -52,6 +52,7 @@ function buildGroups(rawOrItems, groupBy, value, mode) {
       label: `Group ${i + 1}`,
       members: bucket.map((m) => m.label),
       rawMembers: bucket.map((m) => m.data || {}),
+      originalIds: bucket.map((m) => m.originalId),
       hue: HUES[i % HUES.length],
     }));
   }
@@ -75,6 +76,7 @@ function buildGroups(rawOrItems, groupBy, value, mode) {
     label: `Group ${i + 1}`,
     members: bucket.map((m) => m.label),
     rawMembers: bucket.map((m) => m.data || {}),
+    originalIds: bucket.map((m) => m.originalId),
     hue: HUES[i % HUES.length],
   }));
 }

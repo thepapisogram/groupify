@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { RiShareLine, RiEdit2Line, RiEyeLine } from "@remixicon/react";
 import { ShareDialog } from "@/components/groupify/share-dialog";
@@ -12,9 +12,11 @@ interface FormCardActionsProps {
 
 export function FormCardActions({ formId, adminToken }: FormCardActionsProps) {
   const [shareOpen, setShareOpen] = useState(false);
-  const [shareUrl] = useState(() => 
-    typeof window !== "undefined" ? `${window.location.origin}/forms/${formId}` : ""
-  );
+  const [shareUrl, setShareUrl] = useState("");
+
+  useEffect(() => {
+    setShareUrl(`${window.location.origin}/forms/${formId}`);
+  }, [formId]);
 
   return (
     <>

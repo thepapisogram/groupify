@@ -1,6 +1,6 @@
 import type { DistributionMode, ExportFormat, Group } from "@/components/groupify/types";
 import type { FormField } from "@/components/groupify/form-builder";
-import { loadExcelJS, loadDocx } from "@/lib/export";
+import { loadXLSX, loadDocx } from "@/lib/export";
 
 const HUES = [185, 200, 220, 260, 160, 340, 35, 280];
 
@@ -9,12 +9,12 @@ const HUES = [185, 200, 220, 260, 160, 340, 35, 280];
  * On the client, prefer buildGroupsAsync() which runs in a Web Worker.
  */
 export function buildGroups(
-  rawOrItems: string | { label: string; data: Record<string, string | string[]> }[],
+  rawOrItems: string | { label: string; data?: Record<string, string | string[]>; originalId?: string }[],
   groupBy: "size" | "count",
   value: number,
   mode: DistributionMode,
 ): Group[] {
-  let pool: { label: string; data?: Record<string, string | string[]> }[] = [];
+  let pool: { label: string; data?: Record<string, string | string[]>; originalId?: string }[] = [];
 
   if (typeof rawOrItems === "string") {
     const names = rawOrItems
@@ -40,7 +40,7 @@ export function buildGroups(
     const baseSize = Math.floor(pool.length / count);
     const extra = pool.length % count;
 
-    const buckets: { label: string; data?: Record<string, string | string[]> }[][] = Array.from({ length: count }, (_, index) =>
+    const buckets: { label: string; data?: Record<string, string | string[]>; originalId?: string }[][] = Array.from({ length: count }, (_, index) =>
       pool.slice(index * baseSize, index * baseSize + baseSize),
     );
 
@@ -54,6 +54,7 @@ export function buildGroups(
       label: `Group ${index + 1}`,
       members: bucket.map(m => m.label),
       rawMembers: bucket.map(m => m.data || {}),
+      originalIds: bucket.map(m => m.originalId),
       hue: HUES[index % HUES.length],
     }));
   }
@@ -61,7 +62,7 @@ export function buildGroups(
   const size = value;
   const count = Math.floor(pool.length / size);
   const extra = pool.length % size;
-  const buckets: { label: string; data?: Record<string, string | string[]> }[][] = Array.from({ length: count }, (_, index) =>
+  const buckets: { label: string; data?: Record<string, string | string[]>; originalId?: string }[][] = Array.from({ length: count }, (_, index) =>
     pool.slice(index * size, index * size + size),
   );
 
@@ -79,6 +80,7 @@ export function buildGroups(
     label: `Group ${index + 1}`,
     members: bucket.map(m => m.label),
     rawMembers: bucket.map(m => m.data || {}),
+    originalIds: bucket.map(m => m.originalId),
     hue: HUES[index % HUES.length],
   }));
 }
@@ -89,7 +91,7 @@ export function buildGroups(
  * if the Worker API is unavailable (e.g. during SSR).
  */
 export function buildGroupsAsync(
-  rawOrItems: string | { label: string; data: Record<string, string | string[]> }[],
+  rawOrItems: string | { label: string; data?: Record<string, string | string[]>; originalId?: string }[],
   groupBy: "size" | "count",
   value: number,
   mode: DistributionMode,
@@ -120,41 +122,42 @@ export async function exportGroups(groups: Group[], format: ExportFormat, fields
   const hasFields = fields && fields.length > 0;
 
   if (format === "excel") {
-    const { ExcelJS, saveAs } = await loadExcelJS();
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet("Groups");
-
+    const { XLSX, saveAs } = await loadXLSX();
+    
+    // Create rows for XLSX
+    const rows: string[][] = [];
+    
     groups.forEach((group, groupIndex) => {
-      const titleRow = sheet.addRow([group.label]);
-      titleRow.font = { bold: true, size: 15 };
-
-      if (hasFields) {
-        const headerRow = sheet.addRow(fields.map(f => f.label));
-        headerRow.font = { bold: true, size: 12 };
-
+      rows.push([group.label]);
+      
+      if (hasFields && fields) {
+        rows.push(fields.map(f => f.label));
         group.rawMembers?.forEach((member) => {
-          const row = sheet.addRow(fields.map(f => {
+          rows.push(fields.map(f => {
             const val = member[f.id];
             if (!val) return "";
-            return Array.isArray(val) ? val.join(", ") : val;
+            return Array.isArray(val) ? val.join(", ") : String(val);
           }));
-          row.font = { size: 12 };
         });
       } else {
         group.members.forEach((member) => {
-          const row = sheet.addRow([member]);
-          row.font = { size: 12 };
+          rows.push([member]);
         });
       }
 
       if (groupIndex < groups.length - 1) {
-        sheet.addRow([]);
+        rows.push([]);
       }
     });
 
-    sheet.columns.forEach((column) => { column.width = 26; });
-
-    const buffer = await workbook.xlsx.writeBuffer();
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Groups");
+    
+    // Set column width
+    worksheet["!cols"] = [{ wch: 26 }];
+    
+    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
     saveAs(new Blob([buffer], { type: "application/octet-stream" }), "Groupify.xlsx");
     return;
   }
@@ -201,28 +204,31 @@ export async function exportResponses(
   fields: FormField[]
 ) {
   if (format === "excel") {
-    const { ExcelJS, saveAs } = await loadExcelJS();
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet("Responses");
-
-    const headerRow = sheet.addRow([...fields.map((f) => f.label), "Time"]);
-    headerRow.font = { bold: true, size: 12 };
+    const { XLSX, saveAs } = await loadXLSX();
+    
+    const rows: string[][] = [
+      [...fields.map(f => f.label), "Time"]
+    ];
 
     submissions.forEach((sub) => {
-      const row = sheet.addRow([
+      rows.push([
         ...fields.map((f) => {
           const val = sub.data[f.id];
           if (!val) return "";
-          return Array.isArray(val) ? val.join(", ") : val;
+          return Array.isArray(val) ? val.join(", ") : String(val);
         }),
         new Date(sub.submittedAt).toLocaleString(),
       ]);
-      row.font = { size: 12 };
     });
 
-    sheet.columns.forEach((column) => { column.width = 26; });
-
-    const buffer = await workbook.xlsx.writeBuffer();
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Responses");
+    
+    // Set column width
+    worksheet["!cols"] = Array(fields.length + 1).fill({ wch: 26 });
+    
+    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
     saveAs(new Blob([buffer], { type: "application/octet-stream" }), "Responses.xlsx");
     return;
   }

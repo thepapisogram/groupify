@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { nanoid } from "nanoid";
+import crypto from "crypto";
 
 interface FormDoc {
   _id: string;
@@ -37,11 +38,12 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Generate a new formId and keep the rest the same
+    // Generate a new formId and adminToken
     const newFormId = nanoid(6);
-    const newForm = { ...form, _id: newFormId, updatedAt: new Date() };
+    const newAdminToken = crypto.randomBytes(32).toString("hex");
+    const newForm: FormDoc = { ...form, _id: newFormId, adminToken: newAdminToken, updatedAt: new Date() };
 
-    await db.collection<FormDoc>("forms").insertOne(newForm as any);
+    await db.collection<FormDoc>("forms").insertOne(newForm);
     await db.collection<FormDoc>("forms").deleteOne({ _id: formId });
     
     // Update all submissions to reference the new formId
@@ -50,7 +52,7 @@ export async function POST(
       { $set: { formId: newFormId } }
     );
 
-    return NextResponse.json({ newFormId }, { status: 200 });
+    return NextResponse.json({ newFormId, newAdminToken }, { status: 200 });
   } catch (error) {
     console.error("Error regenerating form link:", error);
     return NextResponse.json(

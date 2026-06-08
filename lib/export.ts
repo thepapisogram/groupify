@@ -8,12 +8,12 @@
  * Re-exports everything utils.ts needs so the calling code doesn't change.
  */
 
-export async function loadExcelJS() {
-  const [{ default: ExcelJS }, { saveAs }] = await Promise.all([
-    import("exceljs"),
+export async function loadXLSX() {
+  const [XLSX, { saveAs }] = await Promise.all([
+    import("xlsx"),
     import("file-saver"),
   ]);
-  return { ExcelJS, saveAs };
+  return { XLSX, saveAs };
 }
 
 export async function loadDocx() {

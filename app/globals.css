@@ -93,7 +93,14 @@
     background-image:
       radial-gradient(ellipse 80% 50% at 20% -10%, var(--glow-teal), transparent),
       radial-gradient(ellipse 60% 40% at 80% 110%, var(--glow-cyan), transparent);
+    background-size: 150% 150%;
     min-height: 100dvh;
+    animation: glow-pan 30s ease-in-out infinite alternate;
+  }
+
+  @keyframes glow-pan {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 100% 100%; }
   }
 }
 
