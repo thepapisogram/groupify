@@ -44,12 +44,12 @@ export function DonatePopup({ onFinished }: { onFinished?: () => void }) {
 
   const onSuccess = () => {
     toast.success("Thank you for your generous donation!");
-    setIsOpen(false);
-    setTimeout(() => onFinished?.(), 300);
+    onFinished?.();
   };
 
   const onPaystackClose = () => {
     // User closed the payment modal without paying
+    onFinished?.();
   };
 
   const handleDonate = () => {
@@ -57,7 +57,14 @@ export function DonatePopup({ onFinished }: { onFinished?: () => void }) {
         toast.error("Please enter an email address");
         return;
     }
-    initializePayment({ onSuccess, onClose: onPaystackClose });
+    
+    // Close the Radix dialog first so pointer-events are restored to the body
+    setIsOpen(false);
+    
+    // Wait for the exit animation to finish and Radix to restore interactivity
+    setTimeout(() => {
+        initializePayment({ onSuccess, onClose: onPaystackClose });
+    }, 350);
   };
 
   return (
