@@ -201,24 +201,27 @@ export async function exportGroups(groups: Group[], format: ExportFormat, fields
 export async function exportResponses(
   submissions: { _id: string; submittedAt: string; data: Record<string, string | string[]> }[],
   format: ExportFormat,
-  fields: FormField[]
+  fields: FormField[],
+  fileName: string = "Responses"
 ) {
   if (format === "excel") {
     const { XLSX, saveAs } = await loadXLSX();
     
     const rows: string[][] = [
-      [...fields.map(f => f.label), "Time"]
+      fields.map(f => f.label)
     ];
 
     submissions.forEach((sub) => {
-      rows.push([
-        ...fields.map((f) => {
+      rows.push(
+        fields.map((f) => {
+          if (f.id === "_time") {
+            return new Date(sub.submittedAt).toLocaleString();
+          }
           const val = sub.data[f.id];
           if (!val) return "";
           return Array.isArray(val) ? val.join(", ") : String(val);
-        }),
-        new Date(sub.submittedAt).toLocaleString(),
-      ]);
+        })
+      );
     });
 
     const worksheet = XLSX.utils.aoa_to_sheet(rows);
@@ -226,10 +229,10 @@ export async function exportResponses(
     XLSX.utils.book_append_sheet(workbook, worksheet, "Responses");
     
     // Set column width
-    worksheet["!cols"] = Array(fields.length + 1).fill({ wch: 26 });
+    worksheet["!cols"] = Array(fields.length).fill({ wch: 26 });
     
     const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    saveAs(new Blob([buffer], { type: "application/octet-stream" }), "Responses.xlsx");
+    saveAs(new Blob([buffer], { type: "application/octet-stream" }), `${fileName}.xlsx`);
     return;
   }
 
@@ -237,19 +240,19 @@ export async function exportResponses(
 
   const tableRows = [
     new TableRow({
-      children: [...fields.map(f => f.label), "Time"].map(
+      children: fields.map(f => f.label).map(
         text => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text, bold: true })] })] })
       )
     }),
     ...submissions.map(sub => new TableRow({
-      children: [
-        ...fields.map(f => {
-          const val = sub.data[f.id];
-          const strVal = val ? (Array.isArray(val) ? val.join(", ") : val) : "";
-          return new TableCell({ children: [new Paragraph(strVal)] });
-        }),
-        new TableCell({ children: [new Paragraph(new Date(sub.submittedAt).toLocaleString())] })
-      ]
+      children: fields.map(f => {
+        if (f.id === "_time") {
+          return new TableCell({ children: [new Paragraph(new Date(sub.submittedAt).toLocaleString())] });
+        }
+        const val = sub.data[f.id];
+        const strVal = val ? (Array.isArray(val) ? val.join(", ") : val) : "";
+        return new TableCell({ children: [new Paragraph(strVal)] });
+      })
     }))
   ];
 
@@ -268,5 +271,5 @@ export async function exportResponses(
   });
 
   const blob = await Packer.toBlob(document);
-  saveAs(blob, "Responses.docx");
+  saveAs(blob, `${fileName}.docx`);
 }

@@ -24,7 +24,12 @@ import { Footer } from "@/components/groupify/footer";
 import { Sidebar } from "@/components/groupify/sidebar";
 import { ResultsPanel } from "@/components/groupify/results-panel";
 import { ShareDialog } from "@/components/groupify/share-dialog";
-import { buildGroupsAsync, exportGroups, exportResponses } from "@/components/groupify/utils";
+import { ExportDialog } from "@/components/groupify/export-dialog";
+import {
+  buildGroupsAsync,
+  exportGroups,
+  exportResponses,
+} from "@/components/groupify/utils";
 import { ConfirmDialog } from "@/components/groupify/confirm-dialog";
 import {
   DistributionMode,
@@ -35,7 +40,11 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { useSession } from "next-auth/react";
-import { RiArrowUpSLine, RiArrowDownSLine, RiInbox2Line } from "@remixicon/react";
+import {
+  RiArrowUpSLine,
+  RiArrowDownSLine,
+  RiInbox2Line,
+} from "@remixicon/react";
 
 interface PendingInvite {
   _id: string;
@@ -57,7 +66,11 @@ export interface AdminDashboardProps {
     adminToken?: string;
     userId?: string;
   };
-  initialSubmissions: { _id: string; submittedAt: string; data: Record<string, string | string[]> }[];
+  initialSubmissions: {
+    _id: string;
+    submittedAt: string;
+    data: Record<string, string | string[]>;
+  }[];
   adminToken: string;
   isOwner: boolean;
 }
@@ -76,11 +89,17 @@ export function AdminDashboard({
   const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
 
-  const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/forms/${formId}` : "";
+  const publicUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/forms/${formId}`
+      : "";
 
   const [formConfig, setFormConfig] = useState(initialFormConfig);
   const [submissions, setSubmissions] = useState(initialSubmissions);
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: "asc" | "desc";
+  } | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const [isAdminsDialogOpen, setIsAdminsDialogOpen] = useState(false);
@@ -89,8 +108,9 @@ export function AdminDashboard({
   const [isLoadingAdmins, setIsLoadingAdmins] = useState(true);
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [isUpdatingAdmins, setIsUpdatingAdmins] = useState(false);
-  
+
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isDeletingForm, setIsDeletingForm] = useState(false);
 
   const handleDeleteForm = async () => {
@@ -114,7 +134,9 @@ export function AdminDashboard({
     if (!adminToken) return;
     setIsLoadingAdmins(true);
     try {
-      const res = await fetch(`/api/forms/${formId}/invites?token=${adminToken}`);
+      const res = await fetch(
+        `/api/forms/${formId}/invites?token=${adminToken}`,
+      );
       if (res.ok) {
         const data = await res.json();
         setPendingInvites(data.pending || []);
@@ -144,11 +166,14 @@ export function AdminDashboard({
     if (!formConfig) return;
     setIsUpdatingStatus(true);
     try {
-      const res = await fetch(`/api/forms/${formId}/status?token=${adminToken}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isClosed: !formConfig.isClosed }),
-      });
+      const res = await fetch(
+        `/api/forms/${formId}/status?token=${adminToken}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isClosed: !formConfig.isClosed }),
+        },
+      );
       if (!res.ok) throw new Error("Failed to update status");
       const data = await res.json();
       setFormConfig({ ...formConfig, isClosed: data.isClosed });
@@ -166,7 +191,11 @@ export function AdminDashboard({
 
   const requestSort = (key: string) => {
     let direction: "asc" | "desc" = "asc";
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+    if (
+      sortConfig &&
+      sortConfig.key === key &&
+      sortConfig.direction === "asc"
+    ) {
       direction = "desc";
     }
     setSortConfig({ key, direction });
@@ -197,7 +226,10 @@ export function AdminDashboard({
         return 0;
       });
     } else {
-       sortableItems.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+      sortableItems.sort(
+        (a, b) =>
+          new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
+      );
     }
     return sortableItems;
   }, [submissions, sortConfig]);
@@ -210,7 +242,9 @@ export function AdminDashboard({
   const [groups, setGroups] = useState<Group[]>([]);
   const [isWorking, setIsWorking] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
-  const [activeTab, setActiveTab] = useState<"submissions" | "groups">("submissions");
+  const [activeTab, setActiveTab] = useState<"submissions" | "groups">(
+    "submissions",
+  );
 
   const fetchSubmissions = useCallback(async () => {
     try {
@@ -219,12 +253,14 @@ export function AdminDashboard({
         throw new Error("Unauthorized or form not found");
       }
       const data = await res.json();
-      
+
       setFormConfig(data.form);
       setSubmissions(data.submissions || []);
       toast.success("Data refreshed");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to refresh data");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to refresh data",
+      );
     }
   }, [formId, adminToken]);
 
@@ -293,7 +329,11 @@ export function AdminDashboard({
         formConfig.fields.find((f) => f.isPrimary) || formConfig.fields[0];
       const items = submissions.map((sub) => {
         const val = sub.data[primaryField.id];
-        const label = val ? (Array.isArray(val) ? val.join(", ") : val) : "Unknown";
+        const label = val
+          ? Array.isArray(val)
+            ? val.join(", ")
+            : val
+          : "Unknown";
         return { label, originalId: sub._id };
       });
 
@@ -304,11 +344,12 @@ export function AdminDashboard({
         mode,
       );
 
-      const finalGroups = result.map(g => {
-        const fullMembers = g.originalIds?.map(id => {
-          const sub = submissions.find(s => s._id === id);
-          return sub ? sub.data : {};
-        }) || [];
+      const finalGroups = result.map((g) => {
+        const fullMembers =
+          g.originalIds?.map((id) => {
+            const sub = submissions.find((s) => s._id === id);
+            return sub ? sub.data : {};
+          }) || [];
         return { ...g, rawMembers: fullMembers };
       });
 
@@ -345,15 +386,20 @@ export function AdminDashboard({
     }
   };
 
-  const handleExportResponses = async (format: ExportFormat) => {
-    if (submissions.length === 0 || !formConfig) return;
+  const handleExportResponses = async (
+    filteredSubmissions: typeof initialSubmissions,
+    format: ExportFormat,
+    filteredFields: FormField[],
+    fileName: string
+  ) => {
+    if (filteredSubmissions.length === 0) return;
 
     const id = toast.loading(
       `Preparing ${format === "excel" ? "Excel" : "Word"} file...`,
     );
 
     try {
-      await exportResponses(submissions, format, formConfig.fields);
+      await exportResponses(filteredSubmissions, format, filteredFields, fileName);
       toast.dismiss(id);
       toast.success("File downloaded!");
     } catch {
@@ -388,18 +434,23 @@ export function AdminDashboard({
   const handleRegenerateLink = async () => {
     setIsRegenerating(true);
     try {
-      const res = await fetch(`/api/forms/${formId}/regenerate?token=${adminToken}`, {
-        method: "POST"
-      });
+      const res = await fetch(
+        `/api/forms/${formId}/regenerate?token=${adminToken}`,
+        {
+          method: "POST",
+        },
+      );
       if (!res.ok) throw new Error("Failed to regenerate");
       const data = await res.json();
-      
+
       toast.success("Link regenerated successfully");
       setIsRegenerateDialogOpen(false);
       setIsShareDialogOpen(false);
-      
+
       // Redirect to the new admin URL
-      router.push(`/forms/${data.newFormId}/admin?token=${data.newAdminToken || adminToken}`);
+      router.push(
+        `/forms/${data.newFormId}/admin?token=${data.newAdminToken || adminToken}`,
+      );
     } catch {
       toast.error("Failed to regenerate link");
     } finally {
@@ -412,27 +463,36 @@ export function AdminDashboard({
       toast.error("Please enter a valid email");
       return;
     }
-    
+
     // Check if they are already in pending or active
     if (activeAdmins.some((a) => a.email === newAdminEmail)) {
       toast.error("User is already an active collaborator");
       return;
     }
-    if (pendingInvites.some((i) => i.invitedEmail === newAdminEmail && new Date(i.expiresAt) > new Date())) {
+    if (
+      pendingInvites.some(
+        (i) =>
+          i.invitedEmail === newAdminEmail &&
+          new Date(i.expiresAt) > new Date(),
+      )
+    ) {
       toast.error("An active invite has already been sent to this email");
       return;
     }
 
     setIsUpdatingAdmins(true);
     try {
-      const res = await fetch(`/api/forms/${formId}/invites?token=${adminToken}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: newAdminEmail }),
-      });
+      const res = await fetch(
+        `/api/forms/${formId}/invites?token=${adminToken}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: newAdminEmail }),
+        },
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send invite");
-      
+
       toast.success("Invite sent successfully");
       setNewAdminEmail("");
       fetchInvites(); // Refresh lists
@@ -445,9 +505,12 @@ export function AdminDashboard({
 
   const handleRevokeOrRemove = async (inviteId: string) => {
     try {
-      const res = await fetch(`/api/forms/${formId}/invites/${inviteId}?token=${adminToken}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `/api/forms/${formId}/invites/${inviteId}?token=${adminToken}`,
+        {
+          method: "DELETE",
+        },
+      );
       if (!res.ok) throw new Error("Failed to remove");
       toast.success("Collaborator removed");
       fetchInvites(); // Refresh lists
@@ -455,8 +518,6 @@ export function AdminDashboard({
       toast.error("Failed to remove collaborator");
     }
   };
-
-
 
   return (
     <div className="mesh-bg relative min-h-dvh pb-20">
@@ -497,8 +558,16 @@ export function AdminDashboard({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-1.5 rounded-xl border border-border/50 bg-card px-3 py-2 text-sm font-medium text-foreground transition-all hover:bg-muted">
-                  More
-                  <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
+                  Form Options
+                  <svg
+                    className="size-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -513,23 +582,81 @@ export function AdminDashboard({
                     disabled={isUpdatingStatus}
                   />
                 </div>
-                <DropdownMenuItem onClick={fetchSubmissions} className="cursor-pointer gap-2">
-                  <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 3v5h-5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <DropdownMenuItem
+                  onClick={fetchSubmissions}
+                  className="cursor-pointer gap-2"
+                >
+                  <svg
+                    className="size-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path
+                      d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M21 3v5h-5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                   Refresh
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild className="cursor-pointer gap-2">
                   <Link href={`/forms/${formId}/edit?token=${adminToken}`}>
-                    <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <svg
+                      className="size-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
                     Edit Form
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsAdminsDialogOpen(true)} className="cursor-pointer gap-2">
-                  <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <DropdownMenuItem
+                  onClick={() => setIsAdminsDialogOpen(true)}
+                  className="cursor-pointer gap-2"
+                >
+                  <svg
+                    className="size-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
                   Manage Collaborators
                 </DropdownMenuItem>
                 {isOwner && (
-                  <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="cursor-pointer gap-2 text-destructive focus:text-destructive focus:bg-destructive/10">
-                    <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <DropdownMenuItem
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                    className="cursor-pointer gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
+                  >
+                    <svg
+                      className="size-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path
+                        d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                     Delete Form
                   </DropdownMenuItem>
                 )}
@@ -554,13 +681,15 @@ export function AdminDashboard({
               <button
                 onClick={() => hasResults && setActiveTab("groups")}
                 disabled={!hasResults}
-                title={!hasResults ? "Generate groups to see results" : undefined}
+                title={
+                  !hasResults ? "Generate groups to see results" : undefined
+                }
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                   activeTab === "groups"
                     ? "bg-card text-foreground shadow-sm"
                     : !hasResults
-                    ? "text-muted-foreground/50 cursor-not-allowed"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      ? "text-muted-foreground/50 cursor-not-allowed"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 }`}
               >
                 Generated Groups
@@ -575,26 +704,16 @@ export function AdminDashboard({
                   </h2>
                   {submissions.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="flex items-center gap-2 rounded-xl bg-muted px-4 py-2 text-sm font-semibold text-foreground transition-all hover:bg-muted/80 shadow-sm animate-fade-in">
-                            Export
-                            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleExportResponses("excel")} className="cursor-pointer">
-                            Export as Excel
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleExportResponses("word")} className="cursor-pointer">
-                            Export as Word
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <button
+                        onClick={() => setIsExportDialogOpen(true)}
+                        className="flex items-center gap-2 rounded-xl bg-muted px-4 py-2 text-sm font-semibold text-foreground transition-all hover:bg-muted/80 shadow-sm animate-fade-in"
+                      >
+                        Export Results
+                      </button>
 
                       <button
                         onClick={handleGenerate}
-                        className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 shadow-sm animate-fade-in"
+                        className="max-sm:hidden flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 shadow-sm animate-fade-in"
                       >
                         Generate Groups
                         <svg
@@ -617,7 +736,9 @@ export function AdminDashboard({
                 {submissions.length === 0 ? (
                   <div className="py-16 text-center flex flex-col items-center justify-center text-muted-foreground">
                     <RiInbox2Line className="size-12 opacity-20 mb-4" />
-                    <p className="font-medium text-foreground">No responses yet.</p>
+                    <p className="font-medium text-foreground">
+                      No responses yet.
+                    </p>
                     <p className="text-sm mt-1">
                       Share the public link to start collecting data.
                     </p>
@@ -628,10 +749,14 @@ export function AdminDashboard({
                       <thead className="text-xs text-muted-foreground uppercase bg-muted/20 border-b border-border/50">
                         <tr>
                           {formConfig.fields.map((f) => (
-                            <th 
-                              key={f.id} 
-                              className={`px-4 py-3 font-medium whitespace-nowrap ${f.isPrimary ? 'cursor-pointer hover:bg-muted/30 select-none' : ''}`}
-                              onClick={f.isPrimary ? () => requestSort(f.id) : undefined}
+                            <th
+                              key={f.id}
+                              className={`px-4 py-3 font-medium whitespace-nowrap ${f.isPrimary ? "cursor-pointer hover:bg-muted/30 select-none" : ""}`}
+                              onClick={
+                                f.isPrimary
+                                  ? () => requestSort(f.id)
+                                  : undefined
+                              }
                             >
                               <div className="flex items-center gap-1">
                                 {f.label}
@@ -642,13 +767,17 @@ export function AdminDashboard({
                                 )}
                                 {f.isPrimary && sortConfig?.key === f.id && (
                                   <span className="text-primary text-xs">
-                                    {sortConfig.direction === "asc" ? <RiArrowUpSLine className="size-4" /> : <RiArrowDownSLine className="size-4" />}
+                                    {sortConfig.direction === "asc" ? (
+                                      <RiArrowUpSLine className="size-4" />
+                                    ) : (
+                                      <RiArrowDownSLine className="size-4" />
+                                    )}
                                   </span>
                                 )}
                               </div>
                             </th>
                           ))}
-                          <th 
+                          <th
                             className="px-4 py-3 font-medium text-right cursor-pointer hover:bg-muted/30 select-none whitespace-nowrap"
                             onClick={() => requestSort("time")}
                           >
@@ -656,7 +785,11 @@ export function AdminDashboard({
                               Time
                               {sortConfig?.key === "time" && (
                                 <span className="text-primary text-xs">
-                                  {sortConfig.direction === "asc" ? <RiArrowUpSLine className="size-4" /> : <RiArrowDownSLine className="size-4" />}
+                                  {sortConfig.direction === "asc" ? (
+                                    <RiArrowUpSLine className="size-4" />
+                                  ) : (
+                                    <RiArrowDownSLine className="size-4" />
+                                  )}
                                 </span>
                               )}
                             </div>
@@ -675,8 +808,8 @@ export function AdminDashboard({
                                 key={f.id}
                                 className="px-4 py-3 text-foreground whitespace-nowrap"
                               >
-                                {Array.isArray(sub.data[f.id]) 
-                                  ? (sub.data[f.id] as string[]).join(", ") 
+                                {Array.isArray(sub.data[f.id])
+                                  ? (sub.data[f.id] as string[]).join(", ")
                                   : sub.data[f.id] || "-"}
                               </td>
                             ))}
@@ -721,7 +854,7 @@ export function AdminDashboard({
                 )}
               </div>
             )}
-            
+
             {hasResults && activeTab === "groups" && (
               <ResultsPanel
                 groups={groups}
@@ -751,7 +884,7 @@ export function AdminDashboard({
             onCopyText={handleCopyText}
           />
         </div>
-        
+
         <ShareDialog
           isOpen={isShareDialogOpen}
           onOpenChange={setIsShareDialogOpen}
@@ -759,19 +892,33 @@ export function AdminDashboard({
           onRegenerate={() => setIsRegenerateDialogOpen(true)}
         />
 
-        <Dialog open={isRegenerateDialogOpen} onOpenChange={setIsRegenerateDialogOpen}>
+        <Dialog
+          open={isRegenerateDialogOpen}
+          onOpenChange={setIsRegenerateDialogOpen}
+        >
           <DialogContent className="w-[calc(100%-2rem)] sm:w-full rounded-2xl sm:max-w-md border-border/50 bg-card/95 backdrop-blur-md">
             <DialogHeader>
-              <DialogTitle className="text-destructive text-xl">Regenerate Link?</DialogTitle>
+              <DialogTitle className="text-destructive text-xl">
+                Regenerate Link?
+              </DialogTitle>
               <DialogDescription>
-                This will generate a new public link for this form. <strong>The old link will immediately stop working</strong>, and anyone using it will get a 404 error.
+                This will generate a new public link for this form.{" "}
+                <strong>The old link will immediately stop working</strong>, and
+                anyone using it will get a 404 error.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="mt-4 sm:justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsRegenerateDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsRegenerateDialogOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleRegenerateLink} disabled={isRegenerating}>
+              <Button
+                variant="destructive"
+                onClick={handleRegenerateLink}
+                disabled={isRegenerating}
+              >
                 {isRegenerating ? "Regenerating..." : "Regenerate Link"}
               </Button>
             </DialogFooter>
@@ -779,14 +926,17 @@ export function AdminDashboard({
         </Dialog>
 
         <Dialog open={isAdminsDialogOpen} onOpenChange={setIsAdminsDialogOpen}>
-          <DialogContent 
+          <DialogContent
             onOpenAutoFocus={(e) => e.preventDefault()}
             className="w-[calc(100%-2rem)] sm:w-full rounded-2xl sm:max-w-md border-border/50 bg-card/95 backdrop-blur-md"
           >
             <DialogHeader>
-              <DialogTitle className="text-xl">Manage Collaborators</DialogTitle>
+              <DialogTitle className="text-xl">
+                Manage Collaborators
+              </DialogTitle>
               <DialogDescription>
-                Collaborators can view responses, generate groups, and manage form settings.
+                Collaborators can view responses, generate groups, and manage
+                form settings.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-6 py-4 max-h-[60vh] overflow-y-auto">
@@ -806,7 +956,12 @@ export function AdminDashboard({
                       }
                     }}
                   />
-                  <Button onClick={handleAddAdmin} disabled={isUpdatingAdmins} variant="secondary" className="rounded-xl">
+                  <Button
+                    onClick={handleAddAdmin}
+                    disabled={isUpdatingAdmins}
+                    variant="secondary"
+                    className="rounded-xl"
+                  >
                     {isUpdatingAdmins ? "Sending..." : "Invite"}
                   </Button>
                 </div>
@@ -820,21 +975,33 @@ export function AdminDashboard({
                 <>
                   {pendingInvites.length > 0 && (
                     <div className="space-y-3">
-                      <h4 className="text-sm font-semibold text-foreground">Pending Invites</h4>
+                      <h4 className="text-sm font-semibold text-foreground">
+                        Pending Invites
+                      </h4>
                       <ul className="space-y-2">
                         {pendingInvites.map((invite) => {
-                          const isExpired = new Date(invite.expiresAt) <= new Date();
+                          const isExpired =
+                            new Date(invite.expiresAt) <= new Date();
                           return (
-                            <li key={invite._id} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm">
+                            <li
+                              key={invite._id}
+                              className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm"
+                            >
                               <div className="flex flex-col">
-                                <span className="text-foreground">{invite.invitedEmail}</span>
-                                <span className={`text-xs ${isExpired ? 'text-amber-500' : 'text-muted-foreground'}`}>
-                                  {isExpired ? 'Expired' : 'Pending'}
+                                <span className="text-foreground">
+                                  {invite.invitedEmail}
+                                </span>
+                                <span
+                                  className={`text-xs ${isExpired ? "text-amber-500" : "text-muted-foreground"}`}
+                                >
+                                  {isExpired ? "Expired" : "Pending"}
                                 </span>
                               </div>
                               {isOwner && (
                                 <button
-                                  onClick={() => handleRevokeOrRemove(invite._id)}
+                                  onClick={() =>
+                                    handleRevokeOrRemove(invite._id)
+                                  }
                                   className="text-muted-foreground hover:text-destructive transition-colors text-xs font-medium px-2 py-1"
                                 >
                                   Revoke
@@ -848,27 +1015,42 @@ export function AdminDashboard({
                   )}
 
                   <div className="space-y-3">
-                    <h4 className="text-sm font-semibold text-foreground">Active Collaborators</h4>
+                    <h4 className="text-sm font-semibold text-foreground">
+                      Active Collaborators
+                    </h4>
                     {activeAdmins.length > 0 ? (
                       <ul className="space-y-2">
                         {activeAdmins.map((admin) => (
-                          <li key={admin.email} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm">
+                          <li
+                            key={admin.email}
+                            className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm"
+                          >
                             <span className="text-foreground">
-                              {admin.email} {session?.user?.email === admin.email && <span className="text-muted-foreground ml-1">(you)</span>}
+                              {admin.email}{" "}
+                              {session?.user?.email === admin.email && (
+                                <span className="text-muted-foreground ml-1">
+                                  (you)
+                                </span>
+                              )}
                             </span>
-                            {isOwner && session?.user?.email !== admin.email && (
-                              <button
-                                onClick={() => handleRevokeOrRemove(admin.inviteId)}
-                                className="text-muted-foreground hover:text-destructive transition-colors text-xs font-medium px-2 py-1"
-                              >
-                                Remove
-                              </button>
-                            )}
+                            {isOwner &&
+                              session?.user?.email !== admin.email && (
+                                <button
+                                  onClick={() =>
+                                    handleRevokeOrRemove(admin.inviteId)
+                                  }
+                                  className="text-muted-foreground hover:text-destructive transition-colors text-xs font-medium px-2 py-1"
+                                >
+                                  Remove
+                                </button>
+                              )}
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-sm text-muted-foreground py-2 italic text-center rounded-lg border border-border/30 bg-muted/10">No active collaborators yet.</p>
+                      <p className="text-sm text-muted-foreground py-2 italic text-center rounded-lg border border-border/30 bg-muted/10">
+                        No active collaborators yet.
+                      </p>
                     )}
                   </div>
                 </>
@@ -877,24 +1059,31 @@ export function AdminDashboard({
             <DialogFooter className="mt-2 sm:justify-between items-center gap-4">
               {process.env.NODE_ENV === "development" && (
                 <div className="flex gap-2 mr-auto">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     disabled={isUpdatingAdmins}
                     onClick={async () => {
                       const testEmail = "thepapisogram@gmail.com";
                       setIsUpdatingAdmins(true);
                       try {
-                        const res = await fetch(`/api/forms/${formId}/invites?token=${adminToken}`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ email: testEmail }),
-                        });
+                        const res = await fetch(
+                          `/api/forms/${formId}/invites?token=${adminToken}`,
+                          {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ email: testEmail }),
+                          },
+                        );
                         if (!res.ok) throw new Error("Failed to send invite");
                         toast.success(`Test invite sent to ${testEmail}`);
                         fetchInvites();
                       } catch (err: unknown) {
-                        toast.error(err instanceof Error ? err.message : "Failed to send test invite");
+                        toast.error(
+                          err instanceof Error
+                            ? err.message
+                            : "Failed to send test invite",
+                        );
                       } finally {
                         setIsUpdatingAdmins(false);
                       }
@@ -903,23 +1092,33 @@ export function AdminDashboard({
                   >
                     Test Invite
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     disabled={isUpdatingAdmins}
                     onClick={async () => {
                       const testEmail = "thepapisogram@gmail.com";
                       setIsUpdatingAdmins(true);
                       try {
-                        const res = await fetch(`/api/forms/${formId}/invites/test-accept?token=${adminToken}`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ email: testEmail }),
-                        });
-                        if (!res.ok) throw new Error("Failed to send test accepted email");
-                        toast.success(`Test accepted email sent to ${testEmail}`);
+                        const res = await fetch(
+                          `/api/forms/${formId}/invites/test-accept?token=${adminToken}`,
+                          {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ email: testEmail }),
+                          },
+                        );
+                        if (!res.ok)
+                          throw new Error("Failed to send test accepted email");
+                        toast.success(
+                          `Test accepted email sent to ${testEmail}`,
+                        );
                       } catch (err: unknown) {
-                        toast.error(err instanceof Error ? err.message : "Failed to send test accepted email");
+                        toast.error(
+                          err instanceof Error
+                            ? err.message
+                            : "Failed to send test accepted email",
+                        );
                       } finally {
                         setIsUpdatingAdmins(false);
                       }
@@ -930,9 +1129,7 @@ export function AdminDashboard({
                   </Button>
                 </div>
               )}
-              <Button onClick={() => setIsAdminsDialogOpen(false)}>
-                Done
-              </Button>
+              <Button onClick={() => setIsAdminsDialogOpen(false)}>Done</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -943,7 +1140,9 @@ export function AdminDashboard({
       {/* Confirm delete dialog */}
       <ConfirmDialog
         open={confirmDeleteId !== null}
-        onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDeleteId(null);
+        }}
         title="Delete response?"
         description="This will permanently remove this submission. This action cannot be undone."
         confirmLabel="Delete"
@@ -954,7 +1153,6 @@ export function AdminDashboard({
         }}
       />
 
-      {/* Confirm delete form dialog */}
       <ConfirmDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
@@ -964,6 +1162,16 @@ export function AdminDashboard({
         variant="destructive"
         onConfirm={handleDeleteForm}
       />
+
+      {formConfig && (
+        <ExportDialog
+          isOpen={isExportDialogOpen}
+          onOpenChange={setIsExportDialogOpen}
+          formConfig={formConfig}
+          submissions={submissions}
+          onExport={handleExportResponses}
+        />
+      )}
     </div>
   );
 }

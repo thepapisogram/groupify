@@ -4,10 +4,8 @@ import clientPromise from "@/lib/mongodb";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/groupify/page-header";
 import { Footer } from "@/components/groupify/footer";
-import { FormCardActions } from "@/components/groupify/form-card-actions";
 import Link from "next/link";
-import { format } from "date-fns";
-import { RiAddCircleLine, RiSettings4Line, RiTeamLine } from "@remixicon/react";
+import { RiAddCircleLine } from "@remixicon/react";
 
 import { FormsList } from "@/components/groupify/forms-list";
 
@@ -81,7 +79,13 @@ export default async function FormsPage() {
           </div>
 
           <FormsList 
-            initialForms={forms.map(f => ({ ...f, _id: f._id.toString() }))}
+            initialForms={forms.map(f => ({ 
+              _id: f._id.toString(),
+              title: f.title as string,
+              userId: f.userId as string,
+              adminToken: f.adminToken as string,
+              createdAt: f.createdAt ? new Date(f.createdAt as Date).toISOString() : undefined
+            }))}
             submissionCounts={submissionCounts}
             userId={userId}
           />
