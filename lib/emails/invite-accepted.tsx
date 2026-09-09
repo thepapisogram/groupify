@@ -25,7 +25,7 @@ export const InviteAcceptedEmail = ({
   formUrl,
 }: InviteAcceptedEmailProps) => {
   const previewText = `${collaboratorEmail} has accepted your invite for ${formTitle}`;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://groupify.vercel.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://groupify.anthonysaah.me";
 
   return (
     <Html>

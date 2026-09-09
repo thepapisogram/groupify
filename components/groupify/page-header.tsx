@@ -78,6 +78,7 @@ export function PageHeader() {
                   alt="Groupify"
                   className="size-7 sm:size-9"
                   priority
+                  unoptimized
                 />
               </div>
             </Link>

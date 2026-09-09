@@ -27,7 +27,7 @@ export const InviteEmail = ({
   declineLink,
 }: InviteEmailProps) => {
   const previewText = `You have been invited to collaborate on ${formTitle}`;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://groupify.vercel.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://groupify.anthonysaah.me";
 
   return (
     <Html>

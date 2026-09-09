@@ -94,6 +94,7 @@ export function DonatePopup({ onFinished }: { onFinished?: () => void }) {
                 height={120}
                 className="h-24 w-24 sm:h-20 sm:w-20 rounded-xl object-cover shadow-sm"
                 priority
+                unoptimized
             />
         </div>
         <div className="text-center text-sm text-muted-foreground px-2">
