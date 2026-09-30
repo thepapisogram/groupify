@@ -14,6 +14,10 @@ export const LIMITS = {
   passwordMin: 8,
   passwordMax: 128,
   nameMax: 80,
+  groupsMax: 200,
+  groupLabelMax: 60,
+  membersMax: 5000,
+  memberNameMax: 500,
   /** Hard ceiling on responses per form so a flood can't grow a collection unbounded. */
   submissionsPerForm: 10_000,
 } as const;
@@ -240,4 +244,39 @@ export function validateSubmission(
   }
 
   return { ok: true, value: data };
+}
+
+// ── published groups ──────────────────────────────────────────────────────
+
+export interface PublishedGroupsInput {
+  groups: { label: string; members: string[] }[];
+}
+
+/** Validate the groups an admin wants respondents to see. Only labels and names are kept. */
+export function parsePublishedGroups(body: unknown): Result<PublishedGroupsInput> {
+  if (!isPlainObject(body) || !Array.isArray(body.groups)) return fail("Invalid payload");
+  if (body.groups.length === 0) return fail("There are no groups to publish");
+  if (body.groups.length > LIMITS.groupsMax) {
+    return fail(`Too many groups (max ${LIMITS.groupsMax})`);
+  }
+
+  let total = 0;
+  const groups: PublishedGroupsInput["groups"] = [];
+  for (const raw of body.groups) {
+    if (!isPlainObject(raw) || !Array.isArray(raw.members)) return fail("Invalid group");
+    const label = cleanString(raw.label, LIMITS.groupLabelMax);
+    if (!label) return fail(`Group names must be 1-${LIMITS.groupLabelMax} characters`);
+
+    const members: string[] = [];
+    for (const m of raw.members) {
+      if (typeof m !== "string") return fail("Invalid member");
+      const name = m.trim().slice(0, LIMITS.memberNameMax);
+      if (name) members.push(name);
+    }
+    total += members.length;
+    if (total > LIMITS.membersMax) return fail(`Too many people (max ${LIMITS.membersMax})`);
+    groups.push({ label, members });
+  }
+
+  return { ok: true, value: { groups } };
 }

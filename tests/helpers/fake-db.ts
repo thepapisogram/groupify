@@ -1,6 +1,6 @@
 /**
  * Minimal in-memory stand-in for the MongoDB collections our routes use.
- * Supports equality filters, `$in`, `$set`, `$addToSet`, sort by one key and
+ * Supports equality filters, `$in`, `$set`, `$unset`, `$addToSet`, sort by one key and
  * counting: enough to exercise route logic without a database server.
  */
 type Doc = Record<string, unknown>;
@@ -53,6 +53,7 @@ export class FakeCollection {
   private apply(doc: Doc, update: Doc) {
     const set = (update.$set ?? {}) as Doc;
     Object.assign(doc, structuredClone(set));
+    for (const key of Object.keys((update.$unset ?? {}) as Doc)) delete doc[key];
     const addToSet = (update.$addToSet ?? {}) as Doc;
     for (const [key, value] of Object.entries(addToSet)) {
       const list = (doc[key] as unknown[] | undefined) ?? [];

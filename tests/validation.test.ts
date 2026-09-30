@@ -6,6 +6,7 @@ import {
   isValidEmail,
   normalizeEmail,
   parseFormDefinition,
+  parsePublishedGroups,
   validatePassword,
   validateSubmission,
 } from "@/lib/validation";
@@ -216,5 +217,36 @@ describe("validateSubmission", () => {
   it("omits blank optional answers", () => {
     const r = validateSubmission(fields, { ...valid, diet: "", skills: [] });
     expect(r).toEqual({ ok: true, value: valid });
+  });
+});
+
+describe("parsePublishedGroups", () => {
+  const ok = { groups: [{ label: " Red ", members: [" Ama ", "Kofi", "  "] }] };
+
+  it("trims, drops blank names and keeps only label + members", () => {
+    const r = parsePublishedGroups({ groups: [{ ...ok.groups[0], secret: "x", rawMembers: [{ email: "a@b.c" }] }] });
+    expect(r).toEqual({ ok: true, value: { groups: [{ label: "Red", members: ["Ama", "Kofi"] }] } });
+  });
+
+  it("rejects malformed payloads", () => {
+    expect(parsePublishedGroups(null).ok).toBe(false);
+    expect(parsePublishedGroups({}).ok).toBe(false);
+    expect(parsePublishedGroups({ groups: [] }).ok).toBe(false);
+    expect(parsePublishedGroups({ groups: [{ label: "", members: [] }] }).ok).toBe(false);
+    expect(parsePublishedGroups({ groups: [{ label: "A", members: "x" }] }).ok).toBe(false);
+    expect(parsePublishedGroups({ groups: [{ label: "A", members: [1] }] }).ok).toBe(false);
+    expect(parsePublishedGroups({ groups: ["x"] }).ok).toBe(false);
+  });
+
+  it("enforces size limits", () => {
+    const many = Array.from({ length: LIMITS.groupsMax + 1 }, (_, i) => ({ label: `G${i}`, members: ["a"] }));
+    expect(parsePublishedGroups({ groups: many }).ok).toBe(false);
+    expect(parsePublishedGroups({ groups: [{ label: "x".repeat(LIMITS.groupLabelMax + 1), members: [] }] }).ok).toBe(false);
+    const people = Array.from({ length: LIMITS.membersMax + 1 }, (_, i) => `p${i}`);
+    expect(parsePublishedGroups({ groups: [{ label: "big", members: people }] }).ok).toBe(false);
+  });
+
+  it("allows an empty group", () => {
+    expect(parsePublishedGroups({ groups: [{ label: "Empty", members: [] }] }).ok).toBe(true);
   });
 });

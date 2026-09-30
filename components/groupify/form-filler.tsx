@@ -22,7 +22,21 @@ interface FormFillerProps {
     /** True for the owner and accepted collaborators (signed in). */
     canManage?: boolean;
     isClosed?: boolean;
+    /** The organiser has shared the groups. */
+    hasPublishedGroups?: boolean;
   };
+}
+
+function GroupsLink({ formId }: { formId: string }) {
+  return (
+    <Link
+      href={`/forms/${formId}/groups`}
+      className="mx-auto mt-6 flex max-w-2xl items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/15"
+    >
+      <span>Groups are ready. Find out which group you&apos;re in.</span>
+      <span aria-hidden="true">&rarr;</span>
+    </Link>
+  );
 }
 
 export function FormFiller({ formId, formConfig }: FormFillerProps) {
@@ -112,6 +126,7 @@ export function FormFiller({ formId, formConfig }: FormFillerProps) {
         <p className="text-muted-foreground">
           Your response has been recorded successfully.
         </p>
+        {formConfig.hasPublishedGroups && <GroupsLink formId={formId} />}
         <div className="pt-4">
           <button
             onClick={() => {
@@ -186,6 +201,8 @@ export function FormFiller({ formId, formConfig }: FormFillerProps) {
           {formConfig.description || "Fill this form."}
         </p>
       </div>
+
+      {formConfig.hasPublishedGroups && <GroupsLink formId={formId} />}
 
       {formConfig.isClosed ? (
         <div className="mt-12 rounded-2xl border border-border/50 bg-card/70 p-8 text-center backdrop-blur-sm shadow-xl max-w-2xl mx-auto animate-slide-up">

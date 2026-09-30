@@ -11,6 +11,12 @@ export type FormField = {
 
 export type SubmissionData = Record<string, string | string[]>;
 
+/** A snapshot of generated groups that respondents can see. Names only; no other answers. */
+export interface PublishedGroups {
+  publishedAt: Date;
+  groups: { label: string; members: string[] }[];
+}
+
 export interface FormDoc {
   _id: string;
   /** Capability secret held by the creator. Never sent to collaborators or the public. */
@@ -25,6 +31,7 @@ export interface FormDoc {
   /** Lower-cased emails of accepted collaborators. */
   confirmedAdmins?: string[];
   isClosed?: boolean;
+  publishedGroups?: PublishedGroups;
 }
 
 export interface SubmissionDoc {

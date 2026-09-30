@@ -27,6 +27,7 @@ import { PATCH as patchStatus } from "@/app/api/forms/[formId]/status/route";
 import { POST as regenerate } from "@/app/api/forms/[formId]/regenerate/route";
 import { GET as getInvites, POST as postInvite } from "@/app/api/forms/[formId]/invites/route";
 import { POST as acceptInvite } from "@/app/api/invites/[token]/accept/route";
+import { PUT as publishGroups, DELETE as unpublishGroups } from "@/app/api/forms/[formId]/groups/route";
 
 const FORM_ID = "form01";
 const TOKEN = "owner-token-abc123";
@@ -354,5 +355,57 @@ describe("invites", () => {
       expect((await accept("tok1")).status).toBe(200);
       expect(db.invites.docs[0].status).toBe("accepted");
     });
+  });
+});
+
+describe("publishing groups", () => {
+  const payload = { groups: [{ label: "Red", members: ["Ama", "Kofi"] }, { label: "Blue", members: ["Esi"] }] };
+  const publish = (body: unknown, token?: string) =>
+    publishGroups(req(`/api/forms/${FORM_ID}/groups`, { method: "PUT", body: json(body), token }), ctx());
+  const unpublish = (token?: string) =>
+    unpublishGroups(req(`/api/forms/${FORM_ID}/groups`, { method: "DELETE", token }), ctx());
+
+  it("requires credentials", async () => {
+    expect((await publish(payload)).status).toBe(401);
+    expect((await publish(payload, "wrong")).status).toBe(403);
+    expect(db.forms.docs[0].publishedGroups).toBeUndefined();
+  });
+
+  it("lets the owner (by token) and a collaborator (by session) publish and unpublish", async () => {
+    expect((await publish(payload, TOKEN)).status).toBe(200);
+    expect(db.forms.docs[0].publishedGroups).toMatchObject({ groups: payload.groups });
+    expect(revalidateTag).toHaveBeenCalledWith(`form-${FORM_ID}`, { expire: 0 });
+
+    mockSession({ id: "c1", email: "collab@school.org" });
+    expect((await unpublish()).status).toBe(200);
+    expect(db.forms.docs[0].publishedGroups).toBeUndefined();
+
+    expect((await publish({ groups: [{ label: "Only", members: ["Ama"] }] })).status).toBe(200);
+    expect(db.forms.docs[0].publishedGroups).toMatchObject({ groups: [{ label: "Only", members: ["Ama"] }] });
+  });
+
+  it("stores only names, never other answers, and rejects bad payloads", async () => {
+    const res = await publish(
+      { groups: [{ label: "Red", members: ["Ama"], rawMembers: [{ email: "ama@x.com" }] }] },
+      TOKEN,
+    );
+    expect(res.status).toBe(200);
+    expect(JSON.stringify(db.forms.docs[0].publishedGroups)).not.toContain("ama@x.com");
+
+    expect((await publish({ groups: [] }, TOKEN)).status).toBe(400);
+    expect((await publish("nope", TOKEN)).status).toBe(400);
+  });
+
+  it("is carried over when the form link is regenerated", async () => {
+    await publish(payload, TOKEN);
+    const res = await regenerate(req(`/api/forms/${FORM_ID}/regenerate`, { method: "POST", token: TOKEN }), ctx());
+    expect(res.status).toBe(200);
+    expect(db.forms.docs[0].publishedGroups).toMatchObject({ groups: payload.groups });
+  });
+
+  it("does not leak published groups through the public form endpoint", async () => {
+    await publish(payload, TOKEN);
+    const body = await (await getForm(req(`/api/forms/${FORM_ID}`), ctx())).json();
+    expect(JSON.stringify(body)).not.toContain("Ama");
   });
 });

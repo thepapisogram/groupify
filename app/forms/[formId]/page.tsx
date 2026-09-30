@@ -19,6 +19,7 @@ export default async function FormFillerPage({ params }: { params: Promise<{ for
         description: form.description,
         fields: form.fields as FormField[],
         isClosed: form.isClosed,
+        hasPublishedGroups: Boolean(form.publishedGroups),
       };
     },
     ["form", formId],
@@ -56,6 +57,7 @@ export default async function FormFillerPage({ params }: { params: Promise<{ for
     fields: form.fields,
     canManage,
     isClosed: form.isClosed,
+    hasPublishedGroups: form.hasPublishedGroups,
   };
 
   return (

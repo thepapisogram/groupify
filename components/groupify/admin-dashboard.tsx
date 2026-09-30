@@ -25,6 +25,7 @@ import { PageHeader } from "@/components/groupify/page-header";
 import { Footer } from "@/components/groupify/footer";
 import { Sidebar } from "@/components/groupify/sidebar";
 import { ResultsPanel } from "@/components/groupify/results-panel";
+import { PublishGroupsDialog } from "@/components/groupify/publish-groups-dialog";
 import { RulesPanel } from "@/components/groupify/rules-panel";
 import { useGrouping } from "@/components/groupify/use-grouping";
 import type { Person } from "@/lib/grouping";
@@ -41,6 +42,7 @@ import {
   RiArrowUpSLine,
   RiArrowDownSLine,
   RiInbox2Line,
+  RiShareForwardLine,
 } from "@remixicon/react";
 
 interface PendingInvite {
@@ -67,6 +69,8 @@ export interface AdminDashboardProps {
     submittedAt: string;
     data: Record<string, string | string[]>;
   }[];
+  /** ISO timestamp if the groups are currently published for respondents. */
+  initialPublishedAt?: string | null;
   /** Present only when the viewer arrived via an admin link; signed-in owners and collaborators rely on their session. */
   adminToken?: string;
   isOwner: boolean;
@@ -76,6 +80,7 @@ export function AdminDashboard({
   formId,
   initialFormConfig,
   initialSubmissions,
+  initialPublishedAt = null,
   adminToken,
   isOwner,
 }: AdminDashboardProps) {
@@ -254,6 +259,44 @@ export function AdminDashboard({
 
   const grouping = useGrouping(people);
   const { groups, hasResults } = grouping;
+
+  const [publishedAt, setPublishedAt] = useState<string | null>(initialPublishedAt);
+  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
+  const groupsUrl = typeof window !== "undefined" ? `${window.location.origin}/forms/${formId}/groups` : "";
+
+  const publishGroups = async (): Promise<boolean> => {
+    try {
+      const res = await adminFetch(`/api/forms/${formId}/groups`, adminToken, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          groups: groups.map((g) => ({ label: g.label, members: g.members })),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to publish groups");
+      setPublishedAt(data.publishedAt);
+      toast.success("Groups published");
+      return true;
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to publish groups");
+      return false;
+    }
+  };
+
+  const unpublishGroups = async (): Promise<boolean> => {
+    try {
+      const res = await adminFetch(`/api/forms/${formId}/groups`, adminToken, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to unpublish groups");
+      setPublishedAt(null);
+      setIsPublishDialogOpen(false);
+      toast.success("Groups unpublished");
+      return true;
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to unpublish groups");
+      return false;
+    }
+  };
 
   const fetchSubmissions = useCallback(async () => {
     try {
@@ -799,6 +842,16 @@ export function AdminDashboard({
                 onMoveMember={grouping.move}
                 onUndo={grouping.undo}
                 canUndo={grouping.canUndo}
+                actions={
+                  <button
+                    type="button"
+                    onClick={() => setIsPublishDialogOpen(true)}
+                    className="flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-all hover:bg-primary/20"
+                  >
+                    <RiShareForwardLine className="size-3" />
+                    {publishedAt ? "Published" : "Publish"}
+                  </button>
+                }
               />
             )}
           </div>
@@ -834,6 +887,21 @@ export function AdminDashboard({
             }
           />
         </div>
+
+        <PublishGroupsDialog
+          open={isPublishDialogOpen}
+          onOpenChange={setIsPublishDialogOpen}
+          groupCount={groups.length}
+          memberCount={totalGrouped}
+          identifierLabel={primaryField?.label ?? "name"}
+          publishedAt={publishedAt}
+          url={groupsUrl}
+          onPublish={async () => {
+            const ok = await publishGroups();
+            return ok;
+          }}
+          onUnpublish={unpublishGroups}
+        />
 
         <ShareDialog
           isOpen={isShareDialogOpen}

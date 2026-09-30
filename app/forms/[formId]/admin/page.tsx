@@ -51,6 +51,7 @@ export default async function AdminDashboardServerPage({
       formId={formId}
       initialFormConfig={formConfig}
       initialSubmissions={serializedSubmissions}
+      initialPublishedAt={form.publishedGroups ? new Date(form.publishedGroups.publishedAt).toISOString() : null}
       // Only echo a token back if the visitor actually arrived with a valid one.
       adminToken={tokenMatches(form.adminToken, adminTokenFromUrl) ? adminTokenFromUrl : undefined}
       isOwner={role === "owner"}
