@@ -18,32 +18,31 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { FormField } from "@/components/groupify/form-builder";
+import type { FormField } from "@/lib/models";
+import { adminFetch, adminPagePath } from "@/lib/admin-client";
+import { normalizeEmail } from "@/lib/validation";
 import { PageHeader } from "@/components/groupify/page-header";
 import { Footer } from "@/components/groupify/footer";
 import { Sidebar } from "@/components/groupify/sidebar";
 import { ResultsPanel } from "@/components/groupify/results-panel";
+import { PublishGroupsDialog } from "@/components/groupify/publish-groups-dialog";
+import { RulesPanel } from "@/components/groupify/rules-panel";
+import { ResponsesTable } from "@/components/groupify/responses-table";
+import { useGrouping } from "@/components/groupify/use-grouping";
+import type { Person } from "@/lib/grouping";
 import { ShareDialog } from "@/components/groupify/share-dialog";
 import { ExportDialog } from "@/components/groupify/export-dialog";
-import {
-  buildGroupsAsync,
-  exportGroups,
-  exportResponses,
-} from "@/components/groupify/utils";
+import { exportGroups, exportResponses } from "@/components/groupify/utils";
 import { ConfirmDialog } from "@/components/groupify/confirm-dialog";
-import {
-  DistributionMode,
-  Group,
-  ExportFormat,
-} from "@/components/groupify/types";
+import type { ExportFormat } from "@/components/groupify/types";
 import { toast } from "sonner";
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
 import { useSession } from "next-auth/react";
 import {
-  RiArrowUpSLine,
-  RiArrowDownSLine,
+  RiFileCopyLine,
   RiInbox2Line,
+  RiRefreshLine,
+  RiShareForwardLine,
 } from "@remixicon/react";
 
 interface PendingInvite {
@@ -61,29 +60,70 @@ export interface AdminDashboardProps {
   formId: string;
   initialFormConfig: {
     title: string;
+    description?: string;
     fields: FormField[];
     isClosed?: boolean;
-    adminToken?: string;
-    userId?: string;
   };
   initialSubmissions: {
     _id: string;
     submittedAt: string;
     data: Record<string, string | string[]>;
   }[];
-  adminToken: string;
+  /** ISO timestamp if the groups are currently published for respondents. */
+  initialPublishedAt?: string | null;
+  /** Present only when the viewer arrived via an admin link; signed-in owners and collaborators rely on their session. */
+  adminToken?: string;
   isOwner: boolean;
+  /** False for forms created without an account, which are reachable only through the admin link. */
+  hasAccountOwner?: boolean;
 }
 
 export function AdminDashboard({
   formId,
   initialFormConfig,
   initialSubmissions,
+  initialPublishedAt = null,
   adminToken,
   isOwner,
+  hasAccountOwner = true,
 }: AdminDashboardProps) {
   const router = useRouter();
   const { data: session } = useSession();
+  const isSignedIn = Boolean(session?.user?.id);
+
+  // Forms made without an account are only reachable through this link; offer to save them.
+  const [isClaimed, setIsClaimed] = useState(hasAccountOwner);
+  const [isClaiming, setIsClaiming] = useState(false);
+  const showClaimPrompt = Boolean(adminToken) && !isClaimed;
+
+  const handleClaim = async () => {
+    setIsClaiming(true);
+    try {
+      const res = await adminFetch(`/api/forms/${formId}/claim`, adminToken, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Couldn't save this form to your account");
+      setIsClaimed(true);
+      toast.success("Saved to your account. Find it any time under My Forms.");
+      router.refresh();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Couldn't save this form to your account");
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
+  const handleDuplicate = async () => {
+    try {
+      const res = await adminFetch(`/api/forms/${formId}/duplicate`, adminToken, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Couldn't duplicate the form");
+      toast.success("Form duplicated");
+      // Signed-in users reach their copy through their account; token holders need the new link.
+      router.push(adminPagePath(data.formId, "admin", isSignedIn ? undefined : data.adminToken));
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Couldn't duplicate the form");
+    }
+  };
 
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
@@ -96,10 +136,6 @@ export function AdminDashboard({
 
   const [formConfig, setFormConfig] = useState(initialFormConfig);
   const [submissions, setSubmissions] = useState(initialSubmissions);
-  const [sortConfig, setSortConfig] = useState<{
-    key: string;
-    direction: "asc" | "desc";
-  } | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const [isAdminsDialogOpen, setIsAdminsDialogOpen] = useState(false);
@@ -116,7 +152,7 @@ export function AdminDashboard({
   const handleDeleteForm = async () => {
     setIsDeletingForm(true);
     try {
-      const res = await fetch(`/api/forms/${formId}?token=${adminToken}`, {
+      const res = await adminFetch(`/api/forms/${formId}`, adminToken, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete form");
@@ -131,12 +167,9 @@ export function AdminDashboard({
   };
 
   const fetchInvites = useCallback(async () => {
-    if (!adminToken) return;
     setIsLoadingAdmins(true);
     try {
-      const res = await fetch(
-        `/api/forms/${formId}/invites?token=${adminToken}`,
-      );
+      const res = await adminFetch(`/api/forms/${formId}/invites`, adminToken);
       if (res.ok) {
         const data = await res.json();
         setPendingInvites(data.pending || []);
@@ -166,14 +199,11 @@ export function AdminDashboard({
     if (!formConfig) return;
     setIsUpdatingStatus(true);
     try {
-      const res = await fetch(
-        `/api/forms/${formId}/status?token=${adminToken}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isClosed: !formConfig.isClosed }),
-        },
-      );
+      const res = await adminFetch(`/api/forms/${formId}/status`, adminToken, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isClosed: !formConfig.isClosed }),
+      });
       if (!res.ok) throw new Error("Failed to update status");
       const data = await res.json();
       setFormConfig({ ...formConfig, isClosed: data.isClosed });
@@ -189,66 +219,78 @@ export function AdminDashboard({
     }
   };
 
-  const requestSort = (key: string) => {
-    let direction: "asc" | "desc" = "asc";
-    if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === "asc"
-    ) {
-      direction = "desc";
-    }
-    setSortConfig({ key, direction });
-  };
 
-  const sortedSubmissions = useMemo(() => {
-    const sortableItems = [...submissions];
-    if (sortConfig !== null) {
-      sortableItems.sort((a, b) => {
-        let aValue, bValue;
-        if (sortConfig.key === "time") {
-          aValue = new Date(a.submittedAt).getTime();
-          bValue = new Date(b.submittedAt).getTime();
-        } else {
-          aValue = a.data[sortConfig.key] || "";
-          bValue = b.data[sortConfig.key] || "";
-        }
-
-        if (Array.isArray(aValue)) aValue = aValue.join(", ");
-        if (Array.isArray(bValue)) bValue = bValue.join(", ");
-
-        if (aValue < bValue) {
-          return sortConfig.direction === "asc" ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === "asc" ? 1 : -1;
-        }
-        return 0;
-      });
-    } else {
-      sortableItems.sort(
-        (a, b) =>
-          new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
-      );
-    }
-    return sortableItems;
-  }, [submissions, sortConfig]);
-
-  // Grouping state
-  const [size, setSize] = useState(4);
-  const [groupCount, setGroupCount] = useState(2);
-  const [groupBy, setGroupBy] = useState<"size" | "count">("size");
-  const [mode, setMode] = useState<DistributionMode>("best");
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [isWorking, setIsWorking] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
   const [activeTab, setActiveTab] = useState<"submissions" | "groups">(
     "submissions",
   );
 
+  // Each response becomes a person, labelled by the form's primary field.
+  const primaryField = useMemo(
+    () => formConfig.fields.find((f) => f.isPrimary) || formConfig.fields[0],
+    [formConfig.fields],
+  );
+  const people = useMemo<Person[]>(
+    () =>
+      submissions.map((sub) => {
+        const val = primaryField ? sub.data[primaryField.id] : undefined;
+        const label = val ? (Array.isArray(val) ? val.join(", ") : val) : "Unknown";
+        return { key: sub._id, label, data: sub.data };
+      }),
+    [submissions, primaryField],
+  );
+  const balanceOptions = useMemo(
+    () =>
+      formConfig.fields
+        .filter((f) => f.type === "select" || f.type === "radio" || f.type === "checklist")
+        .map((f) => ({ key: f.id, label: f.label })),
+    [formConfig.fields],
+  );
+
+  const grouping = useGrouping(people);
+  const { groups, hasResults } = grouping;
+
+  const [publishedAt, setPublishedAt] = useState<string | null>(initialPublishedAt);
+  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
+  const groupsUrl = typeof window !== "undefined" ? `${window.location.origin}/forms/${formId}/groups` : "";
+
+  const publishGroups = async (): Promise<boolean> => {
+    try {
+      const res = await adminFetch(`/api/forms/${formId}/groups`, adminToken, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          groups: groups.map((g) => ({ label: g.label, members: g.members })),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to publish groups");
+      setPublishedAt(data.publishedAt);
+      toast.success("Groups published");
+      return true;
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to publish groups");
+      return false;
+    }
+  };
+
+  const unpublishGroups = async (): Promise<boolean> => {
+    try {
+      const res = await adminFetch(`/api/forms/${formId}/groups`, adminToken, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to unpublish groups");
+      setPublishedAt(null);
+      setIsPublishDialogOpen(false);
+      toast.success("Groups unpublished");
+      return true;
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to unpublish groups");
+      return false;
+    }
+  };
+
   const fetchSubmissions = useCallback(async () => {
     try {
-      const res = await fetch(`/api/forms/${formId}/admin?token=${adminToken}`);
+      const res = await adminFetch(`/api/forms/${formId}/admin`, adminToken);
       if (!res.ok) {
         throw new Error("Unauthorized or form not found");
       }
@@ -266,8 +308,9 @@ export function AdminDashboard({
 
   const handleDeleteSubmission = async (submissionId: string) => {
     try {
-      const res = await fetch(
-        `/api/forms/${formId}/submissions/${submissionId}?token=${adminToken}`,
+      const res = await adminFetch(
+        `/api/forms/${formId}/submissions/${submissionId}`,
+        adminToken,
         { method: "DELETE" },
       );
 
@@ -280,94 +323,16 @@ export function AdminDashboard({
     }
   };
 
-  // Handlers for synchronization (same as homepage)
   const nameCount = submissions.length;
-  const hasResults = groups.length > 0;
   const totalGrouped = groups.reduce(
     (sum, group) => sum + group.members.length,
     0,
   );
-  const estGroups = nameCount >= 2 ? groupCount : 0;
 
-  const handleSizeChange = (newSize: number) => {
-    setSize(newSize);
-    setGroupBy("size");
-    if (nameCount > 0) {
-      setGroupCount(
-        mode === "best"
-          ? Math.max(1, Math.floor(nameCount / newSize))
-          : Math.ceil(nameCount / newSize),
-      );
-    }
+  const handleGenerate = async () => {
+    const result = await grouping.generate();
+    if (result) setActiveTab("groups");
   };
-
-  const handleGroupCountChange = (newCount: number) => {
-    setGroupCount(newCount);
-    setGroupBy("count");
-    if (nameCount > 0) {
-      setSize(Math.max(2, Math.ceil(nameCount / newCount)));
-    }
-  };
-
-  const handleModeChange = (newMode: DistributionMode) => {
-    setMode(newMode);
-    if (groupBy === "size" && nameCount > 0) {
-      setGroupCount(
-        newMode === "best"
-          ? Math.max(1, Math.floor(nameCount / size))
-          : Math.ceil(nameCount / size),
-      );
-    }
-  };
-
-  const handleGenerate = useCallback(async () => {
-    if (nameCount === 0 || !formConfig) return;
-
-    setIsWorking(true);
-    try {
-      const primaryField =
-        formConfig.fields.find((f) => f.isPrimary) || formConfig.fields[0];
-      const items = submissions.map((sub) => {
-        const val = sub.data[primaryField.id];
-        const label = val
-          ? Array.isArray(val)
-            ? val.join(", ")
-            : val
-          : "Unknown";
-        return { label, originalId: sub._id };
-      });
-
-      const result = await buildGroupsAsync(
-        items,
-        groupBy,
-        groupBy === "size" ? size : groupCount,
-        mode,
-      );
-
-      const finalGroups = result.map((g) => {
-        const fullMembers =
-          g.originalIds?.map((id) => {
-            const sub = submissions.find((s) => s._id === id);
-            return sub ? sub.data : {};
-          }) || [];
-        return { ...g, rawMembers: fullMembers };
-      });
-
-      setGroups(finalGroups);
-      setActiveTab("groups");
-      toast.success(
-        `${result.length} group${result.length !== 1 ? "s" : ""} created`,
-      );
-    } catch {
-      toast.error("Failed to generate groups");
-    } finally {
-      setIsWorking(false);
-    }
-  }, [mode, nameCount, submissions, size, groupCount, groupBy, formConfig]);
-
-  const handleShuffle = useCallback(() => {
-    handleGenerate();
-  }, [handleGenerate]);
 
   const handleExport = async (format: ExportFormat) => {
     if (groups.length === 0 || !formConfig) return;
@@ -411,13 +376,10 @@ export function AdminDashboard({
   const handleCopyText = async () => {
     if (groups.length === 0 || !formConfig) return;
 
-    const primaryField =
-      formConfig.fields.find((f) => f.isPrimary) || formConfig.fields[0];
-
     const text = groups
       .map(
         (group) =>
-          `${group.label}\n${group.rawMembers?.map((member, index) => `${index + 1}. ${member[primaryField.id] || "Unknown"}`).join("\n")}`,
+          `${group.label}\n${group.members.map((member, index) => `${index + 1}. ${member}`).join("\n")}`,
       )
       .join("\n\n");
 
@@ -434,12 +396,9 @@ export function AdminDashboard({
   const handleRegenerateLink = async () => {
     setIsRegenerating(true);
     try {
-      const res = await fetch(
-        `/api/forms/${formId}/regenerate?token=${adminToken}`,
-        {
-          method: "POST",
-        },
-      );
+      const res = await adminFetch(`/api/forms/${formId}/regenerate`, adminToken, {
+        method: "POST",
+      });
       if (!res.ok) throw new Error("Failed to regenerate");
       const data = await res.json();
 
@@ -448,8 +407,9 @@ export function AdminDashboard({
       setIsShareDialogOpen(false);
 
       // Redirect to the new admin URL
+      // Token holders need the new token in the URL; signed-in owners keep access via their session.
       router.push(
-        `/forms/${data.newFormId}/admin?token=${data.newAdminToken || adminToken}`,
+        adminPagePath(data.newFormId, "admin", adminToken ? data.newAdminToken : undefined),
       );
     } catch {
       toast.error("Failed to regenerate link");
@@ -464,15 +424,17 @@ export function AdminDashboard({
       return;
     }
 
+    const wanted = normalizeEmail(newAdminEmail);
+
     // Check if they are already in pending or active
-    if (activeAdmins.some((a) => a.email === newAdminEmail)) {
+    if (activeAdmins.some((a) => normalizeEmail(a.email) === wanted)) {
       toast.error("User is already an active collaborator");
       return;
     }
     if (
       pendingInvites.some(
         (i) =>
-          i.invitedEmail === newAdminEmail &&
+          normalizeEmail(i.invitedEmail) === wanted &&
           new Date(i.expiresAt) > new Date(),
       )
     ) {
@@ -482,18 +444,24 @@ export function AdminDashboard({
 
     setIsUpdatingAdmins(true);
     try {
-      const res = await fetch(
-        `/api/forms/${formId}/invites?token=${adminToken}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: newAdminEmail }),
-        },
-      );
+      const res = await adminFetch(`/api/forms/${formId}/invites`, adminToken, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: newAdminEmail }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send invite");
 
-      toast.success("Invite sent successfully");
+      if (data.emailSent === false && data.inviteLink) {
+        try {
+          await navigator.clipboard.writeText(data.inviteLink);
+          toast.warning("Invite created, but the email couldn't be sent. The invite link was copied so you can share it yourself.");
+        } catch {
+          toast.warning(`Invite created, but the email couldn't be sent. Share this link: ${data.inviteLink}`, { duration: 15000 });
+        }
+      } else {
+        toast.success("Invite sent successfully");
+      }
       setNewAdminEmail("");
       fetchInvites(); // Refresh lists
     } catch (err: unknown) {
@@ -505,11 +473,10 @@ export function AdminDashboard({
 
   const handleRevokeOrRemove = async (inviteId: string) => {
     try {
-      const res = await fetch(
-        `/api/forms/${formId}/invites/${inviteId}?token=${adminToken}`,
-        {
-          method: "DELETE",
-        },
+      const res = await adminFetch(
+        `/api/forms/${formId}/invites/${encodeURIComponent(inviteId)}`,
+        adminToken,
+        { method: "DELETE" },
       );
       if (!res.ok) throw new Error("Failed to remove");
       toast.success("Collaborator removed");
@@ -524,6 +491,32 @@ export function AdminDashboard({
       <div className="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-28 sm:px-6 sm:py-12">
         <PageHeader />
 
+        {showClaimPrompt && (
+          <div
+            role="region"
+            aria-label="Save this form"
+            className="mb-6 print:hidden flex flex-col gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between"
+          >
+            <p>
+              <strong className="font-semibold">This form isn&apos;t saved to an account.</strong> Anyone with this
+              page&apos;s link can manage it, and if you lose the link you lose the form.
+            </p>
+            {isSignedIn ? (
+              <Button type="button" size="sm" onClick={handleClaim} disabled={isClaiming} className="shrink-0">
+                {isClaiming ? "Saving..." : "Save to my account"}
+              </Button>
+            ) : (
+              <Button asChild size="sm" className="shrink-0">
+                <Link
+                  href={`/login?callbackUrl=${encodeURIComponent(adminPagePath(formId, "admin", adminToken))}`}
+                >
+                  Sign in to save it
+                </Link>
+              </Button>
+            )}
+          </div>
+        )}
+
         <div className="mt-8 mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
@@ -533,7 +526,7 @@ export function AdminDashboard({
               Admin Dashboard &bull; {submissions.length} responses
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 print:hidden">
             {/* Status toggle — always visible on desktop */}
             <div className="hidden sm:flex items-center gap-2 rounded-xl border border-border/50 bg-card px-3 py-2">
               <span className="text-sm font-medium text-foreground">
@@ -607,7 +600,7 @@ export function AdminDashboard({
                   Refresh
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild className="cursor-pointer gap-2">
-                  <Link href={`/forms/${formId}/edit?token=${adminToken}`}>
+                  <Link href={adminPagePath(formId, "edit", adminToken)}>
                     <svg
                       className="size-4"
                       viewBox="0 0 24 24"
@@ -639,6 +632,13 @@ export function AdminDashboard({
                   </svg>
                   Manage Collaborators
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleDuplicate}
+                  className="cursor-pointer gap-2"
+                >
+                  <RiFileCopyLine className="size-4" />
+                  Duplicate Form
+                </DropdownMenuItem>
                 {isOwner && (
                   <DropdownMenuItem
                     onClick={() => setIsDeleteDialogOpen(true)}
@@ -667,8 +667,14 @@ export function AdminDashboard({
 
         <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
           <div className="space-y-6 min-w-0">
-            <div className="flex p-1 space-x-1 bg-muted/30 border border-border/50 rounded-xl w-fit">
+            <div
+              role="group"
+              aria-label="View"
+              className="print:hidden flex p-1 space-x-1 bg-muted/30 border border-border/50 rounded-xl w-fit"
+            >
               <button
+                type="button"
+                aria-pressed={activeTab === "submissions"}
                 onClick={() => setActiveTab("submissions")}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                   activeTab === "submissions"
@@ -679,6 +685,8 @@ export function AdminDashboard({
                 Submissions
               </button>
               <button
+                type="button"
+                aria-pressed={activeTab === "groups"}
                 onClick={() => hasResults && setActiveTab("groups")}
                 disabled={!hasResults}
                 title={
@@ -688,7 +696,7 @@ export function AdminDashboard({
                   activeTab === "groups"
                     ? "bg-card text-foreground shadow-sm"
                     : !hasResults
-                      ? "text-muted-foreground/50 cursor-not-allowed"
+                      ? "text-muted-foreground/70 cursor-not-allowed"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 }`}
               >
@@ -700,10 +708,20 @@ export function AdminDashboard({
               <div className="rounded-2xl border border-border/50 bg-card/70 p-6 backdrop-blur-sm shadow-md animate-fade-in">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                   <h2 className="text-lg font-semibold text-foreground">
-                    Recent Submissions
+                    Responses
                   </h2>
                   {submissions.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={fetchSubmissions}
+                        aria-label="Refresh responses"
+                        title="Check for new responses"
+                        className="flex items-center gap-2 rounded-xl border border-border/50 px-3 py-2 text-sm font-medium text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
+                      >
+                        <RiRefreshLine className="size-4" />
+                        <span className="max-sm:sr-only">Refresh</span>
+                      </button>
                       <button
                         onClick={() => setIsExportDialogOpen(true)}
                         className="flex items-center gap-2 rounded-xl bg-muted px-4 py-2 text-sm font-semibold text-foreground transition-all hover:bg-muted/80 shadow-sm animate-fade-in"
@@ -742,115 +760,21 @@ export function AdminDashboard({
                     <p className="text-sm mt-1">
                       Share the public link to start collecting data.
                     </p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="mt-5"
+                      onClick={() => setIsShareDialogOpen(true)}
+                    >
+                      Share the form link
+                    </Button>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                      <thead className="text-xs text-muted-foreground uppercase bg-muted/20 border-b border-border/50">
-                        <tr>
-                          {formConfig.fields.map((f) => (
-                            <th
-                              key={f.id}
-                              className={`px-4 py-3 font-medium whitespace-nowrap ${f.isPrimary ? "cursor-pointer hover:bg-muted/30 select-none" : ""}`}
-                              onClick={
-                                f.isPrimary
-                                  ? () => requestSort(f.id)
-                                  : undefined
-                              }
-                            >
-                              <div className="flex items-center gap-1">
-                                {f.label}
-                                {f.isPrimary && (
-                                  <span className="ml-1 text-xs text-primary">
-                                    (Primary)
-                                  </span>
-                                )}
-                                {f.isPrimary && sortConfig?.key === f.id && (
-                                  <span className="text-primary text-xs">
-                                    {sortConfig.direction === "asc" ? (
-                                      <RiArrowUpSLine className="size-4" />
-                                    ) : (
-                                      <RiArrowDownSLine className="size-4" />
-                                    )}
-                                  </span>
-                                )}
-                              </div>
-                            </th>
-                          ))}
-                          <th
-                            className="px-4 py-3 font-medium text-right cursor-pointer hover:bg-muted/30 select-none whitespace-nowrap"
-                            onClick={() => requestSort("time")}
-                          >
-                            <div className="flex items-center justify-end gap-1">
-                              Time
-                              {sortConfig?.key === "time" && (
-                                <span className="text-primary text-xs">
-                                  {sortConfig.direction === "asc" ? (
-                                    <RiArrowUpSLine className="size-4" />
-                                  ) : (
-                                    <RiArrowDownSLine className="size-4" />
-                                  )}
-                                </span>
-                              )}
-                            </div>
-                          </th>
-                          <th className="px-4 py-3 font-medium w-12"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sortedSubmissions.map((sub) => (
-                          <tr
-                            key={sub._id}
-                            className="border-b border-border/20 last:border-0 hover:bg-muted/10 transition-colors"
-                          >
-                            {formConfig.fields.map((f) => (
-                              <td
-                                key={f.id}
-                                className="px-4 py-3 text-foreground whitespace-nowrap"
-                              >
-                                {Array.isArray(sub.data[f.id])
-                                  ? (sub.data[f.id] as string[]).join(", ")
-                                  : sub.data[f.id] || "-"}
-                              </td>
-                            ))}
-                            <td className="px-4 py-3 text-muted-foreground text-right whitespace-nowrap">
-                              <span
-                                title={new Date(
-                                  sub.submittedAt,
-                                ).toLocaleString()}
-                              >
-                                {formatDistanceToNow(
-                                  new Date(sub.submittedAt),
-                                  { addSuffix: true },
-                                )}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <button
-                                onClick={() => setConfirmDeleteId(sub._id)}
-                                className="p-1.5 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
-                                title="Delete submission"
-                              >
-                                <svg
-                                  className="size-4"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                >
-                                  <path
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ResponsesTable
+                    fields={formConfig.fields}
+                    submissions={submissions}
+                    onDelete={setConfirmDeleteId}
+                  />
                 )}
               </div>
             )}
@@ -859,31 +783,72 @@ export function AdminDashboard({
               <ResultsPanel
                 groups={groups}
                 totalGrouped={totalGrouped}
-                onShuffle={handleShuffle}
+                warnings={grouping.warnings}
+                onShuffle={grouping.reshuffle}
+                onRename={grouping.rename}
+                onMoveMember={grouping.move}
+                onUndo={grouping.undo}
+                canUndo={grouping.canUndo}
+                actions={
+                  <button
+                    type="button"
+                    onClick={() => setIsPublishDialogOpen(true)}
+                    className="flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-all hover:bg-primary/20"
+                  >
+                    <RiShareForwardLine className="size-3" />
+                    {publishedAt ? "Published" : "Publish"}
+                  </button>
+                }
               />
             )}
           </div>
 
           <Sidebar
-            groupBy={groupBy}
-            size={size}
-            groupCount={groupCount}
-            mode={mode}
-            isWorking={isWorking}
+            groupBy={grouping.by}
+            size={grouping.size}
+            groupCount={grouping.groupCount}
+            mode={grouping.mode}
+            isWorking={grouping.isWorking}
             nameCount={nameCount}
             hasResults={hasResults}
             copiedText={copiedText}
-            estGroups={estGroups}
+            estGroups={nameCount >= 2 ? grouping.groupCount : 0}
             groupsCount={groups.length}
-            onGroupByChange={setGroupBy}
-            onSizeChange={handleSizeChange}
-            onGroupCountChange={handleGroupCountChange}
-            onModeChange={handleModeChange}
+            onGroupByChange={grouping.onGroupByChange}
+            onSizeChange={grouping.onSizeChange}
+            onGroupCountChange={grouping.onGroupCountChange}
+            onModeChange={grouping.onModeChange}
             onGenerate={handleGenerate}
             onExport={handleExport}
             onCopyText={handleCopyText}
+            rules={
+              <RulesPanel
+                people={people}
+                rules={grouping.rules}
+                onAdd={grouping.addRule}
+                onRemove={grouping.removeRule}
+                balanceOptions={balanceOptions}
+                balanceBy={grouping.balanceBy}
+                onBalanceChange={grouping.setBalanceBy}
+              />
+            }
           />
         </div>
+
+        <PublishGroupsDialog
+          open={isPublishDialogOpen}
+          onOpenChange={setIsPublishDialogOpen}
+          groupCount={groups.length}
+          memberCount={totalGrouped}
+          identifierLabel={primaryField?.label ?? "name"}
+          publishedAt={publishedAt}
+          url={groupsUrl}
+          onPublish={async () => {
+            const ok = await publishGroups();
+            return ok;
+          }}
+          onUnpublish={unpublishGroups}
+        />
 
         <ShareDialog
           isOpen={isShareDialogOpen}
@@ -1056,79 +1021,7 @@ export function AdminDashboard({
                 </>
               )}
             </div>
-            <DialogFooter className="mt-2 sm:justify-between items-center gap-4">
-              {process.env.NODE_ENV === "development" && (
-                <div className="flex gap-2 mr-auto">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isUpdatingAdmins}
-                    onClick={async () => {
-                      const testEmail = "thepapisogram@gmail.com";
-                      setIsUpdatingAdmins(true);
-                      try {
-                        const res = await fetch(
-                          `/api/forms/${formId}/invites?token=${adminToken}`,
-                          {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ email: testEmail }),
-                          },
-                        );
-                        if (!res.ok) throw new Error("Failed to send invite");
-                        toast.success(`Test invite sent to ${testEmail}`);
-                        fetchInvites();
-                      } catch (err: unknown) {
-                        toast.error(
-                          err instanceof Error
-                            ? err.message
-                            : "Failed to send test invite",
-                        );
-                      } finally {
-                        setIsUpdatingAdmins(false);
-                      }
-                    }}
-                    className="border-dashed border-primary/50 text-primary hover:bg-primary/10"
-                  >
-                    Test Invite
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isUpdatingAdmins}
-                    onClick={async () => {
-                      const testEmail = "thepapisogram@gmail.com";
-                      setIsUpdatingAdmins(true);
-                      try {
-                        const res = await fetch(
-                          `/api/forms/${formId}/invites/test-accept?token=${adminToken}`,
-                          {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ email: testEmail }),
-                          },
-                        );
-                        if (!res.ok)
-                          throw new Error("Failed to send test accepted email");
-                        toast.success(
-                          `Test accepted email sent to ${testEmail}`,
-                        );
-                      } catch (err: unknown) {
-                        toast.error(
-                          err instanceof Error
-                            ? err.message
-                            : "Failed to send test accepted email",
-                        );
-                      } finally {
-                        setIsUpdatingAdmins(false);
-                      }
-                    }}
-                    className="border-dashed border-green-500/50 text-green-600 hover:bg-green-500/10 dark:text-green-400"
-                  >
-                    Test Accepted
-                  </Button>
-                </div>
-              )}
+            <DialogFooter className="mt-2 sm:justify-end items-center gap-4">
               <Button onClick={() => setIsAdminsDialogOpen(false)}>Done</Button>
             </DialogFooter>
           </DialogContent>

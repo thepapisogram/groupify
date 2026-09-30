@@ -1,29 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
-import clientPromise from "@/lib/mongodb";
-
-interface FormField {
-  id: string;
-  type: string;
-  label: string;
-  required?: boolean;
-  options?: string[];
-}
-
-interface FormDoc {
-  _id: string;
-  adminToken: string;
-  title: string;
-  fields: FormField[];
-  isClosed?: boolean;
-}
-
-interface SubmissionDoc {
-  _id: string;
-  formId: string;
-  data: Record<string, string>;
-  submittedAt: Date;
-}
+import { formsCollection, submissionsCollection } from "@/lib/db";
+import { readJson } from "@/lib/http";
+import { checkRateLimit, getClientIp, RULES, tooManyRequests } from "@/lib/rate-limit";
+import { LIMITS, validateSubmission } from "@/lib/validation";
+import type { SubmissionDoc } from "@/lib/models";
 
 export async function POST(
   req: NextRequest,
@@ -31,16 +12,15 @@ export async function POST(
 ) {
   try {
     const { formId } = await params;
-    const body = await req.json();
 
-    if (!body || typeof body !== "object") {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
-    }
+    const limit = await checkRateLimit("submit", `${getClientIp(req.headers)}:${formId}`, RULES.submit);
+    if (!limit.ok) return tooManyRequests(limit.retryAfter);
 
-    const client = await clientPromise;
-    const db = client.db("groupify");
+    const parsedBody = await readJson(req, 32 * 1024);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
 
-    const form = await db.collection<FormDoc>("forms").findOne({ _id: formId });
+    const form = await (await formsCollection()).findOne({ _id: formId });
 
     if (!form) {
       return NextResponse.json({ error: "Form not found" }, { status: 404 });
@@ -50,26 +30,31 @@ export async function POST(
       return NextResponse.json({ error: "This form is no longer accepting responses" }, { status: 403 });
     }
 
-    // Basic validation based on form fields
-    for (const field of form.fields) {
-      if (field.required && !body[field.id]) {
-        return NextResponse.json(
-          { error: `Field ${field.label} is required` },
-          { status: 400 }
-        );
-      }
+    const result = validateSubmission(form.fields, body);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+
+    const submissions = await submissionsCollection();
+
+    const existing = await submissions.countDocuments({ formId });
+    if (existing >= LIMITS.submissionsPerForm) {
+      return NextResponse.json(
+        { error: "This form has reached its response limit" },
+        { status: 403 }
+      );
     }
 
     const submissionId = nanoid(12);
 
-    const newSubmission = {
+    const newSubmission: SubmissionDoc = {
       _id: submissionId,
       formId,
-      data: body,
+      data: result.value,
       submittedAt: new Date(),
     };
 
-    await db.collection<SubmissionDoc>("submissions").insertOne(newSubmission);
+    await submissions.insertOne(newSubmission);
 
     return NextResponse.json({ success: true, submissionId }, { status: 201 });
   } catch (error) {

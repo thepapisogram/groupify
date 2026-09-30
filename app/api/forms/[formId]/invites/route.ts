@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
 import crypto from "crypto";
-import { resend } from "@/lib/resend";
+import { authorizeForm } from "@/lib/form-access";
+import { invitesCollection, usersCollection } from "@/lib/db";
+import { getAppUrl, readJson } from "@/lib/http";
+import { checkRateLimit, getClientIp, RULES, tooManyRequests } from "@/lib/rate-limit";
+import { sendEmail } from "@/lib/resend";
 import { InviteEmail } from "@/lib/emails/invite";
+import { emailLookupCandidates, isValidEmail, normalizeEmail } from "@/lib/validation";
+
+const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export async function GET(
   req: NextRequest,
@@ -12,45 +16,35 @@ export async function GET(
 ) {
   try {
     const { formId } = await params;
-    const adminToken = req.nextUrl.searchParams.get("token");
 
-    if (!adminToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await authorizeForm(req, formId, "collaborator");
+    if (!auth.ok) return auth.response;
 
-    const client = await clientPromise;
-    const db = client.db("groupify");
-    const form = await db.collection("forms").findOne({ _id: formId as unknown as import("mongodb").ObjectId });
+    const invites = await (await invitesCollection()).find({ formId }).toArray();
+    const now = new Date();
 
-    if (!form || form.adminToken !== adminToken) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const invites = await db.collection("invites").find({ formId }).toArray();
-
-    // Separate into pending and active/accepted
-    const pending = invites.filter(
-      (i) => i.status === "pending" && new Date(i.expiresAt) > new Date(),
-    );
-    const expired = invites.filter(
-      (i) => i.status === "pending" && new Date(i.expiresAt) <= new Date(),
-    );
-
-    // Active collaborators are those who have accepted, but we also want to display them cleanly
-    // For "Active", we just look at confirmedAdmins on the form
-    const activeEmails = form.confirmedAdmins || [];
-    const active = activeEmails.map((email: string) => {
-      // Find the invite record if it exists to get the ID for deletion
+    const pending = invites.filter((i) => i.status === "pending");
+    const activeEmails = auth.form.confirmedAdmins ?? [];
+    const active = activeEmails.map((email) => {
       const invite = invites.find(
-        (i) => i.invitedEmail === email && i.status === "accepted",
+        (i) => normalizeEmail(i.invitedEmail) === normalizeEmail(email) && i.status === "accepted",
       );
       return {
         email,
-        inviteId: invite?._id || email, // Use email as fallback ID if no invite record (e.g. system added)
+        // Falls back to the email so an admin without an invite record can still be removed.
+        inviteId: invite?._id ?? email,
       };
     });
 
-    return NextResponse.json({ pending, active });
+    return NextResponse.json({
+      pending: pending.map((i) => ({
+        _id: i._id,
+        invitedEmail: i.invitedEmail,
+        expiresAt: i.expiresAt,
+        expired: new Date(i.expiresAt) <= now,
+      })),
+      active,
+    });
   } catch (error) {
     console.error("Error fetching invites:", error);
     return NextResponse.json(
@@ -66,37 +60,36 @@ export async function POST(
 ) {
   try {
     const { formId } = await params;
-    const adminToken = req.nextUrl.searchParams.get("token");
 
-    if (!adminToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await authorizeForm(req, formId, "owner");
+    if (!auth.ok) return auth.response;
 
-    const session = await getServerSession(authOptions);
-    const ownerEmail = session?.user?.email || "Form Owner";
+    const limit = await checkRateLimit("invite", getClientIp(req.headers), RULES.invite);
+    if (!limit.ok) return tooManyRequests(limit.retryAfter);
 
-    const client = await clientPromise;
-    const db = client.db("groupify");
-    const form = await db.collection("forms").findOne({ _id: formId as unknown as import("mongodb").ObjectId });
+    const parsedBody = await readJson(req, 2 * 1024);
+    if (!parsedBody.ok) return parsedBody.response;
+    const rawEmail = (parsedBody.body as { email?: unknown } | null)?.email;
 
-    if (!form || form.adminToken !== adminToken) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const { email } = await req.json();
-
+    const email = normalizeEmail(rawEmail);
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
+    if (!isValidEmail(email)) {
+      return NextResponse.json({ error: "Please enter a valid email address" }, { status: 400 });
+    }
 
-    if (email === session?.user?.email) {
+    const inviterEmail = normalizeEmail(auth.identity.email);
+    if (email === inviterEmail) {
       return NextResponse.json(
         { error: "Cannot invite yourself" },
         { status: 400 },
       );
     }
 
-    const userExists = await db.collection("users").findOne({ email });
+    const userExists = await (await usersCollection()).findOne({
+      email: { $in: emailLookupCandidates(rawEmail) },
+    });
     if (!userExists) {
       return NextResponse.json(
         { error: "User with this email does not exist on Groupify" },
@@ -104,65 +97,71 @@ export async function POST(
       );
     }
 
-    const confirmedAdmins = form.confirmedAdmins || [];
-    if (confirmedAdmins.includes(email)) {
+    const confirmedAdmins = auth.form.confirmedAdmins ?? [];
+    if (confirmedAdmins.some((a) => normalizeEmail(a) === email)) {
       return NextResponse.json(
         { error: "User is already an active collaborator" },
         { status: 400 },
       );
     }
 
-    const existingInvite = await db.collection("invites").findOne({
+    const invites = await invitesCollection();
+    const now = new Date();
+
+    const existingInvite = await invites.findOne({
       formId,
       invitedEmail: email,
       status: "pending",
     });
 
-    // If there's an existing invite, we could resend. For now, let's just create a new one and overwrite.
-    // Or just check if it's expired.
-    if (existingInvite && new Date(existingInvite.expiresAt) > new Date()) {
-      return NextResponse.json(
-        { error: "A pending invite already exists for this email" },
-        { status: 400 },
-      );
+    if (existingInvite) {
+      if (new Date(existingInvite.expiresAt) > now) {
+        return NextResponse.json(
+          { error: "A pending invite already exists for this email" },
+          { status: 400 },
+        );
+      }
+      // Expired: replace it rather than leaving stale rows behind.
+      await invites.deleteOne({ _id: existingInvite._id });
     }
 
-    // Generate new invite
     const token = crypto.randomBytes(8).toString("hex");
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(now.getTime() + INVITE_TTL_MS);
+    const invitedBy = inviterEmail || "The form owner";
 
-    await db.collection("invites").insertOne({
-      _id: token as unknown as import("mongodb").ObjectId,
+    await invites.insertOne({
+      _id: token,
       formId,
-      formTitle: form.title,
+      formTitle: auth.form.title,
       invitedEmail: email,
-      invitedBy: ownerEmail,
+      invitedBy,
       status: "pending",
       createdAt: now,
       expiresAt,
     });
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const appUrl = getAppUrl(req);
     const inviteLink = `${appUrl}/invites/${token}`;
     const declineLink = `${appUrl}/invites/${token}/decline`;
 
-    // Send email
-    if (process.env.RESEND_API_KEY) {
-      await resend.emails.send({
-        from: process.env.EMAIL_FROM || "Groupify <noreply@groupify.app>",
-        to: email,
-        subject: `You have been invited to collaborate on ${form.title}`,
-        react: InviteEmail({
-          invitedBy: ownerEmail,
-          formTitle: form.title,
-          inviteLink,
-          declineLink,
-        }),
-      });
-    }
+    const emailSent = await sendEmail({
+      to: email,
+      subject: `You have been invited to collaborate on ${auth.form.title}`,
+      react: InviteEmail({
+        invitedBy,
+        formTitle: auth.form.title,
+        inviteLink,
+        declineLink,
+      }),
+    });
 
-    return NextResponse.json({ success: true, inviteId: token });
+    // If email couldn't be delivered the owner still gets the link to pass on themselves.
+    return NextResponse.json({
+      success: true,
+      inviteId: token,
+      emailSent,
+      ...(emailSent ? {} : { inviteLink }),
+    });
   } catch (error) {
     console.error("Error creating invite:", error);
     return NextResponse.json(

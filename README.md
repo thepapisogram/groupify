@@ -1,74 +1,82 @@
 # Groupify
 
-Groupify is a modern, responsive web application designed to simplify the creation, management, and distribution of custom forms and dynamic groups. From crafting bespoke data-collection forms to running complex grouping algorithms via Web Workers, Groupify acts as a powerful all-in-one productivity suite for teams and educators.
+Groupify turns any list into fair, balanced groups in seconds, for classrooms, workshops, teams and events. Paste names or collect them with a shareable form, set rules, tweak the result, then export, print or publish it.
 
 ![Groupify Overview](./public/logo.webp)
 
-## 🚀 Key Features
+## Features
 
-*   **Dynamic Form Builder**: Construct custom forms with rich input types (text, checkboxes, multi-select). Forms can be dynamically enabled/disabled and shared via unique public links.
-*   **Algorithmic Group Generation**: Run client-side grouping algorithms (powered by dedicated Web Workers to keep the UI unblocked) that distribute form respondents into optimal teams based on custom criteria (e.g. equal distribution, specific sizes).
-*   **Secure Team Collaboration**: Invite other users to manage your forms via secure, token-based email invitations powered by Resend. Collaborators can view submissions, run grouping algorithms, and manage form statuses.
-*   **Data Export Pipeline**: Instantly export your generated groups and raw submissions into formatted Excel spreadsheets (`exceljs`) and Word documents (`docx`).
-*   **Authentication & Identity**: Fully integrated with NextAuth.js and MongoDB, supporting secure Email/Password and Google OAuth logins.
-*   **Monetization / Donations**: Integrated with Paystack to seamlessly accept donations and process secure transactions directly within the platform.
-*   **Premium Glassmorphic UI**: Built with a sleek, dark-mode-first glassmorphic aesthetic using Tailwind CSS, Radix UI primitives, and Remix Icons.
+**Making groups**
+- Group by size or by number of groups; spread leftovers evenly or put them in a smaller group.
+- **Rules**: keep chosen people together, keep others apart, and spread a tag or form answer (skill level, year group, …) evenly. Rules that can't be met are reported, not hidden.
+- Rename groups, move people between them, undo, reshuffle. The quick tool remembers your list and your last eight groupings on the device.
+- Grouping runs in a Web Worker so large lists never freeze the page.
 
-## 🛠 Tech Stack
+**Forms**
+- Build a sign-up form (text, number, dropdown, single choice, checkboxes) from a template or from scratch. No account needed to create or fill one.
+- Responses table with search and sorting; export responses to Excel/Word with column and row filters.
+- Generate groups straight from responses, then **publish** them so respondents can look up their own group.
+- Duplicate a form for next term; save an anonymous form to an account.
 
-*   **Framework**: [Next.js](https://nextjs.org/) 16 (App Router)
-*   **Language**: [TypeScript](https://www.typescriptlang.org/)
-*   **Styling**: [Tailwind CSS](https://tailwindcss.com/) + [Radix UI](https://www.radix-ui.com/)
-*   **Database**: [MongoDB](https://www.mongodb.com/) (Native Node Driver & NextAuth Adapter)
-*   **Authentication**: [NextAuth.js](https://next-auth.js.org/)
-*   **Emails**: [Resend](https://resend.com/) + [React Email](https://react.email/)
-*   **Icons**: [Remix Icon](https://remixicon.com/)
+**Sharing and access**
+- Owners can invite collaborators by email (token invitation, 7-day expiry). Collaborators can work with responses and edit the form; only owners can delete it, rotate its link or manage people.
+- Export groups to Excel (`xlsx`) and Word (`docx`), copy as text, or print (dedicated print styles).
+- Email/password and Google sign-in via NextAuth.
 
-## 💻 Local Development
+## Tech stack
 
-1. **Clone the repository and install dependencies:**
-   We recommend using `pnpm` as the package manager.
-   ```bash
-   pnpm install
-   ```
+- [Next.js](https://nextjs.org/) 16 (App Router) and React 19, TypeScript
+- Tailwind CSS 3, Radix UI primitives, Remix Icon
+- MongoDB (native driver) with NextAuth's MongoDB adapter
+- Resend + React Email for invitations (optional)
+- Vitest for tests
 
-2. **Configure Environment Variables:**
-   Create a `.env` file in the root directory and populate it with the following keys:
-   ```env
-   # Database
-   MONGODB_URI="mongodb://localhost:27017/groupify"
+## Getting started
 
-   # Authentication
-   NEXTAUTH_SECRET="your-super-secret-key"
-   NEXTAUTH_URL="http://localhost:3000"
-   GOOGLE_CLIENT_ID="your-google-oauth-client-id"
-   GOOGLE_CLIENT_SECRET="your-google-oauth-secret"
+```bash
+pnpm install
+cp .env.example .env   # then fill in the values
+pnpm dev               # http://localhost:3000
+```
 
-   # Payments
-   NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY="your-paystack-test-key"
+The only required settings are `MONGODB_URI`, `NEXTAUTH_SECRET` and `NEXTAUTH_URL`. Google sign-in, email and donations are optional; see [`.env.example`](./.env.example). Use `pnpm` (that's what `pnpm-lock.yaml` is for).
 
-   # Emails
-   RESEND_API_KEY="re_..."
-   EMAIL_FROM="Groupify <noreply@yourdomain.com>"
-   NEXT_PUBLIC_APP_URL="http://localhost:3000"
-   ```
+### Scripts
 
-3. **Start the development server:**
-   ```bash
-   pnpm dev
-   ```
-   The application will be available at [http://localhost:3000](http://localhost:3000).
+| Command | What it does |
+| --- | --- |
+| `pnpm dev` | Development server |
+| `pnpm build` / `pnpm start` | Production build and server |
+| `pnpm lint` | ESLint |
+| `pnpm typecheck` | TypeScript, no emit |
+| `pnpm test` | Unit and route tests (Vitest) |
+| `npx tsx scripts/ensure-indexes.ts` | Create the MongoDB indexes (the app also creates them on connect) |
 
-## 🗄 Project Structure
+## How access works
 
-*   `app/`: Next.js App Router endpoints, pages, and API routes.
-    *   `app/api/`: Secure backend API routes for forms, invites, and authentication.
-    *   `app/forms/[formId]/admin`: The core administrator dashboard for form management.
-*   `components/groupify/`: Reusable UI components, modals, and the form builder.
-*   `lib/`: Core utilities including the MongoDB client, Resend initialization, and React Email templates.
-*   `public/`: Static assets including the grouping Web Worker script.
-*   `scripts/`: Utility scripts (e.g. database migrations).
+Understanding this makes the API routes easy to read. Everything goes through [`lib/form-access.ts`](./lib/form-access.ts):
 
-## 📄 License
+| Role | Who | Can |
+| --- | --- | --- |
+| **owner** | The signed-in creator, or anyone holding the form's admin token | Everything, including delete, rotate link, manage collaborators |
+| **collaborator** | An accepted invitee (matched by email, case-insensitively) | View/delete responses, edit the form, open/close it, publish groups |
+
+- Forms created while signed out have no `userId`; the **admin token** in their admin link is the only credential. It is sent in an `X-Admin-Token` header (the old `?token=` query parameter is still accepted) and compared in constant time. Signed-in owners and collaborators never receive it.
+- Public endpoints validate every submission against the form's own field definitions, cap payload size, and are rate limited with a MongoDB-backed counter (`rate_limits`, TTL-expired) so limits hold across serverless instances. It fails open if the database is unreachable.
+
+## Project structure
+
+- `app/`: routes. `app/api/` holds the JSON API; `app/forms/[formId]/{admin,edit,groups}` are the form pages.
+- `components/groupify/`: feature components (quick tool, form builder, dashboard, results, rules).
+- `lib/grouping.ts`: the grouping engine. Pure, seedable and shared by the browser, the worker and the tests.
+- `lib/validation.ts`, `lib/form-access.ts`, `lib/rate-limit.ts`, `lib/db.ts`, `lib/models.ts`: validation, access control, rate limiting and typed collections.
+- `tests/`: unit tests plus route-level tests that run the real handlers against an in-memory database (`tests/helpers/fake-db.ts`).
+- `scripts/`: one-off maintenance scripts.
+
+## Testing
+
+`pnpm test` runs the whole suite; it needs no database. It covers the grouping engine (including a regression check of group sizes against the previous implementation), validation, rate limiting, redirect safety, and the access-control matrix for every API route.
+
+## License
 
 This project is private and intended for internal or authorized use only.

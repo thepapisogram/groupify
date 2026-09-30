@@ -1,47 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
-import clientPromise from "@/lib/mongodb";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-
-interface FormDoc {
-  _id: string;
-  adminToken: string;
-  title: string;
-  description?: string;
-  fields: Record<string, unknown>[];
-  createdAt: Date;
-  userId?: string;
-}
+import { formsCollection } from "@/lib/db";
+import { readJson } from "@/lib/http";
+import { checkRateLimit, getClientIp, RULES, tooManyRequests } from "@/lib/rate-limit";
+import { parseFormDefinition } from "@/lib/validation";
+import type { FormDoc } from "@/lib/models";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const body = await req.json();
-    const { title, description, fields } = body;
+    const limit = await checkRateLimit("create-form", getClientIp(req.headers), RULES.createForm);
+    if (!limit.ok) return tooManyRequests(limit.retryAfter);
 
-    if (!title || !fields || !Array.isArray(fields)) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    const parsedBody = await readJson(req, 64 * 1024);
+    if (!parsedBody.ok) return parsedBody.response;
+
+    const definition = parseFormDefinition(parsedBody.body);
+    if (!definition.ok) {
+      return NextResponse.json({ error: definition.error }, { status: 400 });
     }
 
-    const client = await clientPromise;
-    const db = client.db("groupify");
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     const formId = nanoid(6);
     const adminToken = nanoid(16);
-    const userId = (session?.user as { id?: string } | undefined)?.id;
 
     const newForm: FormDoc = {
       _id: formId,
       adminToken,
-      title,
-      description,
-      fields,
+      ...definition.value,
       createdAt: new Date(),
       ...(userId ? { userId } : {}),
     };
 
-    await db.collection<FormDoc>("forms").insertOne(newForm);
+    await (await formsCollection()).insertOne(newForm);
 
     return NextResponse.json(
       { formId, adminToken },

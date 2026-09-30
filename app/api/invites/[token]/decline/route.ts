@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
+import { invitesCollection } from "@/lib/db";
 
 export async function POST(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
     const { token } = await params;
-    const client = await clientPromise;
-    const db = client.db("groupify");
-    
-    const invite = await db.collection("invites").findOne({ _id: token as unknown as import("mongodb").ObjectId });
+    const invites = await invitesCollection();
+
+    const invite = await invites.findOne({ _id: token });
 
     if (!invite) {
       return NextResponse.json({ error: "Invite not found" }, { status: 404 });
@@ -20,11 +19,7 @@ export async function POST(
       return NextResponse.json({ error: `Invite is already ${invite.status}` }, { status: 400 });
     }
 
-    // Mark invite as declined
-    await db.collection("invites").updateOne(
-      { _id: token as unknown as import("mongodb").ObjectId },
-      { $set: { status: "declined" } }
-    );
+    await invites.updateOne({ _id: token }, { $set: { status: "declined" } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

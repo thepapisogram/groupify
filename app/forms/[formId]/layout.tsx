@@ -1,11 +1,8 @@
-import { Metadata } from "next";
-import clientPromise from "@/lib/mongodb";
+import type { Metadata } from "next";
+import { formsCollection } from "@/lib/db";
 
-interface FormDoc {
-  _id: string;
-  title: string;
-  description?: string;
-}
+// Forms belong to whoever made them; they are shared by link and shouldn't appear in search results.
+const NO_INDEX = { index: false, follow: false } as const;
 
 export async function generateMetadata({
   params,
@@ -14,14 +11,16 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { formId } = await params;
   try {
-    const client = await clientPromise;
-    const db = client.db("groupify");
-    const form = await db.collection<FormDoc>("forms").findOne({ _id: formId });
+    const form = await (await formsCollection()).findOne(
+      { _id: formId },
+      { projection: { title: 1, description: 1 } },
+    );
 
     if (form) {
       return {
         title: form.title,
         description: form.description || "Fill this form.",
+        robots: NO_INDEX,
       };
     }
   } catch (error) {
@@ -31,6 +30,7 @@ export async function generateMetadata({
   return {
     title: "Groupify Form",
     description: "Fill this form.",
+    robots: NO_INDEX,
   };
 }
 

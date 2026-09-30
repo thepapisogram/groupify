@@ -15,7 +15,7 @@
     --secondary: 210 40% 93%;
     --secondary-foreground: 222 47% 11%;
     --muted: 210 40% 93%;
-    --muted-foreground: 215 16% 47%;
+    --muted-foreground: 215 16% 40%;
     --accent: 185 80% 35%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
@@ -165,6 +165,59 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
 .stagger-4 { animation-delay: 0.20s; }
 .stagger-5 { animation-delay: 0.25s; }
 .stagger-6 { animation-delay: 0.30s; }
+
+/* ── Accessibility ───────────────────────────────────────────────────── */
+/* Fallback focus ring for keyboard users; components with their own ring override it. */
+:where(a, button, [role="button"], [role="tab"], summary):focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Respect the OS "reduce motion" setting: no decorative animation or smooth movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  body {
+    animation: none;
+  }
+}
+
+/* ── Print ────────────────────────────────────────────────────────────── */
+/* Group lists get printed. The dark theme's pale text would vanish on paper, so print in plain
+   black on white, drop decorative backgrounds and animations, and keep each card in one piece. */
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    animation: none !important;
+  }
+  .mesh-bg::before {
+    display: none !important;
+  }
+  * {
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    backdrop-filter: none !important;
+    animation: none !important;
+    transition: none !important;
+    border-color: #999 !important;
+  }
+  a {
+    text-decoration: none !important;
+  }
+  /* Notifications are screen-only. */
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+}
 
 /* ── Shimmer button state ─────────────────────────────────────────────── */
 .btn-shimmer {

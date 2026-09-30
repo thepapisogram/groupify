@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import clientPromise from "@/lib/mongodb";
 import { AdminDashboard } from "@/components/groupify/admin-dashboard";
-import { ObjectId } from "mongodb";
-import { safeObjectId } from "@/lib/mongodb";
+import { PageHeader } from "@/components/groupify/page-header";
+import { Footer } from "@/components/groupify/footer";
+import { adminPagePath } from "@/lib/admin-client";
+import { formsCollection, submissionsCollection } from "@/lib/db";
+import { getIdentity, resolveFormRole, tokenMatches } from "@/lib/form-access";
 
 export default async function AdminDashboardServerPage({
   params,
@@ -16,31 +17,42 @@ export default async function AdminDashboardServerPage({
   const { formId } = await params;
   const { token: adminTokenFromUrl } = await searchParams;
 
-  const client = await clientPromise;
-  const db = client.db("groupify");
-
-  const form = await db.collection("forms").findOne({ _id: safeObjectId(formId) as unknown as ObjectId });
+  const form = await (await formsCollection()).findOne({ _id: formId });
 
   if (!form) {
-    redirect("/");
+    return (
+      <div className="mesh-bg relative min-h-dvh">
+        <div className="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-28 sm:px-6 sm:py-12">
+          <PageHeader />
+          <div className="mx-auto mt-12 max-w-lg rounded-2xl border border-border/50 bg-card/70 p-8 text-center shadow-xl backdrop-blur-sm">
+            <h1 className="text-xl font-bold text-foreground">Form not found</h1>
+            <p className="mt-2 text-muted-foreground">
+              This form may have been deleted, or its link was regenerated. If you own it, check My Forms for the
+              current link.
+            </p>
+            <Link href="/forms" className="mt-6 inline-flex text-sm font-medium text-primary hover:underline">
+              Go to My Forms
+            </Link>
+          </div>
+          <Footer />
+        </div>
+      </div>
+    );
   }
 
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string })?.id;
-  const userEmail = session?.user?.email;
+  const identity = await getIdentity();
+  const role = resolveFormRole(form, { token: adminTokenFromUrl, identity });
 
-  const isOwner = !!(form.userId && userId === form.userId);
-  const isSharedAdmin = !!(userEmail && form.confirmedAdmins && form.confirmedAdmins.includes(userEmail));
-  
-  const hasValidToken = adminTokenFromUrl && form.adminToken === adminTokenFromUrl;
-  const hasSessionAccess = isOwner || isSharedAdmin;
-
-  if (!hasValidToken && !hasSessionAccess) {
+  if (!role) {
+    if (!identity.userId && !identity.email) {
+      // Signed out: let owners and collaborators sign in and come straight back.
+      const back = adminPagePath(formId, "admin", adminTokenFromUrl);
+      redirect(`/login?callbackUrl=${encodeURIComponent(back)}`);
+    }
     redirect(`/forms/${formId}`);
   }
 
-  const submissions = await db
-    .collection("submissions")
+  const submissions = await (await submissionsCollection())
     .find({ formId })
     .sort({ submittedAt: -1 })
     .toArray();
@@ -49,8 +61,6 @@ export default async function AdminDashboardServerPage({
     title: form.title,
     fields: form.fields || [],
     isClosed: form.isClosed || false,
-    adminToken: form.adminToken,
-    userId: form.userId,
     description: form.description || "",
   };
 
@@ -61,12 +71,15 @@ export default async function AdminDashboardServerPage({
   }));
 
   return (
-    <AdminDashboard 
-      formId={formId} 
-      initialFormConfig={formConfig} 
-      initialSubmissions={serializedSubmissions} 
-      adminToken={form.adminToken}
-      isOwner={isOwner}
+    <AdminDashboard
+      formId={formId}
+      initialFormConfig={formConfig}
+      initialSubmissions={serializedSubmissions}
+      initialPublishedAt={form.publishedGroups ? new Date(form.publishedGroups.publishedAt).toISOString() : null}
+      // Only echo a token back if the visitor actually arrived with a valid one.
+      adminToken={tokenMatches(form.adminToken, adminTokenFromUrl) ? adminTokenFromUrl : undefined}
+      isOwner={role === "owner"}
+      hasAccountOwner={Boolean(form.userId)}
     />
   );
 }

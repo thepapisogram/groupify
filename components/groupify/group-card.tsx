@@ -1,13 +1,81 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import type { Group } from "@/components/groupify/types";
-import { RiTeamLine } from "@remixicon/react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { RiArrowLeftRightLine, RiPencilLine, RiTeamLine } from "@remixicon/react";
 
 interface GroupCardProps {
   group: Group;
   index: number;
+  /** Every group, so members can be moved between them. */
+  allGroups?: Group[];
+  onRename?: (groupId: number, label: string) => void;
+  onMoveMember?: (fromGroupId: number, memberIndex: number, toGroupId: number) => void;
+}
+
+/** Group name that turns into an input on click. Enter or blur saves, Escape cancels. */
+function EditableLabel({ label, onSave }: { label: string; onSave: (value: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(label);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select();
+  }, [editing]);
+
+  const commit = () => {
+    setEditing(false);
+    if (draft.trim() && draft.trim() !== label) onSave(draft);
+    else setDraft(label);
+  };
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        value={draft}
+        maxLength={60}
+        aria-label="Group name"
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") {
+            setDraft(label);
+            setEditing(false);
+          }
+        }}
+        className="w-full min-w-0 rounded-md border border-primary/40 bg-background/70 px-1.5 py-0.5 font-syne text-sm font-bold tracking-wide text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setDraft(label);
+        setEditing(true);
+      }}
+      title="Rename group"
+      aria-label={`Rename ${label}`}
+      className="group/name flex min-w-0 items-center gap-1.5 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+    >
+      <span className="truncate font-syne text-sm font-bold tracking-wide text-foreground">{label}</span>
+      <RiPencilLine className="size-3 shrink-0 print:hidden text-muted-foreground/60 transition-opacity group-hover/name:text-foreground" />
+    </button>
+  );
 }
 
 /**
- * Color palette — 8 slots mapped 1-to-1 to the HUES array in utils.ts.
+ * Color palette — 8 slots mapped 1-to-1 to the HUES array in lib/grouping.ts.
  * HUES = [185, 200, 220, 260, 160, 340, 35, 280]
  * Using Tailwind static classes keeps the stylesheet statically analyzable.
  */
@@ -86,25 +154,32 @@ const CARD_PALETTE = [
   },
 ] as const;
 
-export function GroupCard({ group, index }: GroupCardProps) {
+export function GroupCard({ group, index, allGroups, onRename, onMoveMember }: GroupCardProps) {
   const palette = CARD_PALETTE[index % CARD_PALETTE.length];
+  const targets = (allGroups ?? []).filter((g) => g.id !== group.id);
+  const canMove = Boolean(onMoveMember) && targets.length > 0;
 
   return (
     <div
-      className={`group flex flex-col overflow-hidden rounded-2xl border ${palette.border} ${palette.cardBg} backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/5 animate-slide-up`}
+      className={`group flex flex-col overflow-hidden rounded-2xl border print:break-inside-avoid ${palette.border} ${palette.cardBg} backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/5 animate-slide-up`}
       style={{ animationDelay: `${index * 0.05}s` }}
     >
-      <div className={`flex items-center justify-between border-b ${palette.border} ${palette.headerBg} px-4 py-2.5 transition-colors`}>
-        <div className="flex items-center gap-2">
-          <div className={`flex size-6 items-center justify-center rounded-full shadow-sm ${palette.itemBg}`}>
+      <div className={`flex items-center justify-between gap-2 border-b ${palette.border} ${palette.headerBg} px-4 py-2.5 transition-colors`}>
+        <div className="flex min-w-0 items-center gap-2">
+          <div className={`flex size-6 shrink-0 items-center justify-center rounded-full shadow-sm ${palette.itemBg}`}>
             <RiTeamLine className="size-4 text-emerald-500" />
           </div>
-          <span className="font-syne text-sm font-bold tracking-wide text-foreground">
-            {group.label}
-          </span>
+          {onRename ? (
+            <EditableLabel label={group.label} onSave={(value) => onRename(group.id, value)} />
+          ) : (
+            <span className="truncate font-syne text-sm font-bold tracking-wide text-foreground">
+              {group.label}
+            </span>
+          )}
         </div>
         <span
-          className={`flex h-5 items-center rounded-full px-2 text-xs font-bold tracking-widest shadow-sm ${palette.badgeBg} text-white`}
+          className={`flex h-5 shrink-0 items-center rounded-full px-2 text-xs font-bold tracking-widest shadow-sm ${palette.badgeBg} text-white`}
+          title={`${group.members.length} member${group.members.length === 1 ? "" : "s"}`}
         >
           {group.members.length}
         </span>
@@ -123,9 +198,36 @@ export function GroupCard({ group, index }: GroupCardProps) {
               >
                 {memberIndex + 1}
               </span>
-              <span className="text-sm font-medium text-foreground/80 transition-colors group-hover/item:text-foreground">
+              <span className="min-w-0 flex-1 break-words text-sm font-medium text-foreground/80 transition-colors group-hover/item:text-foreground">
                 {member}
               </span>
+              {canMove && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={`Move ${member} to another group`}
+                      title="Move to another group"
+                      className="shrink-0 print:hidden rounded-md p-1 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    >
+                      <RiArrowLeftRightLine className="size-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="max-h-64 w-48 overflow-y-auto">
+                    <DropdownMenuLabel className="text-xs text-muted-foreground">Move to…</DropdownMenuLabel>
+                    {targets.map((target) => (
+                      <DropdownMenuItem
+                        key={target.id}
+                        onSelect={() => onMoveMember?.(group.id, memberIndex, target.id)}
+                        className="cursor-pointer justify-between gap-2"
+                      >
+                        <span className="truncate">{target.label}</span>
+                        <span className="text-xs text-muted-foreground">{target.members.length}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </li>
           ))}
         </ul>

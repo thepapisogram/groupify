@@ -2,11 +2,22 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/groupify/page-header";
 import { Footer } from "@/components/groupify/footer";
 import { Button } from "@/components/ui/button";
+import { adminFetch, adminPagePath } from "@/lib/admin-client";
+import type { FormField } from "@/lib/models";
+import { LIMITS } from "@/lib/validation";
+import {
+  FORM_TEMPLATES,
+  instantiateTemplate,
+  snapshotOf,
+  type FormTemplate,
+} from "@/lib/form-templates";
+import { ConfirmDialog } from "@/components/groupify/confirm-dialog";
 import {
   Select,
   SelectContent,
@@ -15,14 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export type FormField = {
-  id: string;
-  label: string;
-  type: "text" | "number" | "select" | "radio" | "checklist";
-  options?: string[];
-  isPrimary?: boolean;
-  required?: boolean;
-};
+export type { FormField };
 
 interface FormBuilderProps {
   initialTitle?: string;
@@ -37,21 +41,36 @@ function TagsInput({
   value = [],
   onChange,
   placeholder,
+  label,
 }: {
   value?: string[];
   onChange: (v: string[]) => void;
   placeholder: string;
+  /** Accessible name for the text box. */
+  label: string;
 }) {
   const [input, setInput] = useState("");
+
+  /** Add one or more options; commas and new lines separate them, so pasted lists just work. */
+  const commit = (raw: string) => {
+    const parts = raw
+      .split(/[\n,]/)
+      .map((part) => part.trim().slice(0, LIMITS.optionMax))
+      .filter(Boolean);
+    if (parts.length > 0) {
+      const next = [...value];
+      for (const part of parts) {
+        if (!next.includes(part) && next.length < LIMITS.optionsMax) next.push(part);
+      }
+      onChange(next);
+    }
+    setInput("");
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
-      const val = input.trim();
-      if (val && !value.includes(val)) {
-        onChange([...value, val]);
-      }
-      setInput("");
+      commit(input);
     } else if (e.key === "Backspace" && input === "" && value.length > 0) {
       onChange(value.slice(0, -1));
     }
@@ -65,26 +84,37 @@ function TagsInput({
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/50 bg-muted/20 p-2 text-sm focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50">
       {value.map((tag, i) => (
         <span
-          key={i}
+          key={`${tag}-${i}`}
           className="flex items-center gap-1 rounded bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground"
         >
           {tag}
           <button
             type="button"
             onClick={() => removeTag(i)}
-            className="text-primary-foreground/70 hover:text-primary-foreground"
+            aria-label={`Remove option ${tag}`}
+            className="rounded px-0.5 text-primary-foreground/80 hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground/60"
           >
-            &times;
+            <span aria-hidden="true">&times;</span>
           </button>
         </span>
       ))}
       <input
         type="text"
         value={input}
+        aria-label={label}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
+        // Typing an option and tapping elsewhere (common on phones) still adds it.
+        onBlur={() => commit(input)}
+        onPaste={(e) => {
+          const text = e.clipboardData.getData("text");
+          if (/[\n,]/.test(text)) {
+            e.preventDefault();
+            commit(input + text);
+          }
+        }}
         placeholder={value.length === 0 ? placeholder : "Add another option..."}
-        className="flex-1 bg-transparent px-1 min-w-[120px] outline-none text-foreground placeholder:text-muted-foreground/50"
+        className="flex-1 bg-transparent px-1 min-w-[120px] outline-none text-foreground placeholder:text-muted-foreground/70"
       />
     </div>
   );
@@ -107,6 +137,8 @@ export function FormBuilder({
   isEdit = false,
 }: FormBuilderProps) {
   const router = useRouter();
+  const { data: session } = useSession();
+  const isSignedIn = Boolean(session?.user?.id);
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
   const [fields, setFields] = useState<FormField[]>(initialFields);
@@ -117,6 +149,28 @@ export function FormBuilder({
   } | null>(null);
 
   const [draggedId, setDraggedId] = useState<string | null>(null);
+
+  // Starter templates (new forms only). `pristine` remembers the last untouched state, so
+  // picking a template only asks for confirmation when the user has actually changed something.
+  const [pristine, setPristine] = useState(() =>
+    snapshotOf({ title: initialTitle, description: initialDescription, fields: initialFields }),
+  );
+  const [pendingTemplate, setPendingTemplate] = useState<FormTemplate | null>(null);
+  const isDirty = snapshotOf({ title, description, fields }) !== pristine;
+
+  const applyTemplate = (template: FormTemplate) => {
+    const next = instantiateTemplate(template);
+    setTitle(next.title);
+    setDescription(next.description);
+    setFields(next.fields);
+    setPristine(snapshotOf(next));
+    setPendingTemplate(null);
+  };
+
+  const chooseTemplate = (template: FormTemplate) => {
+    if (isDirty) setPendingTemplate(template);
+    else applyTemplate(template);
+  };
 
   // IntersectionObserver sentinel — sticky footer appears only when the
   // sentinel (placed at end of fields) scrolls out of view on mobile.
@@ -254,31 +308,30 @@ export function FormBuilder({
 
     setIsSaving(true);
     try {
-      const url = isEdit
-        ? `/api/forms/${formId}?token=${adminToken}`
-        : "/api/forms";
+      const url = isEdit ? `/api/forms/${formId}` : "/api/forms";
       const method = isEdit ? "PUT" : "POST";
 
-      const response = await fetch(url, {
+      const response = await adminFetch(url, adminToken, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, description, fields }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save form");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to save form");
       }
 
       if (isEdit) {
         toast.success("Form updated successfully!");
-        router.push(`/forms/${formId}/admin?token=${adminToken}`);
+        router.push(adminPagePath(formId!, "admin", adminToken));
       } else {
         const data = await response.json();
         setSaveResult(data);
         toast.success("Form created successfully!");
       }
     } catch (error) {
-      toast.error("An error occurred while saving the form");
+      toast.error(error instanceof Error ? error.message : "An error occurred while saving the form");
       console.error(error);
     } finally {
       setIsSaving(false);
@@ -310,23 +363,26 @@ export function FormBuilder({
                   />
                 </svg>
               </div>
-              <h2 className="mt-6 text-2xl font-bold text-foreground">
+              <h1 className="mt-6 text-2xl font-bold text-foreground">
                 Form created successfully!
-              </h2>
+              </h1>
               <p className="mt-2 text-muted-foreground">
-                Save these links. You won&apos;t be able to see the admin link
-                again.
+                {isSignedIn
+                  ? "Your form is saved to your account. You can find it any time under My Forms."
+                  : "Save these links. You won't be able to see the admin link again."}
               </p>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-foreground">
+                <label htmlFor="public-link" className="text-sm font-semibold text-foreground">
                   Public Link (Share with respondents)
                 </label>
                 <div className="flex gap-2">
                   <input
+                    id="public-link"
                     readOnly
+                    onFocus={(e) => e.currentTarget.select()}
                     value={publicLink}
                     className="flex-1 rounded-xl border border-border/50 bg-muted/20 px-4 py-2.5 text-sm text-foreground"
                   />
@@ -342,13 +398,16 @@ export function FormBuilder({
                 </div>
               </div>
 
+              {!isSignedIn && (
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-destructive">
+                <label htmlFor="admin-link" className="text-sm font-semibold text-destructive">
                   Admin Link (Keep secret!)
                 </label>
                 <div className="flex gap-2">
                   <input
+                    id="admin-link"
                     readOnly
+                    onFocus={(e) => e.currentTarget.select()}
                     value={adminLink}
                     className="flex-1 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-2.5 text-sm text-destructive"
                   />
@@ -364,16 +423,18 @@ export function FormBuilder({
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Use this link to view submissions, edit the form, and generate
-                  groups.
+                  groups. Anyone who has it can manage the form, and it can&apos;t be recovered if you lose it.
+                  Sign in and save the form to your account to avoid that.
                 </p>
               </div>
+              )}
             </div>
 
             <div className="flex justify-center pt-4">
               <button
                 onClick={() =>
                   router.push(
-                    `/forms/${saveResult.formId}/admin?token=${saveResult.adminToken}`,
+                    adminPagePath(saveResult.formId, "admin", isSignedIn ? undefined : saveResult.adminToken),
                   )
                 }
                 className="rounded-xl border border-border/50 bg-card px-6 py-3 text-sm font-semibold text-foreground transition-all hover:bg-muted"
@@ -402,24 +463,51 @@ export function FormBuilder({
             </p>
           </div>
 
+          {!isEdit && (
+            <section aria-labelledby="templates-heading" className="space-y-3">
+              <h2 id="templates-heading" className="text-sm font-semibold text-foreground">
+                Start from a template
+              </h2>
+              <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {FORM_TEMPLATES.map((template) => (
+                  <li key={template.id}>
+                    <button
+                      type="button"
+                      onClick={() => chooseTemplate(template)}
+                      className="h-full w-full rounded-xl border border-border/50 bg-card/50 p-3 text-left transition-all hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    >
+                      <span className="block text-sm font-semibold text-foreground">{template.name}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">{template.summary}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <div className="space-y-4 rounded-2xl border border-border/50 bg-card/70 p-6 backdrop-blur-sm shadow-md">
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-foreground">
-                Form Title <span className="text-destructive">*</span>
+              <label htmlFor="form-title" className="text-sm font-semibold text-foreground">
+                Form Title <span className="text-destructive" aria-hidden="true">*</span>
+                <span className="sr-only"> (required)</span>
               </label>
               <input
+                id="form-title"
                 type="text"
                 value={title}
+                maxLength={LIMITS.titleMax}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Hackathon Registration"
                 className="w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-3 text-sm text-foreground transition-all focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-foreground">
+              <label htmlFor="form-description" className="text-sm font-semibold text-foreground">
                 Description
               </label>
               <textarea
+                id="form-description"
+                maxLength={LIMITS.descriptionMax}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="e.g. Please fill out this form to register for the upcoming hackathon..."
@@ -431,19 +519,12 @@ export function FormBuilder({
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                Form Fields
-                <div className="group relative cursor-help">
-                  <svg className="size-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                    <line x1="12" y1="17" x2="12.01" y2="17" />
-                  </svg>
-                  <div className="pointer-events-none absolute left-0 sm:left-1/2 sm:-translate-x-1/2 bottom-full mb-2 hidden w-64 rounded-lg bg-popover p-3 text-xs text-popover-foreground shadow-md group-hover:block z-50 whitespace-normal">
-                    The Primary Identifier (★) is the main field used to group respondents. The final generated groups will be lists of these primary identifiers.
-                  </div>
-                </div>
-              </h2>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Form Fields</h2>
+                <p className="text-xs text-muted-foreground">
+                  The star marks the primary identifier: the field shown in your group lists, usually the name.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={addField}
@@ -467,7 +548,7 @@ export function FormBuilder({
             </div>
 
             <div className="space-y-4 ml-0 sm:ml-4">
-              {fields.map((field) => (
+              {fields.map((field, index) => (
                 <div
                   key={field.id}
                   draggable
@@ -502,11 +583,13 @@ export function FormBuilder({
                   <div className="flex items-start justify-between gap-4">
                     <div className="grid flex-1 gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <label className="text-xs font-medium text-muted-foreground">
+                        <label htmlFor={`label-${field.id}`} className="text-xs font-medium text-muted-foreground">
                           Field Label
                         </label>
                         <input
+                          id={`label-${field.id}`}
                           type="text"
+                          maxLength={LIMITS.labelMax}
                           value={field.label}
                           onChange={(e) =>
                             updateField(field.id, { label: e.target.value })
@@ -516,7 +599,7 @@ export function FormBuilder({
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-xs font-medium text-muted-foreground">
+                        <label htmlFor={`type-${field.id}`} className="text-xs font-medium text-muted-foreground">
                           Field Type
                         </label>
                         <Select
@@ -527,7 +610,7 @@ export function FormBuilder({
                             })
                           }
                         >
-                          <SelectTrigger className="w-full rounded-lg border border-border/50 bg-muted/20 px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none h-[38px]">
+                          <SelectTrigger id={`type-${field.id}`} className="w-full rounded-lg border border-border/50 bg-muted/20 px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none h-[38px]">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -542,28 +625,39 @@ export function FormBuilder({
                     </div>
 
                     <div className="flex gap-1 mt-6 items-center">
-                      <div className="flex flex-col gap-0.5 mr-2 sm:hidden">
+                      {/* Keyboard- and touch-friendly reordering; dragging is a mouse-only extra. */}
+                      <div className="flex flex-col gap-0.5 mr-2">
                         <button
                           type="button"
                           onClick={() => moveField(field.id, "up")}
-                          className="rounded-md p-1 hover:bg-muted/50 text-muted-foreground/60 hover:text-foreground transition-colors"
+                          disabled={index === 0}
+                          className="rounded-md p-1 hover:bg-muted/50 text-muted-foreground/70 hover:text-foreground transition-colors disabled:pointer-events-none disabled:opacity-30"
                           title="Move up"
+                          aria-label={`Move "${field.label}" up`}
                         >
-                          <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 15l-6-6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M18 15l-6-6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
                         </button>
                         <button
                           type="button"
                           onClick={() => moveField(field.id, "down")}
-                          className="rounded-md p-1 hover:bg-muted/50 text-muted-foreground/60 hover:text-foreground transition-colors"
+                          disabled={index === fields.length - 1}
+                          className="rounded-md p-1 hover:bg-muted/50 text-muted-foreground/70 hover:text-foreground transition-colors disabled:pointer-events-none disabled:opacity-30"
                           title="Move down"
+                          aria-label={`Move "${field.label}" down`}
                         >
-                          <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/></svg>
                         </button>
                       </div>
                       <button
                         type="button"
                         onClick={() => setPrimaryField(field.id)}
-                        className={`rounded-lg p-2 transition-colors ${field.isPrimary ? "text-amber-500 hover:text-amber-600" : "text-muted-foreground/30 hover:text-amber-500 hover:bg-amber-500/10"}`}
+                        aria-pressed={Boolean(field.isPrimary)}
+                        aria-label={
+                          field.isPrimary
+                            ? `"${field.label}" is the primary field`
+                            : `Make "${field.label}" the primary field`
+                        }
+                        className={`rounded-lg p-2 transition-colors ${field.isPrimary ? "text-amber-500 hover:text-amber-600" : "text-muted-foreground/70 hover:text-amber-500 hover:bg-amber-500/10"}`}
                         title={
                           field.isPrimary ? "Primary Field" : "Set as Primary"
                         }
@@ -581,8 +675,9 @@ export function FormBuilder({
                       <button
                         type="button"
                         onClick={() => removeField(field.id)}
-                        className="rounded-lg p-2 text-muted-foreground/40 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        className="rounded-lg p-2 text-muted-foreground/80 transition-colors hover:bg-destructive/10 hover:text-destructive"
                         title="Remove field"
+                        aria-label={`Remove field "${field.label}"`}
                       >
                         <svg
                           className="size-4"
@@ -603,15 +698,14 @@ export function FormBuilder({
 
                   {(field.type === "select" || field.type === "radio" || field.type === "checklist") && (
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground">
-                        Options
-                      </label>
+                      <p className="text-xs font-medium text-muted-foreground">Options</p>
                       <TagsInput
+                        label={`Options for ${field.label}`}
                         value={field.options}
                         onChange={(options) =>
                           updateField(field.id, { options })
                         }
-                        placeholder="e.g. Option 1, Option 2 (Press Enter to add)"
+                        placeholder="Type an option, then press Enter or comma"
                       />
                     </div>
                   )}
@@ -644,7 +738,7 @@ export function FormBuilder({
                 type="button"
                 variant="outline"
                 size="xl"
-                onClick={() => router.push(`/forms/${formId}/admin?token=${adminToken}`)}
+                onClick={() => router.push(adminPagePath(formId!, "admin", adminToken))}
                 className="flex-1 sm:flex-none"
               >
                 Cancel
@@ -669,7 +763,7 @@ export function FormBuilder({
                   type="button"
                   variant="outline"
                   size="lg"
-                  onClick={() => router.push(`/forms/${formId}/admin?token=${adminToken}`)}
+                  onClick={() => router.push(adminPagePath(formId!, "admin", adminToken))}
                   className="flex-1"
                 >
                   Cancel
@@ -689,6 +783,19 @@ export function FormBuilder({
         </div>
         <Footer />
       </div>
+
+      <ConfirmDialog
+        open={pendingTemplate !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingTemplate(null);
+        }}
+        title="Replace your form?"
+        description={`Using the "${pendingTemplate?.name ?? ""}" template will replace the title, description and fields you've entered so far.`}
+        confirmLabel="Use template"
+        onConfirm={() => {
+          if (pendingTemplate) applyTemplate(pendingTemplate);
+        }}
+      />
     </div>
   );
 }

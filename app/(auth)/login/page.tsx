@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { RiArrowLeftSLine, RiEyeLine, RiEyeOffLine } from "@remixicon/react";
 import { PageHeader } from "@/components/groupify/page-header";
 import { Button } from "@/components/ui/button";
+import { readCallbackUrl } from "@/lib/redirect";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,7 +33,7 @@ export default function LoginPage() {
       } else {
         toast.success("Logged in successfully");
         router.refresh();
-        router.push("/");
+        router.push(readCallbackUrl());
       }
     } catch {
       toast.error("An unexpected error occurred");
@@ -42,7 +43,7 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
-    signIn("google", { callbackUrl: "/" });
+    signIn("google", { callbackUrl: readCallbackUrl() });
   };
 
   return (
@@ -115,6 +116,7 @@ export default function LoginPage() {
                 id="login-email"
                 type="email"
                 required
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
@@ -131,6 +133,7 @@ export default function LoginPage() {
                   id="login-password"
                   type={showPassword ? "text" : "password"}
                   required
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-2.5 pr-10 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
@@ -164,7 +167,10 @@ export default function LoginPage() {
 
           <p className="text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
-            <Link href="/signup" className="font-semibold text-primary hover:underline">
+            <Link
+              href={`/signup${typeof window !== "undefined" ? window.location.search : ""}`}
+              className="font-semibold text-primary hover:underline"
+            >
               Sign up
             </Link>
           </p>

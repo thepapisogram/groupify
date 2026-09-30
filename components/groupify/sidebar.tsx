@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { SizeControl } from "@/components/groupify/size-control";
 import { StatsBar } from "@/components/groupify/stats-bar";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,10 @@ interface SidebarProps {
   onGenerate: () => void;
   onExport: (format: ExportFormat) => void;
   onCopyText: () => void;
+  /** Rendered between the configuration card and the Generate button (e.g. the rules panel). */
+  rules?: ReactNode;
+  /** Rendered after the export card (e.g. print or publish actions). */
+  extraActions?: ReactNode;
 }
 
 const DISTRIBUTION_OPTIONS = [
@@ -57,9 +62,11 @@ export function Sidebar({
   onGenerate,
   onExport,
   onCopyText,
+  rules,
+  extraActions,
 }: SidebarProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 print:hidden">
       <StatsBar
         nameCount={nameCount}
         size={size}
@@ -75,9 +82,9 @@ export function Sidebar({
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-foreground">
+            <p className="text-sm font-medium text-foreground">
               {groupBy === "size" ? "Members per group" : "Number of groups"}
-            </label>
+            </p>
             <button
               type="button"
               onClick={() =>
@@ -85,6 +92,11 @@ export function Sidebar({
               }
               className="rounded-full bg-muted/50 p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               title={
+                groupBy === "size"
+                  ? "Switch to number of groups"
+                  : "Switch to members per group"
+              }
+              aria-label={
                 groupBy === "size"
                   ? "Switch to number of groups"
                   : "Switch to members per group"
@@ -108,6 +120,7 @@ export function Sidebar({
           </div>
           {groupBy === "size" ? (
             <SizeControl
+              label="Members per group"
               value={size}
               min={2}
               max={99}
@@ -115,26 +128,29 @@ export function Sidebar({
             />
           ) : (
             <SizeControl
+              label="Number of groups"
               value={groupCount}
               min={1}
               max={99}
               onChange={onGroupCountChange}
             />
           )}
-          <p className="text-xs text-muted-foreground/60">
+          <p className="text-xs text-muted-foreground/80">
             Min {groupBy === "size" ? 2 : 1} - Max 99
           </p>
         </div>
 
         <div className="space-y-3">
-          <label className="text-sm font-medium text-foreground">
+          <p id="extra-members-label" className="text-sm font-medium text-foreground">
             Extra members
-          </label>
-          <div className="space-y-2">
+          </p>
+          <div className="space-y-2" role="radiogroup" aria-labelledby="extra-members-label">
             {DISTRIBUTION_OPTIONS.map((option) => (
               <button
                 key={option.value}
                 type="button"
+                role="radio"
+                aria-checked={mode === option.value}
                 onClick={() => onModeChange(option.value)}
                 className={`w-full rounded-xl border p-3 text-left transition-all flex items-start gap-3 ${
                   mode === option.value
@@ -162,6 +178,8 @@ export function Sidebar({
           </div>
         </div>
       </div>
+
+      {rules}
 
       <div className="fixed bottom-4 left-4 right-4 z-50 pb-[env(safe-area-inset-bottom)] sm:static sm:bottom-auto sm:left-auto sm:right-auto sm:z-auto sm:pb-0">
         <Button
@@ -260,6 +278,8 @@ export function Sidebar({
           </div>
         </div>
       )}
+
+      {hasResults && extraActions}
     </div>
   );
 }

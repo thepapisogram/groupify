@@ -33,6 +33,11 @@ async function connectAndInit(): Promise<MongoClient> {
     db.collection("invites").createIndex(
       { invitedEmail: 1, status: 1 },
       { name: "invites_invitedEmail_status", background: true }
+    ),
+    // Rate-limit counters delete themselves once their window has passed.
+    db.collection("rate_limits").createIndex(
+      { expireAt: 1 },
+      { name: "rate_limits_expireAt", expireAfterSeconds: 0 }
     )
   ]).catch(err => console.error("Failed to ensure indexes:", err));
   

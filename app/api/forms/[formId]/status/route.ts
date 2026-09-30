@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
-import clientPromise from "@/lib/mongodb";
+import { authorizeForm } from "@/lib/form-access";
+import { formsCollection } from "@/lib/db";
+import { invalidateFormCache, readJson } from "@/lib/http";
 
 export async function PATCH(
   req: NextRequest,
@@ -8,44 +9,24 @@ export async function PATCH(
 ) {
   try {
     const { formId } = await params;
-    const adminToken = req.nextUrl.searchParams.get("token");
 
-    if (!adminToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await authorizeForm(req, formId, "collaborator");
+    if (!auth.ok) return auth.response;
 
-    const client = await clientPromise;
-    const db = client.db("groupify");
-
-    const form = await db.collection<{ _id: string; adminToken: string; isClosed?: boolean }>("forms").findOne({ _id: formId });
-
-    if (!form) {
-      return NextResponse.json({ error: "Form not found" }, { status: 404 });
-    }
-
-    if (form.adminToken !== adminToken) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const body = await req.json();
-    const { isClosed } = body;
+    const parsedBody = await readJson(req, 1024);
+    if (!parsedBody.ok) return parsedBody.response;
+    const { isClosed } = (parsedBody.body ?? {}) as { isClosed?: unknown };
 
     if (typeof isClosed !== "boolean") {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
-    await db.collection<{ _id: string; adminToken: string; isClosed?: boolean; updatedAt?: Date }>("forms").updateOne(
+    await (await formsCollection()).updateOne(
       { _id: formId },
-      {
-        $set: {
-          isClosed,
-          updatedAt: new Date(),
-        },
-      }
+      { $set: { isClosed, updatedAt: new Date() } }
     );
 
-    // @ts-expect-error Next.js 14 typings mismatch
-    revalidateTag(`form-${formId}`);
+    invalidateFormCache(formId);
 
     return NextResponse.json({ success: true, isClosed }, { status: 200 });
   } catch (error) {

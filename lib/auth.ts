@@ -1,12 +1,21 @@
-import { AuthOptions } from "next-auth";
+import type { AuthOptions } from "next-auth";
+import type { Adapter } from "next-auth/adapters";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import clientPromise from "@/lib/mongodb";
 import { compare } from "bcryptjs";
+import { checkRateLimit, getClientIp, RULES } from "@/lib/rate-limit";
+import { emailLookupCandidates, normalizeEmail } from "@/lib/validation";
+
+// Compared against when no account exists, so response time doesn't reveal which emails are registered.
+const DUMMY_HASH = "$2b$12$Z6ql/4wk5oJL2kYeQa.fQOrPQSJQR1yY3lTTfi7FerLyiYK3PhmXi";
+
+const INVALID_LOGIN = "Invalid email or password";
 
 export const authOptions: AuthOptions = {
-  adapter: MongoDBAdapter(clientPromise) as any,
+  // @auth/mongodb-adapter is typed against an older mongodb driver than we ship.
+  adapter: MongoDBAdapter(clientPromise) as unknown as Adapter,
   session: {
     strategy: "jwt",
   },
@@ -18,7 +27,7 @@ export const authOptions: AuthOptions = {
         return {
           id: profile.sub,
           name: profile.name,
-          email: profile.email,
+          email: normalizeEmail(profile.email),
           image: profile.picture,
           emailVerified: true,
         };
@@ -30,30 +39,44 @@ export const authOptions: AuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Missing credentials");
+      async authorize(credentials, req) {
+        const email = normalizeEmail(credentials?.email);
+        const password = credentials?.password;
+
+        if (!email || !password) {
+          throw new Error(INVALID_LOGIN);
+        }
+
+        const ip = getClientIp((req?.headers ?? {}) as Record<string, unknown>);
+        const [perIp, perEmail] = await Promise.all([
+          checkRateLimit("login-ip", `${ip}:${email}`, RULES.loginPerIpAndEmail),
+          checkRateLimit("login-email", email, RULES.loginPerEmail),
+        ]);
+        if (!perIp.ok || !perEmail.ok) {
+          const minutes = Math.ceil(Math.max(perIp.retryAfter, perEmail.retryAfter) / 60);
+          throw new Error(`Too many attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`);
         }
 
         const client = await clientPromise;
         const db = client.db();
-        
+
         const user = await db.collection("users").findOne({
-          email: credentials.email,
+          email: { $in: emailLookupCandidates(credentials?.email) },
         });
 
         if (!user) {
-          throw new Error("No user found with this email");
+          await compare(password, DUMMY_HASH);
+          throw new Error(INVALID_LOGIN);
         }
 
         if (!user.password) {
-          throw new Error("User registered through OAuth");
+          throw new Error("This account uses Google sign-in. Please continue with Google.");
         }
 
-        const isValid = await compare(credentials.password, user.password);
+        const isValid = await compare(password, user.password);
 
         if (!isValid) {
-          throw new Error("Invalid password");
+          throw new Error(INVALID_LOGIN);
         }
 
         return {
@@ -68,7 +91,6 @@ export const authOptions: AuthOptions = {
   callbacks: {
     async session({ session, token }) {
       if (token && session.user) {
-        // @ts-ignore - Adding custom property to session user
         session.user.id = token.sub;
       }
       return session;

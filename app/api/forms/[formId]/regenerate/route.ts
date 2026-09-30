@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
 import { nanoid } from "nanoid";
 import crypto from "crypto";
-
-interface FormDoc {
-  _id: string;
-  adminToken: string;
-  title: string;
-  fields: Record<string, unknown>[];
-  createdAt?: Date;
-  updatedAt?: Date;
-  userId?: string;
-}
+import { authorizeForm } from "@/lib/form-access";
+import { formsCollection, invitesCollection, submissionsCollection } from "@/lib/db";
+import { invalidateFormCache } from "@/lib/http";
 
 export async function POST(
   req: NextRequest,
@@ -19,38 +11,28 @@ export async function POST(
 ) {
   try {
     const { formId } = await params;
-    const adminToken = req.nextUrl.searchParams.get("token");
 
-    if (!adminToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await authorizeForm(req, formId, "owner");
+    if (!auth.ok) return auth.response;
 
-    const client = await clientPromise;
-    const db = client.db("groupify");
+    const forms = await formsCollection();
 
-    const form = await db.collection<FormDoc>("forms").findOne({ _id: formId });
-
-    if (!form) {
-      return NextResponse.json({ error: "Form not found" }, { status: 404 });
-    }
-
-    if (form.adminToken !== adminToken) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    // Generate a new formId and adminToken
+    // Copy first, move dependants, delete last: a failure part-way never loses data.
     const newFormId = nanoid(6);
     const newAdminToken = crypto.randomBytes(32).toString("hex");
-    const newForm: FormDoc = { ...form, _id: newFormId, adminToken: newAdminToken, updatedAt: new Date() };
+    await forms.insertOne({
+      ...auth.form,
+      _id: newFormId,
+      adminToken: newAdminToken,
+      updatedAt: new Date(),
+    });
 
-    await db.collection<FormDoc>("forms").insertOne(newForm);
-    await db.collection<FormDoc>("forms").deleteOne({ _id: formId });
-    
-    // Update all submissions to reference the new formId
-    await db.collection<{ formId: string }>("submissions").updateMany(
-      { formId: formId },
-      { $set: { formId: newFormId } }
-    );
+    await (await submissionsCollection()).updateMany({ formId }, { $set: { formId: newFormId } });
+    await (await invitesCollection()).updateMany({ formId }, { $set: { formId: newFormId } });
+    await forms.deleteOne({ _id: formId });
+
+    // The old public page is cached; without this the "old" link would keep rendering.
+    invalidateFormCache(formId);
 
     return NextResponse.json({ newFormId, newAdminToken }, { status: 200 });
   } catch (error) {

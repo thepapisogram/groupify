@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { RiArrowLeftSLine, RiEyeLine, RiEyeOffLine } from "@remixicon/react";
 import { PageHeader } from "@/components/groupify/page-header";
 import { Button } from "@/components/ui/button";
+import { readCallbackUrl } from "@/lib/redirect";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -44,10 +45,10 @@ export default function SignupPage() {
 
       if (res?.error) {
         toast.error("Could not sign in automatically. Please log in.");
-        router.push("/login");
+        router.push(`/login${window.location.search}`);
       } else {
         router.refresh();
-        router.push("/");
+        router.push(readCallbackUrl());
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -61,7 +62,7 @@ export default function SignupPage() {
   };
 
   const handleGoogleLogin = () => {
-    signIn("google", { callbackUrl: "/" });
+    signIn("google", { callbackUrl: readCallbackUrl() });
   };
 
   return (
@@ -165,7 +166,9 @@ export default function SignupPage() {
                   id="signup-password"
                   type={showPassword ? "text" : "password"}
                   required
-                  minLength={6}
+                  minLength={8}
+                  maxLength={128}
+                  autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-2.5 pr-10 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
@@ -184,7 +187,7 @@ export default function SignupPage() {
                   )}
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground/60">Minimum 6 characters</p>
+              <p className="text-xs text-muted-foreground/80">At least 8 characters</p>
             </div>
 
             <Button
@@ -200,7 +203,10 @@ export default function SignupPage() {
 
           <p className="text-center text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link href="/login" className="font-semibold text-primary hover:underline">
+            <Link
+              href={`/login${typeof window !== "undefined" ? window.location.search : ""}`}
+              className="font-semibold text-primary hover:underline"
+            >
               Sign in
             </Link>
           </p>

@@ -26,6 +26,7 @@ function SignOutButton() {
         onClick={() => setIsOpen(true)}
         className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
         title="Sign out"
+        aria-label="Sign out"
       >
         <RiLogoutBoxRLine className="size-3.5" />
       </button>
@@ -65,7 +66,7 @@ export function PageHeader() {
   const { data: session, status } = useSession();
 
   return (
-    <header className="mb-6 sm:mb-10 animate-fade-in">
+    <header className="mb-6 sm:mb-10 animate-fade-in print:hidden">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="relative">
@@ -85,9 +86,9 @@ export function PageHeader() {
           </div>
 
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+            <span className="block text-2xl font-extrabold tracking-tight text-foreground sm:text-4xl">
               <Link href="/">Groupify</Link>
-            </h1>
+            </span>
           </div>
         </div>
 
@@ -116,13 +117,23 @@ export function PageHeader() {
               <SignOutButton />
             </div>
           ) : (
-            <Link
-              href="/login"
-              className="flex items-center gap-1.5 rounded-xl border border-border/50 bg-primary/10 px-2.5 py-1.5 text-xs font-medium text-primary backdrop-blur-sm transition-colors hover:bg-primary/20 sm:gap-2 sm:px-3"
-            >
-              <RiUserLine className="size-3.5" />
-              Sign in
-            </Link>
+            <>
+              <Link
+                href="/forms/new"
+                className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-primary/10 hover:text-primary sm:px-3"
+              >
+                <RiFileTextLine className="size-3.5" />
+                <span className="hidden sm:inline">Create a form</span>
+                <span className="sm:hidden">Form</span>
+              </Link>
+              <Link
+                href="/login"
+                className="flex items-center gap-1.5 rounded-xl border border-border/50 bg-primary/10 px-2.5 py-1.5 text-xs font-medium text-primary backdrop-blur-sm transition-colors hover:bg-primary/20 sm:gap-2 sm:px-3"
+              >
+                <RiUserLine className="size-3.5" />
+                Sign in
+              </Link>
+            </>
           )}
 
           <ModeToggle />

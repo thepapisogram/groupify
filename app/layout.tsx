@@ -1,5 +1,5 @@
 import { Syne, DM_Sans } from "next/font/google"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/components/auth/session-provider"
@@ -7,7 +7,6 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import "./globals.css"
 import appMeta from "../data/metadata"
-import { PopupManager } from "@/components/groupify/popup-manager"
 
 const syne = Syne({
   subsets: ["latin"],
@@ -25,6 +24,15 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   ...appMeta.main,
+  // Makes relative Open Graph / canonical URLs absolute.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || appMeta.app.defaultUrl),
+}
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#07090f" },
+  ],
 }
 
 export default async function RootLayout({
@@ -37,6 +45,12 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${syne.variable} ${dmSans.variable} font-dm antialiased`}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary-foreground focus:shadow-lg"
+        >
+          Skip to main content
+        </a>
         <AuthProvider session={session}>
           <ThemeProvider
             attribute="class"
@@ -44,8 +58,9 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {children}
-            <PopupManager />
+            <main id="main-content" tabIndex={-1} className="outline-none">
+              {children}
+            </main>
             <Toaster position="bottom-right" richColors />
           </ThemeProvider>
         </AuthProvider>
