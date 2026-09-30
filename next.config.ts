@@ -30,6 +30,7 @@ const nextConfig: NextConfig = {
       { source: "/invites/:path*", headers: privateHeaders },
       { source: "/verify-email", headers: privateHeaders },
       { source: "/reset-password", headers: privateHeaders },
+      { source: "/account", headers: privateHeaders },
       // Public, but not something search engines should list.
       { source: "/forms/:formId/groups", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
     ];
