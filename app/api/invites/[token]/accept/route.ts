@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { getIdentity } from "@/lib/form-access";
 import { formsCollection, invitesCollection } from "@/lib/db";
 import { getAppUrl } from "@/lib/http";
 import { sendEmail } from "@/lib/resend";
@@ -13,10 +12,21 @@ export async function POST(
 ) {
   try {
     const { token } = await params;
-    const session = await getServerSession(authOptions);
-    const userEmail = normalizeEmail(session?.user?.email);
+    const identity = await getIdentity();
+    const userEmail = normalizeEmail(identity.email);
 
     if (!userEmail) {
+      if (identity.pendingEmail) {
+        // Anyone can sign up with any address, so an invite can only be accepted once it is proven to be theirs.
+        return NextResponse.json(
+          {
+            error:
+              "Confirm your email address before accepting this invite. Use the link we emailed you, or request a new one from the banner at the top of the page.",
+            code: "email-unverified",
+          },
+          { status: 403 },
+        );
+      }
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

@@ -35,7 +35,13 @@ export default function SignupPage() {
         throw new Error(data.message || "Something went wrong!");
       }
 
-      toast.success("Account created! Signing you in...");
+      toast.success(
+        data.verificationRequired
+          ? data.verificationSent
+            ? `Account created! We sent a confirmation link to ${email}.`
+            : "Account created! Use the banner at the top of the page to get a confirmation email."
+          : "Account created! Signing you in...",
+      );
 
       const res = await signIn("credentials", {
         redirect: false,

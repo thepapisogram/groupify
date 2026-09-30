@@ -116,4 +116,6 @@ export const RULES = {
   loginPerEmail: { limit: 30, windowMs: 15 * 60_000 },
   createForm: { limit: 30, windowMs: 60 * 60_000 },
   invite: { limit: 20, windowMs: 60 * 60_000 },
+  verifyAttempt: { limit: 30, windowMs: 15 * 60_000 },
+  verifyResend: { limit: 5, windowMs: 60 * 60_000 },
 } satisfies Record<string, RateLimitRule>;

@@ -1,20 +1,35 @@
 /**
  * Minimal in-memory stand-in for the MongoDB collections our routes use.
- * Supports equality filters, `$in`, `$set`, `$unset`, `$addToSet`, sort by one key and
- * counting: enough to exercise route logic without a database server.
+ * Supports equality filters (including ObjectIds), `$in`, `$exists`, `$set`, `$unset`,
+ * `$addToSet`, sort by one key and counting: enough to exercise route logic without a database server.
  */
+import { ObjectId } from "mongodb";
+
 type Doc = Record<string, unknown>;
+
+/** structuredClone would strip ObjectId's prototype, so clone by hand. */
+function clone<T>(value: T): T {
+  if (value instanceof ObjectId || value instanceof Date) return value;
+  if (Array.isArray(value)) return value.map(clone) as unknown as T;
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, clone(v)])) as T;
+  }
+  return value;
+}
+
+const same = (a: unknown, b: unknown): boolean => {
+  if (a instanceof ObjectId || b instanceof ObjectId) return String(a) === String(b);
+  return a === b;
+};
 
 function matches(doc: Doc, filter: Doc): boolean {
   return Object.entries(filter).every(([key, cond]) => {
     const value = doc[key];
-    if (cond && typeof cond === "object" && "$in" in (cond as Doc)) {
-      return ((cond as { $in: unknown[] }).$in).includes(value);
+    if (cond && typeof cond === "object" && !(cond instanceof ObjectId) && !(cond instanceof Date)) {
+      if ("$in" in (cond as Doc)) return ((cond as { $in: unknown[] }).$in).some((c) => same(c, value));
+      if ("$exists" in (cond as Doc)) return ((cond as { $exists: boolean }).$exists) === (key in doc);
     }
-    if (cond && typeof cond === "object" && "$exists" in (cond as Doc)) {
-      return ((cond as { $exists: boolean }).$exists) === (key in doc);
-    }
-    return value === cond;
+    return same(value, cond);
   });
 }
 
@@ -23,7 +38,7 @@ export class FakeCollection {
 
   async findOne(filter: Doc) {
     const found = this.docs.find((d) => matches(d, filter));
-    return found ? structuredClone(found) : null;
+    return found ? clone(found) : null;
   }
 
   find(filter: Doc = {}) {
@@ -38,7 +53,7 @@ export class FakeCollection {
         });
         return cursor;
       },
-      toArray: async () => structuredClone(rows),
+      toArray: async () => clone(rows),
     };
     return cursor;
   }
@@ -48,14 +63,15 @@ export class FakeCollection {
   }
 
   async insertOne(doc: Doc) {
-    if (this.docs.some((d) => d._id === doc._id)) throw new Error("duplicate _id");
-    this.docs.push(structuredClone(doc));
-    return { insertedId: doc._id };
+    const withId = { _id: new ObjectId(), ...doc };
+    if (this.docs.some((d) => same(d._id, withId._id))) throw new Error("duplicate _id");
+    this.docs.push(clone(withId));
+    return { insertedId: withId._id };
   }
 
   private apply(doc: Doc, update: Doc) {
     const set = (update.$set ?? {}) as Doc;
-    Object.assign(doc, structuredClone(set));
+    Object.assign(doc, clone(set));
     for (const key of Object.keys((update.$unset ?? {}) as Doc)) delete doc[key];
     const addToSet = (update.$addToSet ?? {}) as Doc;
     for (const [key, value] of Object.entries(addToSet)) {
@@ -77,6 +93,13 @@ export class FakeCollection {
     return { matchedCount: rows.length, modifiedCount: rows.length };
   }
 
+  async findOneAndDelete(filter: Doc) {
+    const index = this.docs.findIndex((d) => matches(d, filter));
+    if (index < 0) return null;
+    const [removed] = this.docs.splice(index, 1);
+    return removed;
+  }
+
   async deleteOne(filter: Doc) {
     const index = this.docs.findIndex((d) => matches(d, filter));
     if (index >= 0) this.docs.splice(index, 1);
@@ -95,6 +118,8 @@ export const db = {
   submissions: new FakeCollection(),
   invites: new FakeCollection(),
   users: new FakeCollection(),
+  accounts: new FakeCollection(),
+  email_verifications: new FakeCollection(),
 };
 
 export function resetDb() {
@@ -102,11 +127,16 @@ export function resetDb() {
   db.submissions = new FakeCollection();
   db.invites = new FakeCollection();
   db.users = new FakeCollection();
+  db.accounts = new FakeCollection();
+  db.email_verifications = new FakeCollection();
 }
 
 // Same surface as lib/db.ts, so it can stand in for it via vi.mock.
-export const getDb = async () => ({});
+export const getDb = async () => ({
+  collection: (name: keyof typeof db) => db[name],
+});
 export const formsCollection = async () => db.forms;
 export const submissionsCollection = async () => db.submissions;
 export const invitesCollection = async () => db.invites;
 export const usersCollection = async () => db.users;
+export const accountsCollection = async () => db.accounts;

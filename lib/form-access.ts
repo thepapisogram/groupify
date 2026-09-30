@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { ADMIN_TOKEN_HEADER } from "@/lib/admin-client";
 import { formsCollection } from "@/lib/db";
 import { normalizeEmail } from "@/lib/validation";
+import { isUserVerified } from "@/lib/verification";
 import type { FormDoc } from "@/lib/models";
 
 /**
@@ -16,7 +17,10 @@ export type FormRole = "owner" | "collaborator";
 
 export interface Identity {
   userId?: string;
+  /** The account's email, but only once it is verified. Everything email-based (collaborator access, invites) uses this. */
   email?: string;
+  /** The account's email while it is still unverified. Never grants access. */
+  pendingEmail?: string;
 }
 
 /** Constant-time comparison that also hides length differences. */
@@ -47,7 +51,13 @@ export function roleAtLeast(role: FormRole, minimum: FormRole): boolean {
 
 export async function getIdentity(): Promise<Identity> {
   const session = await getServerSession(authOptions);
-  return { userId: session?.user?.id, email: session?.user?.email ?? undefined };
+  const userId = session?.user?.id;
+  const email = session?.user?.email ?? undefined;
+  if (!userId && !email) return {};
+
+  // Anyone can type any address into the signup form, so an email only counts once it's proven.
+  const verified = await isUserVerified(userId);
+  return verified ? { userId, email } : { userId, pendingEmail: email };
 }
 
 /** Read the admin token from the header (preferred) or the legacy `?token=` query parameter. */
@@ -86,7 +96,7 @@ export async function authorizeForm(
   const role = resolveFormRole(form, { token, identity });
 
   if (!role) {
-    const hasCredentials = Boolean(token || identity.userId || identity.email);
+    const hasCredentials = Boolean(token || identity.userId || identity.email || identity.pendingEmail);
     return {
       ok: false,
       response: NextResponse.json(

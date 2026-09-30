@@ -281,6 +281,14 @@ export default function DocumentationPage() {
                   already have a Groupify account and accepts by email. Invitations expire after 7 days.
                 </p>
               </Card>
+              <Card title="Confirming your email">
+                <p>
+                  If you sign up with an email and password, we email you a link to confirm the address. Until you do,
+                  invitations and forms shared with you won&apos;t work, because anyone could otherwise sign up with your
+                  address. Forms you own are unaffected, and Google sign-in counts as confirmed. Use{" "}
+                  <strong>Resend email</strong> in the banner if the link expired (they last 24 hours).
+                </p>
+              </Card>
               <Card title="What collaborators can do">
                 <p>
                   Collaborators can view and delete responses, generate and publish groups, export, edit the form and

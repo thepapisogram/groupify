@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/components/auth/session-provider"
+import { VerifyEmailBanner } from "@/components/groupify/verify-email-banner"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import "./globals.css"
@@ -58,6 +59,7 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <VerifyEmailBanner />
             <main id="main-content" tabIndex={-1} className="outline-none">
               {children}
             </main>
