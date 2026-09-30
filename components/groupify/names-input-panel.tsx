@@ -35,7 +35,7 @@ export function NamesInputPanel({
             <button
               type="button"
               onClick={onClear}
-              className="text-xs text-muted-foreground/60 transition-colors hover:text-destructive"
+              className="text-xs text-muted-foreground/80 transition-colors hover:text-destructive"
             >
               Clear all
             </button>
@@ -55,10 +55,10 @@ export function NamesInputPanel({
         />
         
         {!names && (
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/40">
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/60">
             <RiTeamLine className="mb-4 size-12 opacity-50" strokeWidth={1.5} />
             <p className="text-sm font-medium mb-3">Paste your list</p>
-            <div className="flex flex-col items-center gap-1.5 text-xs text-muted-foreground/30 font-dm">
+            <div className="flex flex-col items-center gap-1.5 text-xs text-muted-foreground/50 font-dm">
               <span className="animate-fade-in" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>Michael Scott</span>
               <span className="animate-fade-in" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>Jim Halpert</span>
               <span className="animate-fade-in" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>Pam Beesly</span>

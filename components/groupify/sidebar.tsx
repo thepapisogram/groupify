@@ -66,7 +66,7 @@ export function Sidebar({
   extraActions,
 }: SidebarProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 print:hidden">
       <StatsBar
         nameCount={nameCount}
         size={size}
@@ -135,7 +135,7 @@ export function Sidebar({
               onChange={onGroupCountChange}
             />
           )}
-          <p className="text-xs text-muted-foreground/60">
+          <p className="text-xs text-muted-foreground/80">
             Min {groupBy === "size" ? 2 : 1} - Max 99
           </p>
         </div>

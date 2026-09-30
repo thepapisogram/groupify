@@ -1,5 +1,5 @@
 import { Syne, DM_Sans } from "next/font/google"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/components/auth/session-provider"
@@ -24,6 +24,15 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   ...appMeta.main,
+  // Makes relative Open Graph / canonical URLs absolute.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || appMeta.app.defaultUrl),
+}
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#07090f" },
+  ],
 }
 
 export default async function RootLayout({

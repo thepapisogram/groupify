@@ -26,7 +26,7 @@ async function main() {
   console.log("✓  submissions: { formId: 1, submittedAt: -1 }");
 
   // ── forms ────────────────────────────────────────────────────────────────
-  // Supports queries by userId (My Forms page) and adminEmails ($in check)
+  // Supports queries by userId (My Forms page) and confirmedAdmins (forms shared with me)
   await db.collection("forms").createIndex(
     { userId: 1, createdAt: -1 },
     { name: "forms_userId_createdAt", background: true }
@@ -34,10 +34,10 @@ async function main() {
   console.log("✓  forms: { userId: 1, createdAt: -1 }");
 
   await db.collection("forms").createIndex(
-    { adminEmails: 1 },
-    { name: "forms_adminEmails", background: true }
+    { confirmedAdmins: 1 },
+    { name: "forms_confirmedAdmins", background: true }
   );
-  console.log("✓  forms: { adminEmails: 1 }");
+  console.log("✓  forms: { confirmedAdmins: 1 }");
 
   // ── invites ──────────────────────────────────────────────────────────────
   await db.collection("invites").createIndex(
@@ -51,6 +51,14 @@ async function main() {
     { name: "invites_invitedEmail_status", background: true }
   );
   console.log("✓  invites: { invitedEmail: 1, status: 1 }");
+
+  // ── rate_limits ──────────────────────────────────────────────────────────
+  // Counters delete themselves once their window has passed.
+  await db.collection("rate_limits").createIndex(
+    { expireAt: 1 },
+    { name: "rate_limits_expireAt", expireAfterSeconds: 0 }
+  );
+  console.log("✓  rate_limits: { expireAt: 1 } (TTL)");
 
   console.log("\nAll indexes ensured successfully.");
   process.exit(0);

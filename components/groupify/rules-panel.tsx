@@ -223,7 +223,7 @@ export function RulesPanel({
                   type="button"
                   onClick={() => onRemove(rule.id)}
                   aria-label={`Remove rule: ${RULE_COPY[rule.type].title} ${names.join(", ")}`}
-                  className="shrink-0 rounded-md p-1 text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  className="shrink-0 rounded-md p-1 text-muted-foreground/80 transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 >
                   <RiCloseLine className="size-4" />
                 </button>

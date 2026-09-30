@@ -187,7 +187,7 @@ export default function SignupPage() {
                   )}
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground/60">At least 8 characters</p>
+              <p className="text-xs text-muted-foreground/80">At least 8 characters</p>
             </div>
 
             <Button

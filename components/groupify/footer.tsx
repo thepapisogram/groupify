@@ -17,7 +17,7 @@ export function Footer() {
 
   return (
     <>
-      <footer className="mt-16 w-full overflow-hidden rounded-3xl border border-border/40 bg-card/40 px-6 py-6 sm:px-8 sm:py-8 backdrop-blur-xl shadow-lg transition-all hover:border-border/60">
+      <footer className="mt-16 print:hidden w-full overflow-hidden rounded-3xl border border-border/40 bg-card/40 px-6 py-6 sm:px-8 sm:py-8 backdrop-blur-xl shadow-lg transition-all hover:border-border/60">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -70,7 +70,7 @@ export function Footer() {
         </div>
         
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border/40 pt-5">
-          <p className="text-xs font-semibold text-muted-foreground/60 tracking-wide">
+          <p className="text-xs font-semibold text-muted-foreground/80 tracking-wide">
             Developed by{" "}
             <Link
               href={appMeta.author.url}
@@ -80,7 +80,7 @@ export function Footer() {
               {appMeta.author.name}
             </Link>
           </p>
-          <div className="flex items-center gap-3 text-xs font-bold text-muted-foreground/40 tracking-wider">
+          <div className="flex items-center gap-3 text-xs font-bold text-muted-foreground/70 tracking-wider">
             <span>v{appMeta.app.version}</span>
             <span className="h-1 w-1 rounded-full bg-border/80"></span>
             <span>&copy; {new Date().getFullYear()}</span>

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { Group } from "@/components/groupify/types";
 import { GroupCard } from "@/components/groupify/group-card";
-import { RiAlertLine, RiArrowGoBackLine } from "@remixicon/react";
+import { RiAlertLine, RiArrowGoBackLine, RiPrinterLine } from "@remixicon/react";
 
 interface ResultsPanelProps {
   groups: Group[];
@@ -38,7 +38,7 @@ export function ResultsPanel({
           {groups.length} groups - {totalGrouped} members
         </p>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
           {onUndo && (
             <button type="button" onClick={onUndo} disabled={!canUndo} className={headerButton}>
               <RiArrowGoBackLine className="size-3" />
@@ -46,6 +46,10 @@ export function ResultsPanel({
             </button>
           )}
           {actions}
+          <button type="button" onClick={() => window.print()} className={headerButton}>
+            <RiPrinterLine className="size-3" />
+            Print
+          </button>
           <button type="button" onClick={onShuffle} className={headerButton}>
             <svg
               className="size-3"
@@ -90,7 +94,7 @@ export function ResultsPanel({
       </div>
 
       {(onRename || onMoveMember) && (
-        <p className="text-xs text-muted-foreground/60">
+        <p className="text-xs text-muted-foreground/80 print:hidden">
           Tip: click a group name to rename it, or use the arrows beside a name to move someone.
         </p>
       )}

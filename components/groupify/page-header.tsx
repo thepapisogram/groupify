@@ -66,7 +66,7 @@ export function PageHeader() {
   const { data: session, status } = useSession();
 
   return (
-    <header className="mb-6 sm:mb-10 animate-fade-in">
+    <header className="mb-6 sm:mb-10 animate-fade-in print:hidden">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="relative">

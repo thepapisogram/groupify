@@ -14,7 +14,7 @@ export function PanelSwitcher({
   onChange,
 }: PanelSwitcherProps) {
   return (
-    <div className="mb-6 animate-fade-in">
+    <div className="mb-6 animate-fade-in print:hidden">
       <div
         role="group"
         aria-label="View"

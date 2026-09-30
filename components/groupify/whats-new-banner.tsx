@@ -54,7 +54,7 @@ export function WhatsNewBanner() {
     <div
       role="region"
       aria-label={`What's new in Groupify ${appMeta.app.version}`}
-      className="mb-6 flex items-start gap-3 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3 text-sm animate-fade-in"
+      className="mb-6 flex items-start gap-3 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3 text-sm animate-fade-in print:hidden"
     >
       <RiSparklingLine className="mt-0.5 size-4 shrink-0 text-primary" />
       <p className="flex-1 text-foreground/90">

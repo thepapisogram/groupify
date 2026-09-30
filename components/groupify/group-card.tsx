@@ -69,7 +69,7 @@ function EditableLabel({ label, onSave }: { label: string; onSave: (value: strin
       className="group/name flex min-w-0 items-center gap-1.5 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
     >
       <span className="truncate font-syne text-sm font-bold tracking-wide text-foreground">{label}</span>
-      <RiPencilLine className="size-3 shrink-0 text-muted-foreground/40 transition-opacity group-hover/name:text-foreground" />
+      <RiPencilLine className="size-3 shrink-0 print:hidden text-muted-foreground/60 transition-opacity group-hover/name:text-foreground" />
     </button>
   );
 }
@@ -161,7 +161,7 @@ export function GroupCard({ group, index, allGroups, onRename, onMoveMember }: G
 
   return (
     <div
-      className={`group flex flex-col overflow-hidden rounded-2xl border ${palette.border} ${palette.cardBg} backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/5 animate-slide-up`}
+      className={`group flex flex-col overflow-hidden rounded-2xl border print:break-inside-avoid ${palette.border} ${palette.cardBg} backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/5 animate-slide-up`}
       style={{ animationDelay: `${index * 0.05}s` }}
     >
       <div className={`flex items-center justify-between gap-2 border-b ${palette.border} ${palette.headerBg} px-4 py-2.5 transition-colors`}>
@@ -208,7 +208,7 @@ export function GroupCard({ group, index, allGroups, onRename, onMoveMember }: G
                       type="button"
                       aria-label={`Move ${member} to another group`}
                       title="Move to another group"
-                      className="shrink-0 rounded-md p-1 text-muted-foreground/40 transition-colors hover:bg-muted hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                      className="shrink-0 print:hidden rounded-md p-1 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     >
                       <RiArrowLeftRightLine className="size-3.5" />
                     </button>

@@ -657,7 +657,7 @@ export function FormBuilder({
                             ? `"${field.label}" is the primary field`
                             : `Make "${field.label}" the primary field`
                         }
-                        className={`rounded-lg p-2 transition-colors ${field.isPrimary ? "text-amber-500 hover:text-amber-600" : "text-muted-foreground/50 hover:text-amber-500 hover:bg-amber-500/10"}`}
+                        className={`rounded-lg p-2 transition-colors ${field.isPrimary ? "text-amber-500 hover:text-amber-600" : "text-muted-foreground/70 hover:text-amber-500 hover:bg-amber-500/10"}`}
                         title={
                           field.isPrimary ? "Primary Field" : "Set as Primary"
                         }
@@ -675,7 +675,7 @@ export function FormBuilder({
                       <button
                         type="button"
                         onClick={() => removeField(field.id)}
-                        className="rounded-lg p-2 text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        className="rounded-lg p-2 text-muted-foreground/80 transition-colors hover:bg-destructive/10 hover:text-destructive"
                         title="Remove field"
                         aria-label={`Remove field "${field.label}"`}
                       >

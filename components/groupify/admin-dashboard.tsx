@@ -495,7 +495,7 @@ export function AdminDashboard({
           <div
             role="region"
             aria-label="Save this form"
-            className="mb-6 flex flex-col gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between"
+            className="mb-6 print:hidden flex flex-col gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between"
           >
             <p>
               <strong className="font-semibold">This form isn&apos;t saved to an account.</strong> Anyone with this
@@ -526,7 +526,7 @@ export function AdminDashboard({
               Admin Dashboard &bull; {submissions.length} responses
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 print:hidden">
             {/* Status toggle — always visible on desktop */}
             <div className="hidden sm:flex items-center gap-2 rounded-xl border border-border/50 bg-card px-3 py-2">
               <span className="text-sm font-medium text-foreground">
@@ -670,7 +670,7 @@ export function AdminDashboard({
             <div
               role="group"
               aria-label="View"
-              className="flex p-1 space-x-1 bg-muted/30 border border-border/50 rounded-xl w-fit"
+              className="print:hidden flex p-1 space-x-1 bg-muted/30 border border-border/50 rounded-xl w-fit"
             >
               <button
                 type="button"
