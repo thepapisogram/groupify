@@ -16,5 +16,9 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     emailVerified?: boolean;
+    /** Whether the account proved its email, regardless of whether verification is enforced. */
+    emailProven?: boolean;
+    /** When this session started (ms), so it can be voided if the account is taken over. */
+    authAt?: number;
   }
 }
