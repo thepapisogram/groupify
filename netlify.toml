@@ -1,0 +1,5 @@
+# NEXT_PUBLIC_* values are compiled into the browser bundle by design, and Paystack's checkout
+# needs its *public* key there. Netlify's secrets scanner flags it as a leak, which fails the
+# deploy, so it is excluded. Never add a real secret (sk_..., database URIs, API keys) to this list.
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY"
