@@ -7,6 +7,7 @@ import { PanelSwitcher } from "@/components/groupify/panel-switcher";
 import { ResultsPanel } from "@/components/groupify/results-panel";
 import { RecentGroupings } from "@/components/groupify/recent-groupings";
 import { RulesPanel } from "@/components/groupify/rules-panel";
+import { WhatsNewBanner } from "@/components/groupify/whats-new-banner";
 import { Sidebar } from "@/components/groupify/sidebar";
 import type { ExportFormat, Group } from "@/components/groupify/types";
 import { useGrouping } from "@/components/groupify/use-grouping";
@@ -23,6 +24,21 @@ import {
 } from "@/lib/local-store";
 
 type ActivePanel = "input" | "results";
+
+const EXAMPLE_NAMES = [
+  "Ama Mensah",
+  "Kofi Boateng",
+  "Esi Owusu",
+  "Yaw Asante",
+  "Akua Darko",
+  "Kwame Adjei",
+  "Abena Ofori",
+  "Kojo Quaye",
+  "Efua Tetteh",
+  "Nana Yeboah",
+  "Adwoa Sarpong",
+  "Kwesi Appiah",
+].join("\n");
 
 /**
  * The quick grouping tool. Rendered only in the browser (see QuickToolLoader), so
@@ -131,6 +147,11 @@ export function QuickTool() {
     }
   };
 
+  const handleExample = () => {
+    setNames(EXAMPLE_NAMES);
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  };
+
   const handleClear = () => {
     setNames("");
     clearResults();
@@ -141,83 +162,85 @@ export function QuickTool() {
 
   return (
     <>
-    <PanelSwitcher
-      hasResults={hasResults}
-      activePanel={activePanel}
-      groupsCount={groups.length}
-      onChange={setActivePanel}
-    />
-
-    <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-      <div className="grid">
-        <div
-          className={`col-start-1 row-start-1 transition-all duration-300 ${
-            activePanel === "input" || !hasResults
-              ? "opacity-100 z-10 translate-x-0"
-              : "opacity-0 -z-10 -translate-x-4 pointer-events-none invisible"
-          }`}
-        >
-          <NamesInputPanel
-            names={names}
-            onNamesChange={handleNamesChange}
-            onClear={handleClear}
-            textareaRef={textareaRef}
-            headerExtra={
-              <RecentGroupings items={recent} onRestore={handleRestore} onClear={handleClearRecent} />
-            }
-          />
-        </div>
-        <div
-          className={`col-start-1 row-start-1 transition-all duration-300 ${
-            activePanel === "results" && hasResults
-              ? "opacity-100 z-10 translate-x-0"
-              : "opacity-0 -z-10 translate-x-4 pointer-events-none invisible"
-          }`}
-        >
-          <ResultsPanel
-            groups={groups}
-            totalGrouped={totalGrouped}
-            warnings={grouping.warnings}
-            onShuffle={grouping.reshuffle}
-            onRename={grouping.rename}
-            onMoveMember={grouping.move}
-            onUndo={grouping.undo}
-            canUndo={grouping.canUndo}
-          />
-        </div>
-      </div>
-
-      <Sidebar
-        groupBy={grouping.by}
-        size={grouping.size}
-        groupCount={grouping.groupCount}
-        mode={grouping.mode}
-        isWorking={grouping.isWorking}
-        nameCount={nameCount}
+      <WhatsNewBanner />
+      <PanelSwitcher
         hasResults={hasResults}
-        copiedText={copiedText}
-        estGroups={nameCount >= 2 ? grouping.groupCount : 0}
+        activePanel={activePanel}
         groupsCount={groups.length}
-        onGroupByChange={grouping.onGroupByChange}
-        onSizeChange={grouping.onSizeChange}
-        onGroupCountChange={grouping.onGroupCountChange}
-        onModeChange={grouping.onModeChange}
-        onGenerate={handleGenerate}
-        onExport={handleExport}
-        onCopyText={handleCopyText}
-        rules={
-          <RulesPanel
-            people={people}
-            rules={grouping.rules}
-            onAdd={grouping.addRule}
-            onRemove={grouping.removeRule}
-            balanceOptions={tags.length > 0 ? [{ key: TAG_KEY, label: "Tag (text after | in a name)" }] : []}
-            balanceBy={balanceBy}
-            onBalanceChange={grouping.setBalanceBy}
-          />
-        }
+        onChange={setActivePanel}
       />
-    </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+        <div className="grid">
+          <div
+            className={`col-start-1 row-start-1 transition-all duration-300 ${
+              activePanel === "input" || !hasResults
+                ? "opacity-100 z-10 translate-x-0"
+                : "opacity-0 -z-10 -translate-x-4 pointer-events-none invisible"
+            }`}
+          >
+            <NamesInputPanel
+              names={names}
+              onNamesChange={handleNamesChange}
+              onClear={handleClear}
+              textareaRef={textareaRef}
+              onExample={handleExample}
+              headerExtra={
+                <RecentGroupings items={recent} onRestore={handleRestore} onClear={handleClearRecent} />
+              }
+            />
+          </div>
+          <div
+            className={`col-start-1 row-start-1 transition-all duration-300 ${
+              activePanel === "results" && hasResults
+                ? "opacity-100 z-10 translate-x-0"
+                : "opacity-0 -z-10 translate-x-4 pointer-events-none invisible"
+            }`}
+          >
+            <ResultsPanel
+              groups={groups}
+              totalGrouped={totalGrouped}
+              warnings={grouping.warnings}
+              onShuffle={grouping.reshuffle}
+              onRename={grouping.rename}
+              onMoveMember={grouping.move}
+              onUndo={grouping.undo}
+              canUndo={grouping.canUndo}
+            />
+          </div>
+        </div>
+
+        <Sidebar
+          groupBy={grouping.by}
+          size={grouping.size}
+          groupCount={grouping.groupCount}
+          mode={grouping.mode}
+          isWorking={grouping.isWorking}
+          nameCount={nameCount}
+          hasResults={hasResults}
+          copiedText={copiedText}
+          estGroups={nameCount >= 2 ? grouping.groupCount : 0}
+          groupsCount={groups.length}
+          onGroupByChange={grouping.onGroupByChange}
+          onSizeChange={grouping.onSizeChange}
+          onGroupCountChange={grouping.onGroupCountChange}
+          onModeChange={grouping.onModeChange}
+          onGenerate={handleGenerate}
+          onExport={handleExport}
+          onCopyText={handleCopyText}
+          rules={
+            <RulesPanel
+              people={people}
+              rules={grouping.rules}
+              onAdd={grouping.addRule}
+              onRemove={grouping.removeRule}
+              balanceOptions={tags.length > 0 ? [{ key: TAG_KEY, label: "Tag (text after | in a name)" }] : []}
+              balanceBy={balanceBy}
+              onBalanceChange={grouping.setBalanceBy}
+            />
+          }
+        />
+      </div>
     </>
   );
 }

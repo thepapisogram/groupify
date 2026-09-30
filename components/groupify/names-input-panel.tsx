@@ -8,6 +8,8 @@ interface NamesInputPanelProps {
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   /** Extra controls in the header, e.g. recent groupings. */
   headerExtra?: ReactNode;
+  /** Fill the box with sample names so a first-time visitor can see the result straight away. */
+  onExample?: () => void;
 }
 
 export function NamesInputPanel({
@@ -16,6 +18,7 @@ export function NamesInputPanel({
   onClear,
   textareaRef,
   headerExtra,
+  onExample,
 }: NamesInputPanelProps) {
   return (
     <div className="space-y-3 animate-fade-in">
@@ -65,7 +68,17 @@ export function NamesInputPanel({
         )}
       </div>
 
-      <p className="text-xs text-muted-foreground/50">
+      {!names && onExample && (
+        <button
+          type="button"
+          onClick={onExample}
+          className="text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded"
+        >
+          No list handy? Try an example
+        </button>
+      )}
+
+      <p className="text-xs text-muted-foreground/70">
         Tip: paste a column from Excel - each cell becomes a name automatically. Add{" "}
         <code className="rounded bg-muted/50 px-1 py-0.5">| tag</code> after a name (e.g.{" "}
         <code className="rounded bg-muted/50 px-1 py-0.5">Ama | Advanced</code>) to spread a

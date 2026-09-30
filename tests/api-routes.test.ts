@@ -28,6 +28,8 @@ import { POST as regenerate } from "@/app/api/forms/[formId]/regenerate/route";
 import { GET as getInvites, POST as postInvite } from "@/app/api/forms/[formId]/invites/route";
 import { POST as acceptInvite } from "@/app/api/invites/[token]/accept/route";
 import { PUT as publishGroups, DELETE as unpublishGroups } from "@/app/api/forms/[formId]/groups/route";
+import { POST as claimForm } from "@/app/api/forms/[formId]/claim/route";
+import { POST as duplicateForm } from "@/app/api/forms/[formId]/duplicate/route";
 
 const FORM_ID = "form01";
 const TOKEN = "owner-token-abc123";
@@ -407,5 +409,108 @@ describe("publishing groups", () => {
     await publish(payload, TOKEN);
     const body = await (await getForm(req(`/api/forms/${FORM_ID}`), ctx())).json();
     expect(JSON.stringify(body)).not.toContain("Ama");
+  });
+});
+
+describe("claiming an anonymous form", () => {
+  const ANON_ID = "anon01";
+  const ANON_TOKEN = "anon-token-xyz";
+  const claim = (token?: string) =>
+    claimForm(req(`/api/forms/${ANON_ID}/claim`, { method: "POST", token }), {
+      params: Promise.resolve({ formId: ANON_ID }),
+    });
+
+  beforeEach(() => {
+    db.forms.docs.push({ _id: ANON_ID, adminToken: ANON_TOKEN, title: "Anon", fields, createdAt: new Date() });
+  });
+
+  it("needs the admin token and a signed-in account", async () => {
+    expect((await claim()).status).toBe(401); // nothing at all
+
+    mockSession({ id: "u1", email: "u1@x.com" });
+    expect((await claim()).status).toBe(403); // signed in, but no proof of ownership
+
+    mockSession(null);
+    expect((await claim(ANON_TOKEN)).status).toBe(401); // token but no account to attach it to
+    expect(db.forms.docs.find((d) => d._id === ANON_ID)!.userId).toBeUndefined();
+  });
+
+  it("attaches the form to the account of a signed-in token holder", async () => {
+    mockSession({ id: "u1", email: "u1@x.com" });
+    const res = await claim(ANON_TOKEN);
+    expect(res.status).toBe(200);
+    expect(db.forms.docs.find((d) => d._id === ANON_ID)!.userId).toBe("u1");
+  });
+
+  it("is idempotent for the same account and refuses a different one", async () => {
+    mockSession({ id: "u1", email: "u1@x.com" });
+    await claim(ANON_TOKEN);
+    expect((await (await claim(ANON_TOKEN)).json()).alreadyYours).toBe(true);
+
+    mockSession({ id: "u2", email: "u2@x.com" });
+    expect((await claim(ANON_TOKEN)).status).toBe(409);
+    expect(db.forms.docs.find((d) => d._id === ANON_ID)!.userId).toBe("u1");
+  });
+
+  it("cannot take over a form that already has an owner, even with its token", async () => {
+    mockSession({ id: "thief", email: "thief@x.com" });
+    const res = await claimForm(req(`/api/forms/${FORM_ID}/claim`, { method: "POST", token: TOKEN }), ctx());
+    expect(res.status).toBe(409);
+    expect(db.forms.docs.find((d) => d._id === FORM_ID)!.userId).toBe("owner-1");
+  });
+});
+
+describe("duplicating a form", () => {
+  const duplicate = (token?: string) =>
+    duplicateForm(req(`/api/forms/${FORM_ID}/duplicate`, { method: "POST", token }), ctx());
+
+  beforeEach(() => {
+    db.submissions.docs.push({ _id: "s1", formId: FORM_ID, data: { name: "Ama" }, submittedAt: new Date() });
+    db.forms.docs[0].publishedGroups = { publishedAt: new Date(), groups: [{ label: "G", members: ["Ama"] }] };
+    db.forms.docs[0].isClosed = true;
+  });
+
+  it("requires access to the form", async () => {
+    expect((await duplicate()).status).toBe(401);
+    expect((await duplicate("wrong")).status).toBe(403);
+    expect(db.forms.docs).toHaveLength(1);
+  });
+
+  it("copies only the setup: no responses, collaborators, published groups or closed state", async () => {
+    mockSession({ id: "owner-1", email: "owner@school.org" });
+    const res = await duplicate();
+    expect(res.status).toBe(201);
+    const { formId, adminToken } = await res.json();
+
+    const copy = db.forms.docs.find((d) => d._id === formId)!;
+    expect(formId).not.toBe(FORM_ID);
+    expect(adminToken).not.toBe(TOKEN);
+    expect(copy).toMatchObject({ title: "Groups (copy)", description: "d", fields, userId: "owner-1", adminToken });
+    expect(copy.confirmedAdmins).toBeUndefined();
+    expect(copy.publishedGroups).toBeUndefined();
+    expect(copy.isClosed).toBeUndefined();
+    expect(db.submissions.docs.filter((s) => s.formId === formId)).toHaveLength(0);
+    expect(db.submissions.docs.filter((s) => s.formId === FORM_ID)).toHaveLength(1);
+  });
+
+  it("lets a collaborator copy it into their own account", async () => {
+    mockSession({ id: "collab-9", email: "collab@school.org" });
+    const { formId } = await (await duplicate()).json();
+    expect(db.forms.docs.find((d) => d._id === formId)!.userId).toBe("collab-9");
+  });
+
+  it("gives an anonymous token holder a copy with its own token", async () => {
+    const res = await duplicate(TOKEN);
+    expect(res.status).toBe(201);
+    const { formId, adminToken } = await res.json();
+    const copy = db.forms.docs.find((d) => d._id === formId)!;
+    expect(copy.userId).toBeUndefined();
+    expect(copy.adminToken).toBe(adminToken);
+  });
+
+  it("keeps the title within the limit", async () => {
+    db.forms.docs[0].title = "T".repeat(120);
+    const { formId } = await (await duplicate(TOKEN)).json();
+    expect((db.forms.docs.find((d) => d._id === formId)!.title as string).length).toBeLessThanOrEqual(120);
   });
 });

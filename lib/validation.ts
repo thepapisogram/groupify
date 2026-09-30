@@ -179,6 +179,67 @@ export function parseFormDefinition(body: unknown): Result<FormDefinition> {
 
 // ── submissions ───────────────────────────────────────────────────────────
 
+export type FieldCheck =
+  | { ok: true; /** Absent when an optional answer was left blank. */ value?: string | string[] }
+  | { ok: false; /** Short text for showing beside the field. */ short: string; /** Full sentence naming the field. */ long: string };
+
+const bad = (short: string, long: string): FieldCheck => ({ ok: false, short, long });
+
+/**
+ * Check one answer against its field definition. Shared by the server (which
+ * stores only what passes) and the form page (which shows `short` inline), so
+ * both always agree on what is acceptable.
+ */
+export function checkField(field: FormField, raw: unknown): FieldCheck {
+  const label = field.label;
+  const required = bad("This field is required", `Please fill out the required field: ${label}`);
+
+  if (field.type === "checklist") {
+    const list = raw === undefined || raw === null ? [] : raw;
+    if (!Array.isArray(list)) return bad("Invalid answer", `Invalid answer for "${label}"`);
+    const picked: string[] = [];
+    for (const item of list) {
+      if (typeof item !== "string" || !field.options?.includes(item)) {
+        return bad("Choose from the options", `Invalid choice for "${label}"`);
+      }
+      if (!picked.includes(item)) picked.push(item);
+    }
+    if (picked.length === 0) return field.required ? required : { ok: true };
+    return { ok: true, value: picked };
+  }
+
+  if (raw !== undefined && raw !== null && typeof raw !== "string" && typeof raw !== "number") {
+    return bad("Invalid answer", `Invalid answer for "${label}"`);
+  }
+  const value = raw === undefined || raw === null ? "" : String(raw).trim();
+
+  if (value === "") return field.required ? required : { ok: true };
+
+  switch (field.type) {
+    case "text":
+      if (value.length > LIMITS.textAnswerMax) {
+        return bad(
+          `Too long (max ${LIMITS.textAnswerMax} characters)`,
+          `"${label}" is too long (max ${LIMITS.textAnswerMax} characters)`,
+        );
+      }
+      break;
+    case "number":
+      if (value.length > LIMITS.numberAnswerMax || !Number.isFinite(Number(value))) {
+        return bad("Enter a number", `"${label}" must be a number`);
+      }
+      break;
+    case "select":
+    case "radio":
+      if (!field.options?.includes(value)) {
+        return bad("Choose one of the options", `Invalid choice for "${label}"`);
+      }
+      break;
+  }
+
+  return { ok: true, value };
+}
+
 /**
  * Check a respondent's answers against the form's field definitions and return
  * only what the form asks for, so arbitrary keys can never be stored.
@@ -190,60 +251,22 @@ export function validateSubmission(
   if (!isPlainObject(body)) return fail("Invalid payload");
 
   const data: SubmissionData = {};
-
   for (const field of fields) {
-    const raw = body[field.id];
-    const label = field.label;
-
-    if (field.type === "checklist") {
-      const list = raw === undefined || raw === null ? [] : raw;
-      if (!Array.isArray(list)) return fail(`Invalid answer for "${label}"`);
-      const picked: string[] = [];
-      for (const item of list) {
-        if (typeof item !== "string" || !field.options?.includes(item)) {
-          return fail(`Invalid choice for "${label}"`);
-        }
-        if (!picked.includes(item)) picked.push(item);
-      }
-      if (picked.length === 0) {
-        if (field.required) return fail(`Please fill out the required field: ${label}`);
-        continue;
-      }
-      data[field.id] = picked;
-      continue;
-    }
-
-    if (raw !== undefined && raw !== null && typeof raw !== "string" && typeof raw !== "number") {
-      return fail(`Invalid answer for "${label}"`);
-    }
-    const value = raw === undefined || raw === null ? "" : String(raw).trim();
-
-    if (value === "") {
-      if (field.required) return fail(`Please fill out the required field: ${label}`);
-      continue;
-    }
-
-    switch (field.type) {
-      case "text":
-        if (value.length > LIMITS.textAnswerMax) {
-          return fail(`"${label}" is too long (max ${LIMITS.textAnswerMax} characters)`);
-        }
-        break;
-      case "number":
-        if (value.length > LIMITS.numberAnswerMax || !Number.isFinite(Number(value))) {
-          return fail(`"${label}" must be a number`);
-        }
-        break;
-      case "select":
-      case "radio":
-        if (!field.options?.includes(value)) return fail(`Invalid choice for "${label}"`);
-        break;
-    }
-
-    data[field.id] = value;
+    const check = checkField(field, body[field.id]);
+    if (!check.ok) return fail(check.long);
+    if (check.value !== undefined) data[field.id] = check.value;
   }
-
   return { ok: true, value: data };
+}
+
+/** Per-field problems for showing inline, keyed by field id. Empty when everything is fine. */
+export function fieldErrors(fields: FormField[], values: Record<string, unknown>): Record<string, string> {
+  const errors: Record<string, string> = {};
+  for (const field of fields) {
+    const check = checkField(field, values[field.id]);
+    if (!check.ok) errors[field.id] = check.short;
+  }
+  return errors;
 }
 
 // ── published groups ──────────────────────────────────────────────────────

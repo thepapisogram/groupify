@@ -27,6 +27,7 @@ import { Sidebar } from "@/components/groupify/sidebar";
 import { ResultsPanel } from "@/components/groupify/results-panel";
 import { PublishGroupsDialog } from "@/components/groupify/publish-groups-dialog";
 import { RulesPanel } from "@/components/groupify/rules-panel";
+import { ResponsesTable } from "@/components/groupify/responses-table";
 import { useGrouping } from "@/components/groupify/use-grouping";
 import type { Person } from "@/lib/grouping";
 import { ShareDialog } from "@/components/groupify/share-dialog";
@@ -36,12 +37,11 @@ import { ConfirmDialog } from "@/components/groupify/confirm-dialog";
 import type { ExportFormat } from "@/components/groupify/types";
 import { toast } from "sonner";
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
 import { useSession } from "next-auth/react";
 import {
-  RiArrowUpSLine,
-  RiArrowDownSLine,
+  RiFileCopyLine,
   RiInbox2Line,
+  RiRefreshLine,
   RiShareForwardLine,
 } from "@remixicon/react";
 
@@ -74,6 +74,8 @@ export interface AdminDashboardProps {
   /** Present only when the viewer arrived via an admin link; signed-in owners and collaborators rely on their session. */
   adminToken?: string;
   isOwner: boolean;
+  /** False for forms created without an account, which are reachable only through the admin link. */
+  hasAccountOwner?: boolean;
 }
 
 export function AdminDashboard({
@@ -83,9 +85,45 @@ export function AdminDashboard({
   initialPublishedAt = null,
   adminToken,
   isOwner,
+  hasAccountOwner = true,
 }: AdminDashboardProps) {
   const router = useRouter();
   const { data: session } = useSession();
+  const isSignedIn = Boolean(session?.user?.id);
+
+  // Forms made without an account are only reachable through this link; offer to save them.
+  const [isClaimed, setIsClaimed] = useState(hasAccountOwner);
+  const [isClaiming, setIsClaiming] = useState(false);
+  const showClaimPrompt = Boolean(adminToken) && !isClaimed;
+
+  const handleClaim = async () => {
+    setIsClaiming(true);
+    try {
+      const res = await adminFetch(`/api/forms/${formId}/claim`, adminToken, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Couldn't save this form to your account");
+      setIsClaimed(true);
+      toast.success("Saved to your account. Find it any time under My Forms.");
+      router.refresh();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Couldn't save this form to your account");
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
+  const handleDuplicate = async () => {
+    try {
+      const res = await adminFetch(`/api/forms/${formId}/duplicate`, adminToken, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Couldn't duplicate the form");
+      toast.success("Form duplicated");
+      // Signed-in users reach their copy through their account; token holders need the new link.
+      router.push(adminPagePath(data.formId, "admin", isSignedIn ? undefined : data.adminToken));
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Couldn't duplicate the form");
+    }
+  };
 
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
@@ -98,10 +136,6 @@ export function AdminDashboard({
 
   const [formConfig, setFormConfig] = useState(initialFormConfig);
   const [submissions, setSubmissions] = useState(initialSubmissions);
-  const [sortConfig, setSortConfig] = useState<{
-    key: string;
-    direction: "asc" | "desc";
-  } | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const [isAdminsDialogOpen, setIsAdminsDialogOpen] = useState(false);
@@ -185,50 +219,6 @@ export function AdminDashboard({
     }
   };
 
-  const requestSort = (key: string) => {
-    let direction: "asc" | "desc" = "asc";
-    if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === "asc"
-    ) {
-      direction = "desc";
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const sortedSubmissions = useMemo(() => {
-    const sortableItems = [...submissions];
-    if (sortConfig !== null) {
-      sortableItems.sort((a, b) => {
-        let aValue, bValue;
-        if (sortConfig.key === "time") {
-          aValue = new Date(a.submittedAt).getTime();
-          bValue = new Date(b.submittedAt).getTime();
-        } else {
-          aValue = a.data[sortConfig.key] || "";
-          bValue = b.data[sortConfig.key] || "";
-        }
-
-        if (Array.isArray(aValue)) aValue = aValue.join(", ");
-        if (Array.isArray(bValue)) bValue = bValue.join(", ");
-
-        if (aValue < bValue) {
-          return sortConfig.direction === "asc" ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === "asc" ? 1 : -1;
-        }
-        return 0;
-      });
-    } else {
-      sortableItems.sort(
-        (a, b) =>
-          new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
-      );
-    }
-    return sortableItems;
-  }, [submissions, sortConfig]);
 
   const [copiedText, setCopiedText] = useState(false);
   const [activeTab, setActiveTab] = useState<"submissions" | "groups">(
@@ -501,6 +491,32 @@ export function AdminDashboard({
       <div className="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-28 sm:px-6 sm:py-12">
         <PageHeader />
 
+        {showClaimPrompt && (
+          <div
+            role="region"
+            aria-label="Save this form"
+            className="mb-6 flex flex-col gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between"
+          >
+            <p>
+              <strong className="font-semibold">This form isn&apos;t saved to an account.</strong> Anyone with this
+              page&apos;s link can manage it, and if you lose the link you lose the form.
+            </p>
+            {isSignedIn ? (
+              <Button type="button" size="sm" onClick={handleClaim} disabled={isClaiming} className="shrink-0">
+                {isClaiming ? "Saving..." : "Save to my account"}
+              </Button>
+            ) : (
+              <Button asChild size="sm" className="shrink-0">
+                <Link
+                  href={`/login?callbackUrl=${encodeURIComponent(adminPagePath(formId, "admin", adminToken))}`}
+                >
+                  Sign in to save it
+                </Link>
+              </Button>
+            )}
+          </div>
+        )}
+
         <div className="mt-8 mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
@@ -616,6 +632,13 @@ export function AdminDashboard({
                   </svg>
                   Manage Collaborators
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleDuplicate}
+                  className="cursor-pointer gap-2"
+                >
+                  <RiFileCopyLine className="size-4" />
+                  Duplicate Form
+                </DropdownMenuItem>
                 {isOwner && (
                   <DropdownMenuItem
                     onClick={() => setIsDeleteDialogOpen(true)}
@@ -644,8 +667,14 @@ export function AdminDashboard({
 
         <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
           <div className="space-y-6 min-w-0">
-            <div className="flex p-1 space-x-1 bg-muted/30 border border-border/50 rounded-xl w-fit">
+            <div
+              role="group"
+              aria-label="View"
+              className="flex p-1 space-x-1 bg-muted/30 border border-border/50 rounded-xl w-fit"
+            >
               <button
+                type="button"
+                aria-pressed={activeTab === "submissions"}
                 onClick={() => setActiveTab("submissions")}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                   activeTab === "submissions"
@@ -656,6 +685,8 @@ export function AdminDashboard({
                 Submissions
               </button>
               <button
+                type="button"
+                aria-pressed={activeTab === "groups"}
                 onClick={() => hasResults && setActiveTab("groups")}
                 disabled={!hasResults}
                 title={
@@ -665,7 +696,7 @@ export function AdminDashboard({
                   activeTab === "groups"
                     ? "bg-card text-foreground shadow-sm"
                     : !hasResults
-                      ? "text-muted-foreground/50 cursor-not-allowed"
+                      ? "text-muted-foreground/70 cursor-not-allowed"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 }`}
               >
@@ -677,10 +708,20 @@ export function AdminDashboard({
               <div className="rounded-2xl border border-border/50 bg-card/70 p-6 backdrop-blur-sm shadow-md animate-fade-in">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                   <h2 className="text-lg font-semibold text-foreground">
-                    Recent Submissions
+                    Responses
                   </h2>
                   {submissions.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={fetchSubmissions}
+                        aria-label="Refresh responses"
+                        title="Check for new responses"
+                        className="flex items-center gap-2 rounded-xl border border-border/50 px-3 py-2 text-sm font-medium text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
+                      >
+                        <RiRefreshLine className="size-4" />
+                        <span className="max-sm:sr-only">Refresh</span>
+                      </button>
                       <button
                         onClick={() => setIsExportDialogOpen(true)}
                         className="flex items-center gap-2 rounded-xl bg-muted px-4 py-2 text-sm font-semibold text-foreground transition-all hover:bg-muted/80 shadow-sm animate-fade-in"
@@ -719,115 +760,21 @@ export function AdminDashboard({
                     <p className="text-sm mt-1">
                       Share the public link to start collecting data.
                     </p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="mt-5"
+                      onClick={() => setIsShareDialogOpen(true)}
+                    >
+                      Share the form link
+                    </Button>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                      <thead className="text-xs text-muted-foreground uppercase bg-muted/20 border-b border-border/50">
-                        <tr>
-                          {formConfig.fields.map((f) => (
-                            <th
-                              key={f.id}
-                              className={`px-4 py-3 font-medium whitespace-nowrap ${f.isPrimary ? "cursor-pointer hover:bg-muted/30 select-none" : ""}`}
-                              onClick={
-                                f.isPrimary
-                                  ? () => requestSort(f.id)
-                                  : undefined
-                              }
-                            >
-                              <div className="flex items-center gap-1">
-                                {f.label}
-                                {f.isPrimary && (
-                                  <span className="ml-1 text-xs text-primary">
-                                    (Primary)
-                                  </span>
-                                )}
-                                {f.isPrimary && sortConfig?.key === f.id && (
-                                  <span className="text-primary text-xs">
-                                    {sortConfig.direction === "asc" ? (
-                                      <RiArrowUpSLine className="size-4" />
-                                    ) : (
-                                      <RiArrowDownSLine className="size-4" />
-                                    )}
-                                  </span>
-                                )}
-                              </div>
-                            </th>
-                          ))}
-                          <th
-                            className="px-4 py-3 font-medium text-right cursor-pointer hover:bg-muted/30 select-none whitespace-nowrap"
-                            onClick={() => requestSort("time")}
-                          >
-                            <div className="flex items-center justify-end gap-1">
-                              Time
-                              {sortConfig?.key === "time" && (
-                                <span className="text-primary text-xs">
-                                  {sortConfig.direction === "asc" ? (
-                                    <RiArrowUpSLine className="size-4" />
-                                  ) : (
-                                    <RiArrowDownSLine className="size-4" />
-                                  )}
-                                </span>
-                              )}
-                            </div>
-                          </th>
-                          <th className="px-4 py-3 font-medium w-12"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sortedSubmissions.map((sub) => (
-                          <tr
-                            key={sub._id}
-                            className="border-b border-border/20 last:border-0 hover:bg-muted/10 transition-colors"
-                          >
-                            {formConfig.fields.map((f) => (
-                              <td
-                                key={f.id}
-                                className="px-4 py-3 text-foreground whitespace-nowrap"
-                              >
-                                {Array.isArray(sub.data[f.id])
-                                  ? (sub.data[f.id] as string[]).join(", ")
-                                  : sub.data[f.id] || "-"}
-                              </td>
-                            ))}
-                            <td className="px-4 py-3 text-muted-foreground text-right whitespace-nowrap">
-                              <span
-                                title={new Date(
-                                  sub.submittedAt,
-                                ).toLocaleString()}
-                              >
-                                {formatDistanceToNow(
-                                  new Date(sub.submittedAt),
-                                  { addSuffix: true },
-                                )}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <button
-                                onClick={() => setConfirmDeleteId(sub._id)}
-                                className="p-1.5 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
-                                title="Delete submission"
-                              >
-                                <svg
-                                  className="size-4"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                >
-                                  <path
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ResponsesTable
+                    fields={formConfig.fields}
+                    submissions={submissions}
+                    onDelete={setConfirmDeleteId}
+                  />
                 )}
               </div>
             )}

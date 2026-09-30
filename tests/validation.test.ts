@@ -3,6 +3,7 @@ import {
   LIMITS,
   cleanName,
   emailLookupCandidates,
+  fieldErrors,
   isValidEmail,
   normalizeEmail,
   parseFormDefinition,
@@ -248,5 +249,36 @@ describe("parsePublishedGroups", () => {
 
   it("allows an empty group", () => {
     expect(parsePublishedGroups({ groups: [{ label: "Empty", members: [] }] }).ok).toBe(true);
+  });
+});
+
+describe("fieldErrors (inline messages on the form page)", () => {
+  it("returns nothing for a valid response", () => {
+    expect(fieldErrors(fields, valid)).toEqual({});
+  });
+
+  it("reports each problem field by id with short messages", () => {
+    const errors = fieldErrors(fields, { name: "  ", team: "Green", age: "abc", skills: ["Rust"] });
+    expect(errors).toEqual({
+      name: "This field is required",
+      team: "Choose one of the options",
+      age: "Enter a number",
+      skills: "Choose from the options",
+    });
+  });
+
+  it("agrees with the server-side validator about what is acceptable", () => {
+    const samples: Record<string, unknown>[] = [
+      valid,
+      { name: "Ama" },
+      { ...valid, age: "1e3" },
+      { ...valid, age: "x" },
+      { ...valid, skills: ["JS", "Go"] },
+      { ...valid, diet: "Nope" },
+      { ...valid, name: "x".repeat(LIMITS.textAnswerMax + 1) },
+    ];
+    for (const sample of samples) {
+      expect(Object.keys(fieldErrors(fields, sample)).length === 0).toBe(validateSubmission(fields, sample).ok);
+    }
   });
 });

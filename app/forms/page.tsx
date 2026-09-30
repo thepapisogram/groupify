@@ -80,7 +80,9 @@ export default async function FormsPage() {
               _id: f._id.toString(),
               title: f.title,
               userId: f.userId,
-              createdAt: f.createdAt ? new Date(f.createdAt).toISOString() : undefined
+              createdAt: f.createdAt ? new Date(f.createdAt).toISOString() : undefined,
+              isClosed: f.isClosed ?? false,
+              hasPublishedGroups: Boolean(f.publishedGroups),
             }))}
             submissionCounts={submissionCounts}
             userId={userId}

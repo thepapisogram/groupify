@@ -7,7 +7,6 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import "./globals.css"
 import appMeta from "../data/metadata"
-import { PopupManager } from "@/components/groupify/popup-manager"
 
 const syne = Syne({
   subsets: ["latin"],
@@ -37,6 +36,12 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${syne.variable} ${dmSans.variable} font-dm antialiased`}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary-foreground focus:shadow-lg"
+        >
+          Skip to main content
+        </a>
         <AuthProvider session={session}>
           <ThemeProvider
             attribute="class"
@@ -44,8 +49,9 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {children}
-            <PopupManager />
+            <main id="main-content" tabIndex={-1} className="outline-none">
+              {children}
+            </main>
             <Toaster position="bottom-right" richColors />
           </ThemeProvider>
         </AuthProvider>

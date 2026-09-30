@@ -82,9 +82,9 @@ export function Sidebar({
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-foreground">
+            <p className="text-sm font-medium text-foreground">
               {groupBy === "size" ? "Members per group" : "Number of groups"}
-            </label>
+            </p>
             <button
               type="button"
               onClick={() =>
@@ -92,6 +92,11 @@ export function Sidebar({
               }
               className="rounded-full bg-muted/50 p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               title={
+                groupBy === "size"
+                  ? "Switch to number of groups"
+                  : "Switch to members per group"
+              }
+              aria-label={
                 groupBy === "size"
                   ? "Switch to number of groups"
                   : "Switch to members per group"
@@ -115,6 +120,7 @@ export function Sidebar({
           </div>
           {groupBy === "size" ? (
             <SizeControl
+              label="Members per group"
               value={size}
               min={2}
               max={99}
@@ -122,6 +128,7 @@ export function Sidebar({
             />
           ) : (
             <SizeControl
+              label="Number of groups"
               value={groupCount}
               min={1}
               max={99}
@@ -134,14 +141,16 @@ export function Sidebar({
         </div>
 
         <div className="space-y-3">
-          <label className="text-sm font-medium text-foreground">
+          <p id="extra-members-label" className="text-sm font-medium text-foreground">
             Extra members
-          </label>
-          <div className="space-y-2">
+          </p>
+          <div className="space-y-2" role="radiogroup" aria-labelledby="extra-members-label">
             {DISTRIBUTION_OPTIONS.map((option) => (
               <button
                 key={option.value}
                 type="button"
+                role="radio"
+                aria-checked={mode === option.value}
                 onClick={() => onModeChange(option.value)}
                 className={`w-full rounded-xl border p-3 text-left transition-all flex items-start gap-3 ${
                   mode === option.value

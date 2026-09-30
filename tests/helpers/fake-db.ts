@@ -11,6 +11,9 @@ function matches(doc: Doc, filter: Doc): boolean {
     if (cond && typeof cond === "object" && "$in" in (cond as Doc)) {
       return ((cond as { $in: unknown[] }).$in).includes(value);
     }
+    if (cond && typeof cond === "object" && "$exists" in (cond as Doc)) {
+      return ((cond as { $exists: boolean }).$exists) === (key in doc);
+    }
     return value === cond;
   });
 }

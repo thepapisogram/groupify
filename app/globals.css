@@ -166,6 +166,28 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
 .stagger-5 { animation-delay: 0.25s; }
 .stagger-6 { animation-delay: 0.30s; }
 
+/* ── Accessibility ───────────────────────────────────────────────────── */
+/* Fallback focus ring for keyboard users; components with their own ring override it. */
+:where(a, button, [role="button"], [role="tab"], summary):focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Respect the OS "reduce motion" setting: no decorative animation or smooth movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  body {
+    animation: none;
+  }
+}
+
 /* ── Shimmer button state ─────────────────────────────────────────────── */
 .btn-shimmer {
   background: linear-gradient(

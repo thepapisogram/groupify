@@ -5,7 +5,7 @@ const author = {
 
 const app = {
     name: "Groupify",
-    version: "2.1.0",
+    version: "2.2.0",
     description: "Groupify is an innovative tool designed to effortlessly sort names into groups. Perfect for classroom settings, it helps class captains quickly and efficiently split the class into groups of 5. Developed by Anthony Saah, Groupify streamlines group organization with ease.",
     applicationName: "Groupify",
     keywords: ["groupify", "groupify tool", "grouping", "classroom", "tool", author.name],
