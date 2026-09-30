@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import { RiTeamLine } from "@remixicon/react";
 
 interface NamesInputPanelProps {
@@ -6,6 +6,8 @@ interface NamesInputPanelProps {
   onNamesChange: (value: string) => void;
   onClear: () => void;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
+  /** Extra controls in the header, e.g. recent groupings. */
+  headerExtra?: ReactNode;
 }
 
 export function NamesInputPanel({
@@ -13,26 +15,34 @@ export function NamesInputPanel({
   onNamesChange,
   onClear,
   textareaRef,
+  headerExtra,
 }: NamesInputPanelProps) {
   return (
     <div className="space-y-3 animate-fade-in">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        <label
+          htmlFor="names-input"
+          className="text-xs font-semibold uppercase tracking-widest text-muted-foreground"
+        >
           Names - one per line
         </label>
-        {names && (
-          <button
-            type="button"
-            onClick={onClear}
-            className="text-xs text-muted-foreground/60 transition-colors hover:text-destructive"
-          >
-            Clear all
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {headerExtra}
+          {names && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="text-xs text-muted-foreground/60 transition-colors hover:text-destructive"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="relative">
         <textarea
+          id="names-input"
           ref={textareaRef}
           value={names}
           onChange={(event) => onNamesChange(event.target.value)}
@@ -56,7 +66,10 @@ export function NamesInputPanel({
       </div>
 
       <p className="text-xs text-muted-foreground/50">
-        Tip: paste a column from Excel - each cell becomes a name automatically.
+        Tip: paste a column from Excel - each cell becomes a name automatically. Add{" "}
+        <code className="rounded bg-muted/50 px-1 py-0.5">| tag</code> after a name (e.g.{" "}
+        <code className="rounded bg-muted/50 px-1 py-0.5">Ama | Advanced</code>) to spread a
+        group of people evenly.
       </p>
     </div>
   );

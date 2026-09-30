@@ -25,19 +25,14 @@ import { PageHeader } from "@/components/groupify/page-header";
 import { Footer } from "@/components/groupify/footer";
 import { Sidebar } from "@/components/groupify/sidebar";
 import { ResultsPanel } from "@/components/groupify/results-panel";
+import { RulesPanel } from "@/components/groupify/rules-panel";
+import { useGrouping } from "@/components/groupify/use-grouping";
+import type { Person } from "@/lib/grouping";
 import { ShareDialog } from "@/components/groupify/share-dialog";
 import { ExportDialog } from "@/components/groupify/export-dialog";
-import {
-  buildGroupsAsync,
-  exportGroups,
-  exportResponses,
-} from "@/components/groupify/utils";
+import { exportGroups, exportResponses } from "@/components/groupify/utils";
 import { ConfirmDialog } from "@/components/groupify/confirm-dialog";
-import {
-  DistributionMode,
-  Group,
-  ExportFormat,
-} from "@/components/groupify/types";
+import type { ExportFormat } from "@/components/groupify/types";
 import { toast } from "sonner";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
@@ -230,17 +225,35 @@ export function AdminDashboard({
     return sortableItems;
   }, [submissions, sortConfig]);
 
-  // Grouping state
-  const [size, setSize] = useState(4);
-  const [groupCount, setGroupCount] = useState(2);
-  const [groupBy, setGroupBy] = useState<"size" | "count">("size");
-  const [mode, setMode] = useState<DistributionMode>("best");
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [isWorking, setIsWorking] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
   const [activeTab, setActiveTab] = useState<"submissions" | "groups">(
     "submissions",
   );
+
+  // Each response becomes a person, labelled by the form's primary field.
+  const primaryField = useMemo(
+    () => formConfig.fields.find((f) => f.isPrimary) || formConfig.fields[0],
+    [formConfig.fields],
+  );
+  const people = useMemo<Person[]>(
+    () =>
+      submissions.map((sub) => {
+        const val = primaryField ? sub.data[primaryField.id] : undefined;
+        const label = val ? (Array.isArray(val) ? val.join(", ") : val) : "Unknown";
+        return { key: sub._id, label, data: sub.data };
+      }),
+    [submissions, primaryField],
+  );
+  const balanceOptions = useMemo(
+    () =>
+      formConfig.fields
+        .filter((f) => f.type === "select" || f.type === "radio" || f.type === "checklist")
+        .map((f) => ({ key: f.id, label: f.label })),
+    [formConfig.fields],
+  );
+
+  const grouping = useGrouping(people);
+  const { groups, hasResults } = grouping;
 
   const fetchSubmissions = useCallback(async () => {
     try {
@@ -277,94 +290,16 @@ export function AdminDashboard({
     }
   };
 
-  // Handlers for synchronization (same as homepage)
   const nameCount = submissions.length;
-  const hasResults = groups.length > 0;
   const totalGrouped = groups.reduce(
     (sum, group) => sum + group.members.length,
     0,
   );
-  const estGroups = nameCount >= 2 ? groupCount : 0;
 
-  const handleSizeChange = (newSize: number) => {
-    setSize(newSize);
-    setGroupBy("size");
-    if (nameCount > 0) {
-      setGroupCount(
-        mode === "best"
-          ? Math.max(1, Math.floor(nameCount / newSize))
-          : Math.ceil(nameCount / newSize),
-      );
-    }
+  const handleGenerate = async () => {
+    const result = await grouping.generate();
+    if (result) setActiveTab("groups");
   };
-
-  const handleGroupCountChange = (newCount: number) => {
-    setGroupCount(newCount);
-    setGroupBy("count");
-    if (nameCount > 0) {
-      setSize(Math.max(2, Math.ceil(nameCount / newCount)));
-    }
-  };
-
-  const handleModeChange = (newMode: DistributionMode) => {
-    setMode(newMode);
-    if (groupBy === "size" && nameCount > 0) {
-      setGroupCount(
-        newMode === "best"
-          ? Math.max(1, Math.floor(nameCount / size))
-          : Math.ceil(nameCount / size),
-      );
-    }
-  };
-
-  const handleGenerate = useCallback(async () => {
-    if (nameCount === 0 || !formConfig) return;
-
-    setIsWorking(true);
-    try {
-      const primaryField =
-        formConfig.fields.find((f) => f.isPrimary) || formConfig.fields[0];
-      const items = submissions.map((sub) => {
-        const val = sub.data[primaryField.id];
-        const label = val
-          ? Array.isArray(val)
-            ? val.join(", ")
-            : val
-          : "Unknown";
-        return { label, originalId: sub._id };
-      });
-
-      const result = await buildGroupsAsync(
-        items,
-        groupBy,
-        groupBy === "size" ? size : groupCount,
-        mode,
-      );
-
-      const finalGroups = result.map((g) => {
-        const fullMembers =
-          g.originalIds?.map((id) => {
-            const sub = submissions.find((s) => s._id === id);
-            return sub ? sub.data : {};
-          }) || [];
-        return { ...g, rawMembers: fullMembers };
-      });
-
-      setGroups(finalGroups);
-      setActiveTab("groups");
-      toast.success(
-        `${result.length} group${result.length !== 1 ? "s" : ""} created`,
-      );
-    } catch {
-      toast.error("Failed to generate groups");
-    } finally {
-      setIsWorking(false);
-    }
-  }, [mode, nameCount, submissions, size, groupCount, groupBy, formConfig]);
-
-  const handleShuffle = useCallback(() => {
-    handleGenerate();
-  }, [handleGenerate]);
 
   const handleExport = async (format: ExportFormat) => {
     if (groups.length === 0 || !formConfig) return;
@@ -408,13 +343,10 @@ export function AdminDashboard({
   const handleCopyText = async () => {
     if (groups.length === 0 || !formConfig) return;
 
-    const primaryField =
-      formConfig.fields.find((f) => f.isPrimary) || formConfig.fields[0];
-
     const text = groups
       .map(
         (group) =>
-          `${group.label}\n${group.rawMembers?.map((member, index) => `${index + 1}. ${member[primaryField.id] || "Unknown"}`).join("\n")}`,
+          `${group.label}\n${group.members.map((member, index) => `${index + 1}. ${member}`).join("\n")}`,
       )
       .join("\n\n");
 
@@ -861,29 +793,45 @@ export function AdminDashboard({
               <ResultsPanel
                 groups={groups}
                 totalGrouped={totalGrouped}
-                onShuffle={handleShuffle}
+                warnings={grouping.warnings}
+                onShuffle={grouping.reshuffle}
+                onRename={grouping.rename}
+                onMoveMember={grouping.move}
+                onUndo={grouping.undo}
+                canUndo={grouping.canUndo}
               />
             )}
           </div>
 
           <Sidebar
-            groupBy={groupBy}
-            size={size}
-            groupCount={groupCount}
-            mode={mode}
-            isWorking={isWorking}
+            groupBy={grouping.by}
+            size={grouping.size}
+            groupCount={grouping.groupCount}
+            mode={grouping.mode}
+            isWorking={grouping.isWorking}
             nameCount={nameCount}
             hasResults={hasResults}
             copiedText={copiedText}
-            estGroups={estGroups}
+            estGroups={nameCount >= 2 ? grouping.groupCount : 0}
             groupsCount={groups.length}
-            onGroupByChange={setGroupBy}
-            onSizeChange={handleSizeChange}
-            onGroupCountChange={handleGroupCountChange}
-            onModeChange={handleModeChange}
+            onGroupByChange={grouping.onGroupByChange}
+            onSizeChange={grouping.onSizeChange}
+            onGroupCountChange={grouping.onGroupCountChange}
+            onModeChange={grouping.onModeChange}
             onGenerate={handleGenerate}
             onExport={handleExport}
             onCopyText={handleCopyText}
+            rules={
+              <RulesPanel
+                people={people}
+                rules={grouping.rules}
+                onAdd={grouping.addRule}
+                onRemove={grouping.removeRule}
+                balanceOptions={balanceOptions}
+                balanceBy={grouping.balanceBy}
+                onBalanceChange={grouping.setBalanceBy}
+              />
+            }
           />
         </div>
 

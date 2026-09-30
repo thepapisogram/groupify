@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { SizeControl } from "@/components/groupify/size-control";
 import { StatsBar } from "@/components/groupify/stats-bar";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,10 @@ interface SidebarProps {
   onGenerate: () => void;
   onExport: (format: ExportFormat) => void;
   onCopyText: () => void;
+  /** Rendered between the configuration card and the Generate button (e.g. the rules panel). */
+  rules?: ReactNode;
+  /** Rendered after the export card (e.g. print or publish actions). */
+  extraActions?: ReactNode;
 }
 
 const DISTRIBUTION_OPTIONS = [
@@ -57,6 +62,8 @@ export function Sidebar({
   onGenerate,
   onExport,
   onCopyText,
+  rules,
+  extraActions,
 }: SidebarProps) {
   return (
     <div className="space-y-4">
@@ -163,6 +170,8 @@ export function Sidebar({
         </div>
       </div>
 
+      {rules}
+
       <div className="fixed bottom-4 left-4 right-4 z-50 pb-[env(safe-area-inset-bottom)] sm:static sm:bottom-auto sm:left-auto sm:right-auto sm:z-auto sm:pb-0">
         <Button
           type="button"
@@ -260,6 +269,8 @@ export function Sidebar({
           </div>
         </div>
       )}
+
+      {hasResults && extraActions}
     </div>
   );
 }
