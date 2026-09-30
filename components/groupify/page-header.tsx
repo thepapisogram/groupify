@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ModeToggle } from "@/components/theme-switcher";
 import { useSession, signOut } from "next-auth/react";
-import { RiLogoutBoxRLine, RiUserLine, RiFileTextLine } from "@remixicon/react";
+import { RiLogoutBoxRLine, RiUserLine, RiFileTextLine, RiUserSettingsLine } from "@remixicon/react";
 import {
   Dialog,
   DialogContent,
@@ -107,12 +107,17 @@ export function PageHeader() {
 
               <div className="h-4 w-px bg-border/50"></div>
 
-              <span
-                className="hidden max-w-[100px] truncate text-xs font-medium text-foreground sm:block"
-                title={session.user?.name || session.user?.email || ""}
+              <Link
+                href="/account"
+                className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                title="Account"
               >
-                {session.user?.name || session.user?.email}
-              </span>
+                <RiUserSettingsLine className="size-3.5 sm:hidden" aria-hidden />
+                <span className="sr-only sm:hidden">Account</span>
+                <span className="hidden max-w-[100px] truncate sm:block">
+                  {session.user?.name || session.user?.email}
+                </span>
+              </Link>
 
               <SignOutButton />
             </div>

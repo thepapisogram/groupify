@@ -296,6 +296,12 @@ export default function DocumentationPage() {
                   you signed up with Google, you can also use it to add a password.
                 </p>
               </Card>
+              <Card title="Changing your password">
+                <p>
+                  When you&apos;re signed in, open <strong>Account</strong> from your name at the top of the page, enter your
+                  current password and choose a new one. Every other device is signed out.
+                </p>
+              </Card>
               <Card title="What collaborators can do">
                 <p>
                   Collaborators can view and delete responses, generate and publish groups, export, edit the form and

@@ -121,4 +121,5 @@ export const RULES = {
   resetRequestPerIp: { limit: 10, windowMs: 60 * 60_000 },
   resetRequestPerEmail: { limit: 3, windowMs: 60 * 60_000 },
   resetAttempt: { limit: 30, windowMs: 15 * 60_000 },
+  changePassword: { limit: 10, windowMs: 15 * 60_000 },
 } satisfies Record<string, RateLimitRule>;
