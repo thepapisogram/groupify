@@ -13,6 +13,7 @@ import type { ExportFormat, Group } from "@/components/groupify/types";
 import { useGrouping } from "@/components/groupify/use-grouping";
 import { exportGroups } from "@/components/groupify/utils";
 import { collectTags, parseNames, TAG_KEY } from "@/lib/grouping";
+import { buildJotterDraftUrl, parseJotterHandoff } from "@/lib/jotter-handoff";
 import {
   addRecent,
   clearDraft,
@@ -46,11 +47,24 @@ const EXAMPLE_NAMES = [
  */
 export function QuickTool() {
   const [draft] = useState(() => loadDraft());
-  const [names, setNames] = useState(() => draft?.names ?? "");
+  // A list sent from Jotter (`#jotter=…`) takes priority over the saved draft.
+  const [handoff] = useState(() =>
+    typeof window === "undefined"
+      ? null
+      : parseJotterHandoff(window.location.hash, process.env.NEXT_PUBLIC_JOTTER_URL),
+  );
+  const [names, setNames] = useState(() => (handoff ? handoff.names.join("\n") : (draft?.names ?? "")));
   const [activePanel, setActivePanel] = useState<ActivePanel>("input");
   const [copiedText, setCopiedText] = useState(false);
   const [recent, setRecent] = useState<SavedGrouping[]>(() => loadRecent());
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Clear the fragment once consumed so a refresh doesn't re-import over the user's edits.
+  useEffect(() => {
+    if (!handoff) return;
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+    toast.success(`Imported ${handoff.names.length} names from Jotter`);
+  }, [handoff]);
 
   const people = useMemo(() => parseNames(names), [names]);
   const grouping = useGrouping(people, draft ?? undefined);
@@ -127,15 +141,18 @@ export function QuickTool() {
     }
   };
 
-  const handleCopyText = async () => {
-    if (groups.length === 0) return;
-
-    const text = groups
+  const groupsAsText = () =>
+    groups
       .map(
         (group: Group) =>
           `${group.label}\n${group.members.map((member: string, index: number) => `${index + 1}. ${member}`).join("\n")}`,
       )
       .join("\n\n");
+
+  const handleCopyText = async () => {
+    if (groups.length === 0) return;
+
+    const text = groupsAsText();
 
     try {
       await navigator.clipboard.writeText(text);
@@ -197,6 +214,17 @@ export function QuickTool() {
                 : "opacity-0 -z-10 translate-x-4 pointer-events-none invisible"
             }`}
           >
+            {handoff?.returnTo && hasResults && (
+              <a
+                href={buildJotterDraftUrl(handoff.returnTo, handoff.title ? `${handoff.title}: groups` : "Groups", groupsAsText())}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mb-3 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-accent"
+              >
+                Save to Jotter
+                <span className="text-xs text-muted-foreground">({new URL(handoff.returnTo).host})</span>
+              </a>
+            )}
             <ResultsPanel
               groups={groups}
               totalGrouped={totalGrouped}
