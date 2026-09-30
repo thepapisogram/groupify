@@ -120,6 +120,7 @@ export const db = {
   users: new FakeCollection(),
   accounts: new FakeCollection(),
   email_verifications: new FakeCollection(),
+  password_resets: new FakeCollection(),
 };
 
 export function resetDb() {
@@ -129,6 +130,7 @@ export function resetDb() {
   db.users = new FakeCollection();
   db.accounts = new FakeCollection();
   db.email_verifications = new FakeCollection();
+  db.password_resets = new FakeCollection();
 }
 
 // Same surface as lib/db.ts, so it can stand in for it via vi.mock.

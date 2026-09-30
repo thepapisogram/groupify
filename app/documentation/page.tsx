@@ -289,6 +289,13 @@ export default function DocumentationPage() {
                   <strong>Resend email</strong> in the banner if the link expired (they last 24 hours).
                 </p>
               </Card>
+              <Card title="Forgot your password?">
+                <p>
+                  On the log in page choose <strong>Forgot password?</strong> and enter your email. If an account exists we
+                  send a link that works once and lasts an hour. Choosing a new password signs you out everywhere else. If
+                  you signed up with Google, you can also use it to add a password.
+                </p>
+              </Card>
               <Card title="What collaborators can do">
                 <p>
                   Collaborators can view and delete responses, generate and publish groups, export, edit the form and
