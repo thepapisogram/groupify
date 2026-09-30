@@ -27,3 +27,9 @@ export async function usersCollection(): Promise<Collection<Document>> {
   const client = await clientPromise;
   return client.db().collection("users");
 }
+
+/** NextAuth's linked OAuth accounts (Google), in the same database as users. */
+export async function accountsCollection(): Promise<Collection<Document>> {
+  const client = await clientPromise;
+  return client.db().collection("accounts");
+}

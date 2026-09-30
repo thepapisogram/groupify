@@ -7,6 +7,7 @@ import clientPromise from "@/lib/mongodb";
 import { compare } from "bcryptjs";
 import { checkRateLimit, getClientIp, RULES } from "@/lib/rate-limit";
 import { emailLookupCandidates, normalizeEmail } from "@/lib/validation";
+import { isUserVerified, markVerifiedByProvider } from "@/lib/verification";
 
 // Compared against when no account exists, so response time doesn't reveal which emails are registered.
 const DUMMY_HASH = "$2b$12$Z6ql/4wk5oJL2kYeQa.fQOrPQSJQR1yY3lTTfi7FerLyiYK3PhmXi";
@@ -92,12 +93,24 @@ export const authOptions: AuthOptions = {
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.sub;
+        session.user.emailVerified = token.emailVerified;
       }
       return session;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account, trigger }) {
       if (user) {
         token.sub = user.id;
+        // Google has already verified the address, so record it and skip the email step.
+        if (account?.provider === "google") await markVerifiedByProvider(user.id);
+      }
+      // Refresh the flag at sign-in, after verifying, for older tokens without it, and for as long as it
+      // is still false (so confirming on another device clears the reminder on the next page load or focus).
+      if (user || trigger === "update" || token.emailVerified !== true) {
+        try {
+          token.emailVerified = await isUserVerified(token.sub);
+        } catch {
+          token.emailVerified = token.emailVerified ?? true;
+        }
       }
       return token;
     },

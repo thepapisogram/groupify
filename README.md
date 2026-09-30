@@ -62,6 +62,7 @@ Understanding this makes the API routes easy to read. Everything goes through [`
 | **collaborator** | An accepted invitee (matched by email, case-insensitively) | View/delete responses, edit the form, open/close it, publish groups |
 
 - Forms created while signed out have no `userId`; the **admin token** in their admin link is the only credential. It is sent in an `X-Admin-Token` header (the old `?token=` query parameter is still accepted) and compared in constant time. Signed-in owners and collaborators never receive it.
+- **Email verification.** Anyone can type any address into the signup form, so an email/password account's email grants nothing until it is confirmed: an unverified account can't match a collaborator entry, accept an invite, or see forms shared with its address (it still manages forms it owns, which are tied to the account). Confirmation uses a random, single-use, 24-hour token that is stored hashed and consumed by `POST /api/auth/verify` (a POST so mail scanners that pre-fetch links can't spend it). Google users count as verified. It is enabled whenever `RESEND_API_KEY` is set and switched off otherwise, since it couldn't be completed. Existing email/password accounts predate the flag and are asked to confirm on their next visit.
 - Public endpoints validate every submission against the form's own field definitions, cap payload size, and are rate limited with a MongoDB-backed counter (`rate_limits`, TTL-expired) so limits hold across serverless instances. It fails open if the database is unreachable.
 
 ## Project structure

@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { usersCollection } from "@/lib/db";
-import { readJson } from "@/lib/http";
+import { getAppUrl, readJson } from "@/lib/http";
+import { sendEmail } from "@/lib/resend";
+import { VerifyEmail } from "@/lib/emails/verify-email";
+import { isVerificationEnabled, issueVerificationToken } from "@/lib/verification";
 import { checkRateLimit, getClientIp, RULES, tooManyRequests } from "@/lib/rate-limit";
 import {
   cleanName,
@@ -10,6 +13,21 @@ import {
   normalizeEmail,
   validatePassword,
 } from "@/lib/validation";
+
+/** Email the confirmation link. Never throws: the user can ask for another from the banner. */
+async function sendVerification(req: Request, userId: string, email: string): Promise<boolean> {
+  try {
+    const token = await issueVerificationToken(userId, email);
+    return await sendEmail({
+      to: email,
+      subject: "Confirm your email address",
+      react: VerifyEmail({ verifyLink: `${getAppUrl(req)}/verify-email?token=${token}` }),
+    });
+  } catch (error) {
+    console.error("Could not send verification email:", error);
+    return false;
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -57,11 +75,18 @@ export async function POST(req: Request) {
       email,
       name: cleanName(name, email.split("@")[0]),
       password: hashedPassword,
+      // Unverified until they click the emailed link. Existing accounts predate this field.
+      emailVerified: null,
       createdAt: new Date(),
     });
 
+    const verificationRequired = isVerificationEnabled();
+    const verificationSent = verificationRequired
+      ? await sendVerification(req, String(newUser.insertedId), email)
+      : false;
+
     return NextResponse.json(
-      { message: "User created successfully", userId: newUser.insertedId },
+      { message: "User created successfully", userId: newUser.insertedId, verificationRequired, verificationSent },
       { status: 201 }
     );
   } catch (error) {

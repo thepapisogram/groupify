@@ -9,7 +9,7 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         allow: ["/", "/documentation", "/forms/new"],
         // Forms, groups, invites and the API belong to individual users and are never worth indexing.
-        disallow: ["/api/", "/forms/", "/invites/", "/login", "/signup"],
+        disallow: ["/api/", "/forms/", "/invites/", "/verify-email", "/login", "/signup"],
       },
     ],
     sitemap: `${base}/sitemap.xml`,

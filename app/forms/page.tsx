@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { getIdentity } from "@/lib/form-access";
 import { formsCollection, submissionsCollection } from "@/lib/db";
 import { emailLookupCandidates } from "@/lib/validation";
 import { redirect } from "next/navigation";
@@ -11,19 +10,20 @@ import { RiAddCircleLine } from "@remixicon/react";
 import { FormsList } from "@/components/groupify/forms-list";
 
 export const metadata = {
-  title: "My Forms | Groupify",
+  title: "My Forms",
   description: "View and manage your Groupify forms",
 };
 
 export default async function FormsPage() {
-  const session = await getServerSession(authOptions);
+  const identity = await getIdentity();
 
-  if (!(session?.user as { id?: string })?.id) {
+  if (!identity.userId) {
     redirect("/login?callbackUrl=/forms");
   }
 
-  const userId = (session?.user as { id: string }).id;
-  const userEmails = emailLookupCandidates(session?.user?.email);
+  const userId = identity.userId;
+  // Forms shared by email only appear once the address is verified.
+  const userEmails = emailLookupCandidates(identity.email);
 
   const query = {
     $or: [
