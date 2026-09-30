@@ -38,7 +38,12 @@ async function connectAndInit(): Promise<MongoClient> {
     db.collection("rate_limits").createIndex(
       { expireAt: 1 },
       { name: "rate_limits_expireAt", expireAfterSeconds: 0 }
-    )
+    ),
+    // Emailed links (confirm address, reset password) are single-use and short-lived; expired ones clear themselves.
+    ...["email_verifications", "password_resets"].flatMap((name) => [
+      db.collection(name).createIndex({ expiresAt: 1 }, { name: `${name}_expiresAt`, expireAfterSeconds: 0 }),
+      db.collection(name).createIndex({ userId: 1 }, { name: `${name}_userId`, background: true }),
+    ]),
   ]).catch(err => console.error("Failed to ensure indexes:", err));
   
   return c;

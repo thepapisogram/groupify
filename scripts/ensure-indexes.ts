@@ -60,6 +60,14 @@ async function main() {
   );
   console.log("✓  rate_limits: { expireAt: 1 } (TTL)");
 
+  // ── email_verifications, password_resets ─────────────────────────────────
+  // Emailed links are single-use and short-lived; expired ones clear themselves.
+  for (const name of ["email_verifications", "password_resets"]) {
+    await db.collection(name).createIndex({ expiresAt: 1 }, { name: `${name}_expiresAt`, expireAfterSeconds: 0 });
+    await db.collection(name).createIndex({ userId: 1 }, { name: `${name}_userId`, background: true });
+    console.log(`✓  ${name}: { expiresAt: 1 } (TTL), { userId: 1 }`);
+  }
+
   console.log("\nAll indexes ensured successfully.");
   process.exit(0);
 }

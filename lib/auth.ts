@@ -101,7 +101,10 @@ export const authOptions: AuthOptions = {
   ],
   callbacks: {
     async session({ session, token }) {
-      if (token && session.user) {
+      // A voided session (see jwt below) has no subject. NextAuth reads an empty session as signed out; without
+      // this it would still carry the name and email from the old cookie.
+      if (!token?.sub) return {} as typeof session;
+      if (session.user) {
         session.user.id = token.sub;
         session.user.emailVerified = token.emailVerified;
       }
@@ -127,8 +130,8 @@ export const authOptions: AuthOptions = {
         if (account?.provider === "google") await markVerifiedByProvider(user.id);
       }
       try {
-        // A Google sign-in that took over an unproven account voids the sessions started before it.
-        if (!user && token.emailProven !== true && (await isSessionRevoked(token.sub, token.authAt))) {
+        // A Google takeover of an unproven account, or a password reset, voids the sessions started before it.
+        if (!user && (await isSessionRevoked(token.sub, token.authAt))) {
           return {};
         }
         // Refresh the flags at sign-in, after verifying, for older tokens without them, and for as long as they

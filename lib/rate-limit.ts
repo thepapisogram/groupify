@@ -118,4 +118,7 @@ export const RULES = {
   invite: { limit: 20, windowMs: 60 * 60_000 },
   verifyAttempt: { limit: 30, windowMs: 15 * 60_000 },
   verifyResend: { limit: 5, windowMs: 60 * 60_000 },
+  resetRequestPerIp: { limit: 10, windowMs: 60 * 60_000 },
+  resetRequestPerEmail: { limit: 3, windowMs: 60 * 60_000 },
+  resetAttempt: { limit: 30, windowMs: 15 * 60_000 },
 } satisfies Record<string, RateLimitRule>;
