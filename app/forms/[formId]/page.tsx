@@ -1,50 +1,25 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import clientPromise from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
 import { unstable_cache } from "next/cache";
 import { PageHeader } from "@/components/groupify/page-header";
 import { Footer } from "@/components/groupify/footer";
 import { FormFiller } from "@/components/groupify/form-filler";
-import { FormField } from "@/components/groupify/form-builder";
+import { formsCollection } from "@/lib/db";
+import { getIdentity, resolveFormRole } from "@/lib/form-access";
+import type { FormField } from "@/lib/models";
 
 export default async function FormFillerPage({ params }: { params: Promise<{ formId: string }> }) {
   const { formId } = await params;
 
-  const session = await getServerSession(authOptions);
-  let userId = null;
-  if (session?.user && (session.user as { id?: string }).id) {
-    userId = (session.user as { id: string }).id;
-  }
-  const userEmail = session?.user?.email || null;
-
+  // The cached copy holds only what respondents may see; no secrets or ownership data.
   const getForm = unstable_cache(
     async (id: string) => {
-      const client = await clientPromise;
-      const db = client.db("groupify");
-      interface FormDoc {
-        _id: ObjectId | string;
-        userId?: string;
-        confirmedAdmins?: string[];
-        title: string;
-        description?: string;
-        fields: FormField[];
-        adminToken?: string;
-        isClosed?: boolean;
-      }
-      let form: FormDoc | null = null;
-      try {
-        form = await db.collection<FormDoc>("forms").findOne({ _id: new ObjectId(id) });
-      } catch {
-        form = await db.collection<FormDoc>("forms").findOne({ _id: id as unknown as ObjectId });
-      }
-      if (form) {
-        return {
-          ...form,
-          _id: form._id.toString(),
-        };
-      }
-      return null;
+      const form = await (await formsCollection()).findOne({ _id: id });
+      if (!form) return null;
+      return {
+        title: form.title,
+        description: form.description,
+        fields: form.fields as FormField[],
+        isClosed: form.isClosed,
+      };
     },
     ["form", formId],
     { tags: [`form-${formId}`] }
@@ -67,14 +42,19 @@ export default async function FormFillerPage({ params }: { params: Promise<{ for
     );
   }
 
-  const isOwner = Boolean(userId === form.userId || (userEmail && form.confirmedAdmins?.includes(userEmail)));
+  // Only signed-in visitors trigger this lookup; anonymous respondents stay on the cached path.
+  const identity = await getIdentity();
+  let canManage = false;
+  if (identity.userId || identity.email) {
+    const live = await (await formsCollection()).findOne({ _id: formId });
+    canManage = Boolean(live && resolveFormRole(live, { identity }));
+  }
 
   const formConfig = {
     title: form.title,
     description: form.description,
     fields: form.fields,
-    isOwner,
-    adminToken: isOwner ? form.adminToken : undefined,
+    canManage,
     isClosed: form.isClosed,
   };
 

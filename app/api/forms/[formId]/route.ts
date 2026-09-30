@@ -1,51 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
-import clientPromise from "@/lib/mongodb";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { authorizeForm } from "@/lib/form-access";
+import { formsCollection, invitesCollection, submissionsCollection } from "@/lib/db";
+import { invalidateFormCache, readJson } from "@/lib/http";
+import { parseFormDefinition } from "@/lib/validation";
 
-  interface FormDoc {
-    _id: string;
-    adminToken: string;
-    title: string;
-    description?: string;
-    fields: Record<string, unknown>[];
-    createdAt?: Date;
-    updatedAt?: Date;
-    userId?: string;
-    confirmedAdmins?: string[];
-  }
+type Params = { params: Promise<{ formId: string }> };
 
-  export async function GET(
-    req: NextRequest,
-    { params }: { params: Promise<{ formId: string }> }
-  ) {
-    try {
-      const { formId } = await params;
-      const client = await clientPromise;
-      const db = client.db("groupify");
+/** Public: what a respondent needs to fill the form in. Never exposes secrets or ownership. */
+export async function GET(_req: NextRequest, { params }: Params) {
+  try {
+    const { formId } = await params;
+    const form = await (await formsCollection()).findOne({ _id: formId });
 
-      const form = await db.collection<FormDoc>("forms").findOne({ _id: formId as unknown as string });
+    if (!form) {
+      return NextResponse.json({ error: "Form not found" }, { status: 404 });
+    }
 
-      if (!form) {
-        return NextResponse.json({ error: "Form not found" }, { status: 404 });
-      }
-
-      const session = await getServerSession(authOptions);
-      const userId = (session?.user as { id?: string } | undefined)?.id;
-      const userEmail = session?.user?.email;
-
-      const isOwner = !!(form.userId && userId === form.userId);
-      const isSharedAdmin = !!(userEmail && form.confirmedAdmins && form.confirmedAdmins.includes(userEmail));
-      const isAdmin = isOwner || isSharedAdmin;
-
-      const { adminToken: _adminToken, confirmedAdmins: _confirmedAdmins, ...publicForm } = form;
-      
-      if (isAdmin) {
-        return NextResponse.json({ ...publicForm, adminToken: form.adminToken, confirmedAdmins: form.confirmedAdmins || [], isOwner }, { status: 200 });
-      }
-
-    return NextResponse.json(publicForm, { status: 200 });
+    return NextResponse.json(
+      {
+        _id: form._id,
+        title: form.title,
+        description: form.description ?? "",
+        fields: form.fields,
+        isClosed: form.isClosed ?? false,
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error fetching form:", error);
     return NextResponse.json(
@@ -55,52 +35,27 @@ import { authOptions } from "@/lib/auth";
   }
 }
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ formId: string }> }
-) {
+export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const { formId } = await params;
-    const adminToken = req.nextUrl.searchParams.get("token");
 
-    if (!adminToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await authorizeForm(req, formId, "collaborator");
+    if (!auth.ok) return auth.response;
+
+    const parsedBody = await readJson(req, 64 * 1024);
+    if (!parsedBody.ok) return parsedBody.response;
+
+    const definition = parseFormDefinition(parsedBody.body);
+    if (!definition.ok) {
+      return NextResponse.json({ error: definition.error }, { status: 400 });
     }
 
-    const client = await clientPromise;
-    const db = client.db("groupify");
-
-    const form = await db.collection<FormDoc>("forms").findOne({ _id: formId });
-
-    if (!form) {
-      return NextResponse.json({ error: "Form not found" }, { status: 404 });
-    }
-
-    if (form.adminToken !== adminToken) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const body = await req.json();
-    const { title, description, fields } = body;
-
-    if (!title || !fields || !Array.isArray(fields)) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
-    }
-
-    await db.collection<FormDoc>("forms").updateOne(
+    await (await formsCollection()).updateOne(
       { _id: formId },
-      {
-        $set: {
-          title,
-          description,
-          fields,
-          updatedAt: new Date(),
-        },
-      }
+      { $set: { ...definition.value, updatedAt: new Date() } }
     );
 
-    // @ts-expect-error Next.js 14 typings mismatch
-    revalidateTag(`form-${formId}`);
+    invalidateFormCache(formId);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
@@ -112,34 +67,18 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ formId: string }> }
-) {
+export async function DELETE(req: NextRequest, { params }: Params) {
   try {
     const { formId } = await params;
-    const adminToken = req.nextUrl.searchParams.get("token");
 
-    if (!adminToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await authorizeForm(req, formId, "owner");
+    if (!auth.ok) return auth.response;
 
-    const client = await clientPromise;
-    const db = client.db("groupify");
+    await (await formsCollection()).deleteOne({ _id: formId });
+    await (await submissionsCollection()).deleteMany({ formId });
+    await (await invitesCollection()).deleteMany({ formId });
 
-    const form = await db.collection<FormDoc>("forms").findOne({ _id: formId });
-
-    if (!form) {
-      return NextResponse.json({ error: "Form not found" }, { status: 404 });
-    }
-
-    if (form.adminToken !== adminToken) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    // Delete form and its submissions
-    await db.collection<FormDoc>("forms").deleteOne({ _id: formId });
-    await db.collection<{ formId: string }>("submissions").deleteMany({ formId });
+    invalidateFormCache(formId);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

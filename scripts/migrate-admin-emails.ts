@@ -10,6 +10,7 @@
 
 import clientPromise from "../lib/mongodb";
 import crypto from "crypto";
+import type { InviteDoc } from "../lib/models";
 
 async function main() {
   console.log("Connecting to MongoDB...");
@@ -17,7 +18,7 @@ async function main() {
   const db = client.db("groupify");
   
   const formsCollection = db.collection("forms");
-  const invitesCollection = db.collection("invites");
+  const invitesCollection = db.collection<InviteDoc>("invites");
 
   const forms = await formsCollection.find({ adminEmails: { $exists: true, $not: { $size: 0 } } }).toArray();
   console.log(`Found ${forms.length} forms with adminEmails to migrate.`);
@@ -52,7 +53,7 @@ async function main() {
           createdAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), // Backdate 7 days
           expiresAt: now,
           acceptedAt: now,
-        } as any);
+        });
 
         existingConfirmed.add(email);
         updated = true;

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { FormField } from "@/components/groupify/form-builder";
+import type { FormField } from "@/lib/models";
+import { adminPagePath } from "@/lib/admin-client";
 import { toast } from "sonner";
 import {
   Select,
@@ -18,8 +19,8 @@ interface FormFillerProps {
     title: string;
     description?: string;
     fields: FormField[];
-    isOwner?: boolean;
-    adminToken?: string;
+    /** True for the owner and accepted collaborators (signed in). */
+    canManage?: boolean;
     isClosed?: boolean;
   };
 }
@@ -128,7 +129,7 @@ export function FormFiller({ formId, formConfig }: FormFillerProps) {
 
   return (
     <>
-      {formConfig.isOwner && formConfig.adminToken && (
+      {formConfig.canManage && (
         <div className="my-8 animate-slide-up rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm backdrop-blur-md">
           <span className="font-medium flex items-center gap-2">
             <svg
@@ -140,11 +141,11 @@ export function FormFiller({ formId, formConfig }: FormFillerProps) {
             >
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
-            You are the admin of this form.
+            You can manage this form.
           </span>
           <div className="flex items-center gap-4 text-xs font-semibold uppercase tracking-wider">
             <Link
-              href={`/forms/${formId}/admin?token=${formConfig.adminToken}`}
+              href={adminPagePath(formId, "admin")}
               className="hover:text-primary/80 transition-colors flex items-center gap-1"
             >
               Dashboard
@@ -159,7 +160,7 @@ export function FormFiller({ formId, formConfig }: FormFillerProps) {
               </svg>
             </Link>
             <Link
-              href={`/forms/${formId}/edit?token=${formConfig.adminToken}`}
+              href={adminPagePath(formId, "edit")}
               className="hover:text-primary/80 transition-colors flex items-center gap-1"
             >
               Edit Form

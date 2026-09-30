@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import clientPromise from "@/lib/mongodb";
+import { formsCollection, submissionsCollection } from "@/lib/db";
+import { emailLookupCandidates } from "@/lib/validation";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/groupify/page-header";
 import { Footer } from "@/components/groupify/footer";
@@ -22,24 +23,20 @@ export default async function FormsPage() {
   }
 
   const userId = (session?.user as { id: string }).id;
-  const userEmail = (session?.user as { email?: string }).email;
-
-  const client = await clientPromise;
-  const db = client.db("groupify");
+  const userEmails = emailLookupCandidates(session?.user?.email);
 
   const query = {
     $or: [
       { userId: userId },
-      { confirmedAdmins: userEmail }
+      ...(userEmails.length > 0 ? [{ confirmedAdmins: { $in: userEmails } }] : []),
     ]
   };
 
   // Fetch forms first, then extract IDs for the submissions aggregation
-  const forms = await db.collection("forms").find(query).sort({ createdAt: -1 }).toArray();
+  const forms = await (await formsCollection()).find(query).sort({ createdAt: -1 }).toArray();
   const formIds = forms.map((f) => String(f._id));
 
-  const submissionCountsRaw = await db
-    .collection("submissions")
+  const submissionCountsRaw = await (await submissionsCollection())
     .aggregate([
       { $match: { formId: { $in: formIds } } },
       { $group: { _id: "$formId", count: { $sum: 1 } } },
@@ -81,10 +78,9 @@ export default async function FormsPage() {
           <FormsList 
             initialForms={forms.map(f => ({ 
               _id: f._id.toString(),
-              title: f.title as string,
-              userId: f.userId as string,
-              adminToken: f.adminToken as string,
-              createdAt: f.createdAt ? new Date(f.createdAt as Date).toISOString() : undefined
+              title: f.title,
+              userId: f.userId,
+              createdAt: f.createdAt ? new Date(f.createdAt).toISOString() : undefined
             }))}
             submissionCounts={submissionCounts}
             userId={userId}

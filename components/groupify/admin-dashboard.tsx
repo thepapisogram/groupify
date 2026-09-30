@@ -18,7 +18,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { FormField } from "@/components/groupify/form-builder";
+import type { FormField } from "@/lib/models";
+import { adminFetch, adminPagePath } from "@/lib/admin-client";
+import { normalizeEmail } from "@/lib/validation";
 import { PageHeader } from "@/components/groupify/page-header";
 import { Footer } from "@/components/groupify/footer";
 import { Sidebar } from "@/components/groupify/sidebar";
@@ -61,17 +63,17 @@ export interface AdminDashboardProps {
   formId: string;
   initialFormConfig: {
     title: string;
+    description?: string;
     fields: FormField[];
     isClosed?: boolean;
-    adminToken?: string;
-    userId?: string;
   };
   initialSubmissions: {
     _id: string;
     submittedAt: string;
     data: Record<string, string | string[]>;
   }[];
-  adminToken: string;
+  /** Present only when the viewer arrived via an admin link; signed-in owners and collaborators rely on their session. */
+  adminToken?: string;
   isOwner: boolean;
 }
 
@@ -116,7 +118,7 @@ export function AdminDashboard({
   const handleDeleteForm = async () => {
     setIsDeletingForm(true);
     try {
-      const res = await fetch(`/api/forms/${formId}?token=${adminToken}`, {
+      const res = await adminFetch(`/api/forms/${formId}`, adminToken, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete form");
@@ -131,12 +133,9 @@ export function AdminDashboard({
   };
 
   const fetchInvites = useCallback(async () => {
-    if (!adminToken) return;
     setIsLoadingAdmins(true);
     try {
-      const res = await fetch(
-        `/api/forms/${formId}/invites?token=${adminToken}`,
-      );
+      const res = await adminFetch(`/api/forms/${formId}/invites`, adminToken);
       if (res.ok) {
         const data = await res.json();
         setPendingInvites(data.pending || []);
@@ -166,14 +165,11 @@ export function AdminDashboard({
     if (!formConfig) return;
     setIsUpdatingStatus(true);
     try {
-      const res = await fetch(
-        `/api/forms/${formId}/status?token=${adminToken}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isClosed: !formConfig.isClosed }),
-        },
-      );
+      const res = await adminFetch(`/api/forms/${formId}/status`, adminToken, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isClosed: !formConfig.isClosed }),
+      });
       if (!res.ok) throw new Error("Failed to update status");
       const data = await res.json();
       setFormConfig({ ...formConfig, isClosed: data.isClosed });
@@ -248,7 +244,7 @@ export function AdminDashboard({
 
   const fetchSubmissions = useCallback(async () => {
     try {
-      const res = await fetch(`/api/forms/${formId}/admin?token=${adminToken}`);
+      const res = await adminFetch(`/api/forms/${formId}/admin`, adminToken);
       if (!res.ok) {
         throw new Error("Unauthorized or form not found");
       }
@@ -266,8 +262,9 @@ export function AdminDashboard({
 
   const handleDeleteSubmission = async (submissionId: string) => {
     try {
-      const res = await fetch(
-        `/api/forms/${formId}/submissions/${submissionId}?token=${adminToken}`,
+      const res = await adminFetch(
+        `/api/forms/${formId}/submissions/${submissionId}`,
+        adminToken,
         { method: "DELETE" },
       );
 
@@ -434,12 +431,9 @@ export function AdminDashboard({
   const handleRegenerateLink = async () => {
     setIsRegenerating(true);
     try {
-      const res = await fetch(
-        `/api/forms/${formId}/regenerate?token=${adminToken}`,
-        {
-          method: "POST",
-        },
-      );
+      const res = await adminFetch(`/api/forms/${formId}/regenerate`, adminToken, {
+        method: "POST",
+      });
       if (!res.ok) throw new Error("Failed to regenerate");
       const data = await res.json();
 
@@ -448,8 +442,9 @@ export function AdminDashboard({
       setIsShareDialogOpen(false);
 
       // Redirect to the new admin URL
+      // Token holders need the new token in the URL; signed-in owners keep access via their session.
       router.push(
-        `/forms/${data.newFormId}/admin?token=${data.newAdminToken || adminToken}`,
+        adminPagePath(data.newFormId, "admin", adminToken ? data.newAdminToken : undefined),
       );
     } catch {
       toast.error("Failed to regenerate link");
@@ -464,15 +459,17 @@ export function AdminDashboard({
       return;
     }
 
+    const wanted = normalizeEmail(newAdminEmail);
+
     // Check if they are already in pending or active
-    if (activeAdmins.some((a) => a.email === newAdminEmail)) {
+    if (activeAdmins.some((a) => normalizeEmail(a.email) === wanted)) {
       toast.error("User is already an active collaborator");
       return;
     }
     if (
       pendingInvites.some(
         (i) =>
-          i.invitedEmail === newAdminEmail &&
+          normalizeEmail(i.invitedEmail) === wanted &&
           new Date(i.expiresAt) > new Date(),
       )
     ) {
@@ -482,18 +479,24 @@ export function AdminDashboard({
 
     setIsUpdatingAdmins(true);
     try {
-      const res = await fetch(
-        `/api/forms/${formId}/invites?token=${adminToken}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: newAdminEmail }),
-        },
-      );
+      const res = await adminFetch(`/api/forms/${formId}/invites`, adminToken, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: newAdminEmail }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send invite");
 
-      toast.success("Invite sent successfully");
+      if (data.emailSent === false && data.inviteLink) {
+        try {
+          await navigator.clipboard.writeText(data.inviteLink);
+          toast.warning("Invite created, but the email couldn't be sent. The invite link was copied so you can share it yourself.");
+        } catch {
+          toast.warning(`Invite created, but the email couldn't be sent. Share this link: ${data.inviteLink}`, { duration: 15000 });
+        }
+      } else {
+        toast.success("Invite sent successfully");
+      }
       setNewAdminEmail("");
       fetchInvites(); // Refresh lists
     } catch (err: unknown) {
@@ -505,11 +508,10 @@ export function AdminDashboard({
 
   const handleRevokeOrRemove = async (inviteId: string) => {
     try {
-      const res = await fetch(
-        `/api/forms/${formId}/invites/${inviteId}?token=${adminToken}`,
-        {
-          method: "DELETE",
-        },
+      const res = await adminFetch(
+        `/api/forms/${formId}/invites/${encodeURIComponent(inviteId)}`,
+        adminToken,
+        { method: "DELETE" },
       );
       if (!res.ok) throw new Error("Failed to remove");
       toast.success("Collaborator removed");
@@ -607,7 +609,7 @@ export function AdminDashboard({
                   Refresh
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild className="cursor-pointer gap-2">
-                  <Link href={`/forms/${formId}/edit?token=${adminToken}`}>
+                  <Link href={adminPagePath(formId, "edit", adminToken)}>
                     <svg
                       className="size-4"
                       viewBox="0 0 24 24"
@@ -1056,79 +1058,7 @@ export function AdminDashboard({
                 </>
               )}
             </div>
-            <DialogFooter className="mt-2 sm:justify-between items-center gap-4">
-              {process.env.NODE_ENV === "development" && (
-                <div className="flex gap-2 mr-auto">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isUpdatingAdmins}
-                    onClick={async () => {
-                      const testEmail = "thepapisogram@gmail.com";
-                      setIsUpdatingAdmins(true);
-                      try {
-                        const res = await fetch(
-                          `/api/forms/${formId}/invites?token=${adminToken}`,
-                          {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ email: testEmail }),
-                          },
-                        );
-                        if (!res.ok) throw new Error("Failed to send invite");
-                        toast.success(`Test invite sent to ${testEmail}`);
-                        fetchInvites();
-                      } catch (err: unknown) {
-                        toast.error(
-                          err instanceof Error
-                            ? err.message
-                            : "Failed to send test invite",
-                        );
-                      } finally {
-                        setIsUpdatingAdmins(false);
-                      }
-                    }}
-                    className="border-dashed border-primary/50 text-primary hover:bg-primary/10"
-                  >
-                    Test Invite
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isUpdatingAdmins}
-                    onClick={async () => {
-                      const testEmail = "thepapisogram@gmail.com";
-                      setIsUpdatingAdmins(true);
-                      try {
-                        const res = await fetch(
-                          `/api/forms/${formId}/invites/test-accept?token=${adminToken}`,
-                          {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ email: testEmail }),
-                          },
-                        );
-                        if (!res.ok)
-                          throw new Error("Failed to send test accepted email");
-                        toast.success(
-                          `Test accepted email sent to ${testEmail}`,
-                        );
-                      } catch (err: unknown) {
-                        toast.error(
-                          err instanceof Error
-                            ? err.message
-                            : "Failed to send test accepted email",
-                        );
-                      } finally {
-                        setIsUpdatingAdmins(false);
-                      }
-                    }}
-                    className="border-dashed border-green-500/50 text-green-600 hover:bg-green-500/10 dark:text-green-400"
-                  >
-                    Test Accepted
-                  </Button>
-                </div>
-              )}
+            <DialogFooter className="mt-2 sm:justify-end items-center gap-4">
               <Button onClick={() => setIsAdminsDialogOpen(false)}>Done</Button>
             </DialogFooter>
           </DialogContent>

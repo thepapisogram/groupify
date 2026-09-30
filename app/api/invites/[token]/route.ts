@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
+import { invitesCollection } from "@/lib/db";
 
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
     const { token } = await params;
-    const client = await clientPromise;
-    const db = client.db("groupify");
-
-    const invite = await db.collection("invites").findOne({ _id: token as unknown as import("mongodb").ObjectId });
+    const invite = await (await invitesCollection()).findOne({ _id: token });
 
     if (!invite) {
       return NextResponse.json({ error: "Invite not found" }, { status: 404 });

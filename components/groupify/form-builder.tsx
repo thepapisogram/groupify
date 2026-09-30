@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/groupify/page-header";
 import { Footer } from "@/components/groupify/footer";
 import { Button } from "@/components/ui/button";
+import { adminFetch, adminPagePath } from "@/lib/admin-client";
+import type { FormField } from "@/lib/models";
 import {
   Select,
   SelectContent,
@@ -15,14 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export type FormField = {
-  id: string;
-  label: string;
-  type: "text" | "number" | "select" | "radio" | "checklist";
-  options?: string[];
-  isPrimary?: boolean;
-  required?: boolean;
-};
+export type { FormField };
 
 interface FormBuilderProps {
   initialTitle?: string;
@@ -254,31 +249,30 @@ export function FormBuilder({
 
     setIsSaving(true);
     try {
-      const url = isEdit
-        ? `/api/forms/${formId}?token=${adminToken}`
-        : "/api/forms";
+      const url = isEdit ? `/api/forms/${formId}` : "/api/forms";
       const method = isEdit ? "PUT" : "POST";
 
-      const response = await fetch(url, {
+      const response = await adminFetch(url, adminToken, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, description, fields }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save form");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to save form");
       }
 
       if (isEdit) {
         toast.success("Form updated successfully!");
-        router.push(`/forms/${formId}/admin?token=${adminToken}`);
+        router.push(adminPagePath(formId!, "admin", adminToken));
       } else {
         const data = await response.json();
         setSaveResult(data);
         toast.success("Form created successfully!");
       }
     } catch (error) {
-      toast.error("An error occurred while saving the form");
+      toast.error(error instanceof Error ? error.message : "An error occurred while saving the form");
       console.error(error);
     } finally {
       setIsSaving(false);
@@ -644,7 +638,7 @@ export function FormBuilder({
                 type="button"
                 variant="outline"
                 size="xl"
-                onClick={() => router.push(`/forms/${formId}/admin?token=${adminToken}`)}
+                onClick={() => router.push(adminPagePath(formId!, "admin", adminToken))}
                 className="flex-1 sm:flex-none"
               >
                 Cancel
@@ -669,7 +663,7 @@ export function FormBuilder({
                   type="button"
                   variant="outline"
                   size="lg"
-                  onClick={() => router.push(`/forms/${formId}/admin?token=${adminToken}`)}
+                  onClick={() => router.push(adminPagePath(formId!, "admin", adminToken))}
                   className="flex-1"
                 >
                   Cancel

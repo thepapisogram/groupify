@@ -1,30 +1,48 @@
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
-import clientPromise from "@/lib/mongodb";
+import { usersCollection } from "@/lib/db";
+import { readJson } from "@/lib/http";
+import { checkRateLimit, getClientIp, RULES, tooManyRequests } from "@/lib/rate-limit";
+import {
+  cleanName,
+  emailLookupCandidates,
+  isValidEmail,
+  normalizeEmail,
+  validatePassword,
+} from "@/lib/validation";
 
 export async function POST(req: Request) {
   try {
-    const { email, password, name } = await req.json();
+    const limit = await checkRateLimit("signup", getClientIp(req.headers), RULES.signup);
+    if (!limit.ok) return tooManyRequests(limit.retryAfter);
 
-    if (!email || !password) {
+    const parsed = await readJson(req, 4 * 1024);
+    if (!parsed.ok) return parsed.response;
+    const { email: rawEmail, password: rawPassword, name } = (parsed.body ?? {}) as Record<string, unknown>;
+
+    const email = normalizeEmail(rawEmail);
+    if (!email || !rawPassword) {
       return NextResponse.json(
         { message: "Email and password are required" },
         { status: 400 }
       );
     }
 
-    if (password.length < 6) {
+    if (!isValidEmail(email)) {
       return NextResponse.json(
-        { message: "Password must be at least 6 characters long" },
+        { message: "Please enter a valid email address" },
         { status: 400 }
       );
     }
 
-    const client = await clientPromise;
-    const db = client.db();
+    const password = validatePassword(rawPassword);
+    if (!password.ok) {
+      return NextResponse.json({ message: password.error }, { status: 400 });
+    }
 
-    // Check if user already exists
-    const existingUser = await db.collection("users").findOne({ email });
+    const users = await usersCollection();
+
+    const existingUser = await users.findOne({ email: { $in: emailLookupCandidates(rawEmail) } });
 
     if (existingUser) {
       return NextResponse.json(
@@ -33,13 +51,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // Hash password
-    const hashedPassword = await hash(password, 12);
+    const hashedPassword = await hash(password.value, 12);
 
-    // Create user
-    const newUser = await db.collection("users").insertOne({
+    const newUser = await users.insertOne({
       email,
-      name: name || email.split("@")[0],
+      name: cleanName(name, email.split("@")[0]),
       password: hashedPassword,
       createdAt: new Date(),
     });

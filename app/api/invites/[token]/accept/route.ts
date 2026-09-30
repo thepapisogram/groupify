@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-
-import { resend } from "@/lib/resend";
+import { formsCollection, invitesCollection } from "@/lib/db";
+import { getAppUrl } from "@/lib/http";
+import { sendEmail } from "@/lib/resend";
 import { InviteAcceptedEmail } from "@/lib/emails/invite-accepted";
-import { ObjectId } from "mongodb";
+import { isValidEmail, normalizeEmail } from "@/lib/validation";
 
 export async function POST(
   req: NextRequest,
@@ -14,15 +14,14 @@ export async function POST(
   try {
     const { token } = await params;
     const session = await getServerSession(authOptions);
+    const userEmail = normalizeEmail(session?.user?.email);
 
-    if (!session?.user?.email) {
+    if (!userEmail) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const client = await clientPromise;
-    const db = client.db("groupify");
-    
-    const invite = await db.collection("invites").findOne({ _id: token as unknown as import("mongodb").ObjectId });
+    const invites = await invitesCollection();
+    const invite = await invites.findOne({ _id: token });
 
     if (!invite) {
       return NextResponse.json({ error: "Invite not found" }, { status: 404 });
@@ -36,48 +35,37 @@ export async function POST(
       return NextResponse.json({ error: "Invite has expired" }, { status: 400 });
     }
 
-    if (invite.invitedEmail !== session.user.email) {
+    if (normalizeEmail(invite.invitedEmail) !== userEmail) {
       return NextResponse.json({ error: "This invite was sent to a different email address" }, { status: 403 });
     }
 
-    // Mark invite as accepted
-    await db.collection("invites").updateOne(
-      { _id: token as unknown as import("mongodb").ObjectId },
+    const forms = await formsCollection();
+    const form = await forms.findOne({ _id: invite.formId });
+    if (!form) {
+      return NextResponse.json({ error: "This form no longer exists" }, { status: 404 });
+    }
+
+    // Grant access first, then mark the invite used.
+    await forms.updateOne(
+      { _id: invite.formId },
+      { $addToSet: { confirmedAdmins: userEmail } },
+    );
+    await invites.updateOne(
+      { _id: token },
       { $set: { status: "accepted", acceptedAt: new Date() } }
     );
 
-    // Fetch form to get admin token for the email link
-    let form;
-    try {
-      form = await db.collection("forms").findOne({ _id: new ObjectId(invite.formId) });
-    } catch {
-      form = await db.collection("forms").findOne({ _id: invite.formId });
-    }
+    // Best-effort notification: accepting must succeed even if the email can't be sent.
+    if (isValidEmail(invite.invitedBy)) {
+      const base = `${getAppUrl(req)}/forms/${invite.formId}/admin`;
+      // Owners with an account reach the dashboard via their session; anonymous forms need the link.
+      const formUrl = form.userId ? base : `${base}?token=${form.adminToken}`;
 
-    // Add user to confirmedAdmins
-    let updateQuery;
-    try {
-      updateQuery = { _id: new ObjectId(invite.formId) };
-    } catch {
-      updateQuery = { _id: invite.formId };
-    }
-
-    await db.collection("forms").updateOne(
-      updateQuery,
-      { $addToSet: { confirmedAdmins: session.user.email } as unknown as import("mongodb").UpdateFilter<Document> }
-    );
-
-    // Send notification email to the owner
-    if (form && invite.invitedBy && process.env.RESEND_API_KEY) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://groupify.vercel.app";
-      const formUrl = `${appUrl}/forms/${invite.formId}/admin?token=${form.adminToken}`;
-      
-      await resend.emails.send({
-        from: process.env.EMAIL_FROM || "Groupify <noreply@groupify.app>",
+      await sendEmail({
         to: invite.invitedBy,
-        subject: `${session.user.email} accepted your invitation!`,
+        subject: `${userEmail} accepted your invitation!`,
         react: InviteAcceptedEmail({
-          collaboratorEmail: session.user.email,
+          collaboratorEmail: userEmail,
           formTitle: invite.formTitle,
           formUrl,
         }),

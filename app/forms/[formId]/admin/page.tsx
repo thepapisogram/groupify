@@ -1,10 +1,7 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import clientPromise from "@/lib/mongodb";
 import { AdminDashboard } from "@/components/groupify/admin-dashboard";
-import { ObjectId } from "mongodb";
-import { safeObjectId } from "@/lib/mongodb";
+import { formsCollection, submissionsCollection } from "@/lib/db";
+import { getIdentity, resolveFormRole, tokenMatches } from "@/lib/form-access";
 
 export default async function AdminDashboardServerPage({
   params,
@@ -16,31 +13,22 @@ export default async function AdminDashboardServerPage({
   const { formId } = await params;
   const { token: adminTokenFromUrl } = await searchParams;
 
-  const client = await clientPromise;
-  const db = client.db("groupify");
-
-  const form = await db.collection("forms").findOne({ _id: safeObjectId(formId) as unknown as ObjectId });
+  const form = await (await formsCollection()).findOne({ _id: formId });
 
   if (!form) {
     redirect("/");
   }
 
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string })?.id;
-  const userEmail = session?.user?.email;
+  const role = resolveFormRole(form, {
+    token: adminTokenFromUrl,
+    identity: await getIdentity(),
+  });
 
-  const isOwner = !!(form.userId && userId === form.userId);
-  const isSharedAdmin = !!(userEmail && form.confirmedAdmins && form.confirmedAdmins.includes(userEmail));
-  
-  const hasValidToken = adminTokenFromUrl && form.adminToken === adminTokenFromUrl;
-  const hasSessionAccess = isOwner || isSharedAdmin;
-
-  if (!hasValidToken && !hasSessionAccess) {
+  if (!role) {
     redirect(`/forms/${formId}`);
   }
 
-  const submissions = await db
-    .collection("submissions")
+  const submissions = await (await submissionsCollection())
     .find({ formId })
     .sort({ submittedAt: -1 })
     .toArray();
@@ -49,8 +37,6 @@ export default async function AdminDashboardServerPage({
     title: form.title,
     fields: form.fields || [],
     isClosed: form.isClosed || false,
-    adminToken: form.adminToken,
-    userId: form.userId,
     description: form.description || "",
   };
 
@@ -61,12 +47,13 @@ export default async function AdminDashboardServerPage({
   }));
 
   return (
-    <AdminDashboard 
-      formId={formId} 
-      initialFormConfig={formConfig} 
-      initialSubmissions={serializedSubmissions} 
-      adminToken={form.adminToken}
-      isOwner={isOwner}
+    <AdminDashboard
+      formId={formId}
+      initialFormConfig={formConfig}
+      initialSubmissions={serializedSubmissions}
+      // Only echo a token back if the visitor actually arrived with a valid one.
+      adminToken={tokenMatches(form.adminToken, adminTokenFromUrl) ? adminTokenFromUrl : undefined}
+      isOwner={role === "owner"}
     />
   );
 }

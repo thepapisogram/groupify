@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { NamesInputPanel } from "@/components/groupify/names-input-panel";
 import { PageHeader } from "@/components/groupify/page-header";

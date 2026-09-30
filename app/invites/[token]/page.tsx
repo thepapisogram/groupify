@@ -8,6 +8,18 @@ import { Footer } from "@/components/groupify/footer";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { RiCheckLine, RiCloseLine } from "@remixicon/react";
+import { normalizeEmail } from "@/lib/validation";
+
+interface Invite {
+  formTitle: string;
+  invitedBy: string;
+  invitedEmail: string;
+  status: "pending" | "accepted" | "declined";
+  expiresAt: string;
+  formId: string;
+}
+
+const errorMessage = (err: unknown) => (err instanceof Error ? err.message : "Something went wrong");
 
 export default function InvitePage() {
   const { token } = useParams() as { token: string };
@@ -16,7 +28,7 @@ export default function InvitePage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [invite, setInvite] = useState<any>(null);
+  const [invite, setInvite] = useState<Invite | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
@@ -52,8 +64,8 @@ export default function InvitePage() {
       if (!res.ok) throw new Error(data.error || "Failed to accept invite");
       toast.success("Invite accepted!");
       router.push(`/forms/${data.formId}/admin`);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(errorMessage(err));
     } finally {
       setIsProcessing(false);
     }
@@ -66,9 +78,9 @@ export default function InvitePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to decline invite");
       toast.success("Invite declined");
-      setInvite((prev: any) => ({ ...prev, status: "declined" }));
-    } catch (err: any) {
-      toast.error(err.message);
+      setInvite((prev) => (prev ? { ...prev, status: "declined" } : prev));
+    } catch (err: unknown) {
+      toast.error(errorMessage(err));
     } finally {
       setIsProcessing(false);
     }
@@ -82,7 +94,7 @@ export default function InvitePage() {
     );
   }
 
-  if (error) {
+  if (error || !invite) {
     return (
       <div className="mesh-bg relative min-h-dvh">
         <div className="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-28 sm:px-6 sm:py-12">
@@ -156,7 +168,7 @@ export default function InvitePage() {
   }
 
   // Pending status
-  if (session?.user?.email && session.user.email !== invite.invitedEmail) {
+  if (session?.user?.email && normalizeEmail(session.user.email) !== normalizeEmail(invite.invitedEmail)) {
     return (
       <div className="mesh-bg relative min-h-dvh">
         <div className="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-28 sm:px-6 sm:py-12">

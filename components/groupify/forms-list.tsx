@@ -10,7 +10,6 @@ interface FormItem {
   _id: string;
   title: string;
   userId?: string;
-  adminToken: string;
   createdAt?: string | Date;
 }
 
@@ -135,7 +134,7 @@ export function FormsList({ initialForms, submissionCounts, userId }: FormsListP
                   </div>
                 </div>
 
-                <FormCardActions formId={formIdStr} adminToken={form.adminToken} />
+                <FormCardActions formId={formIdStr} />
               </div>
             );
           })}
