@@ -1,12 +1,13 @@
 # Groupify
 
-Groupify turns any list into fair, balanced groups in seconds, for classrooms, workshops, teams and events. Paste names or collect them with a shareable form, set rules, tweak the result, then export, print or publish it.
+Groupify turns any list into fair, balanced groups in seconds, for classrooms, workshops, teams and events. Paste names, upload a spreadsheet, or collect them with a shareable form; set rules, tweak the result, then export, print or publish it. Built mobile-first.
 
 ![Groupify Overview](./public/logo.webp)
 
 ## Features
 
 **Making groups**
+- **Spreadsheets**: upload Excel, CSV or ODS (e.g. Google Forms responses). Every column is detected; pick the name column(s) and toggle which columns to keep. Groups and downloads carry those columns. Read entirely in the browser.
 - Group by size or by number of groups; spread leftovers evenly or put them in a smaller group.
 - **Rules**: keep chosen people together, keep others apart, and spread a tag or form answer (skill level, year group, …) evenly. Rules that can't be met are reported, not hidden.
 - Rename groups, move people between them, undo, reshuffle. The quick tool remembers your list and your last eight groupings on the device.
@@ -20,7 +21,7 @@ Groupify turns any list into fair, balanced groups in seconds, for classrooms, w
 
 **Sharing and access**
 - Owners can invite collaborators by email (token invitation, 7-day expiry). Collaborators can work with responses and edit the form; only owners can delete it, rotate its link or manage people.
-- Export groups to Excel (`xlsx`) and Word (`docx`), copy as text, or print (dedicated print styles).
+- Export groups to a formatted Excel workbook (a titled table per group with spacing, an "All" sheet with a Group column, and a sheet per group), Word (`docx`, a table per group) or CSV; copy as text, or print (dedicated print styles).
 - Email/password and Google sign-in via NextAuth.
 
 ## Tech stack
@@ -73,6 +74,7 @@ Understanding this makes the API routes easy to read. Everything goes through [`
 - `app/`: routes. `app/api/` holds the JSON API; `app/forms/[formId]/{admin,edit,groups}` are the form pages.
 - `components/groupify/`: feature components (quick tool, form builder, dashboard, results, rules).
 - `lib/grouping.ts`: the grouping engine. Pure, seedable and shared by the browser, the worker and the tests.
+- `lib/spreadsheet.ts`: reads uploaded sheets into text tables and turns rows into people. `lib/group-export.ts`: builds the Excel (ExcelJS), Word (docx) and CSV downloads.
 - `lib/validation.ts`, `lib/form-access.ts`, `lib/rate-limit.ts`, `lib/db.ts`, `lib/models.ts`: validation, access control, rate limiting and typed collections.
 - `tests/`: unit tests plus route-level tests that run the real handlers against an in-memory database (`tests/helpers/fake-db.ts`).
 - `scripts/`: one-off maintenance scripts.

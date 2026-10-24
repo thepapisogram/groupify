@@ -1,11 +1,9 @@
 import type { ReactNode } from "react";
-import { SizeControl } from "@/components/groupify/size-control";
+import { RiCheckLine, RiFileCopyLine, RiFileExcel2Line, RiFileWord2Line } from "@remixicon/react";
+import { GenerateButton } from "@/components/groupify/generate-button";
+import { GroupSettings } from "@/components/groupify/group-settings";
 import { StatsBar } from "@/components/groupify/stats-bar";
-import { Button } from "@/components/ui/button";
-import type {
-  DistributionMode,
-  ExportFormat,
-} from "@/components/groupify/types";
+import type { DistributionMode, ExportFormat } from "@/components/groupify/types";
 
 interface SidebarProps {
   groupBy: "size" | "count";
@@ -31,19 +29,10 @@ interface SidebarProps {
   extraActions?: ReactNode;
 }
 
-const DISTRIBUTION_OPTIONS = [
-  {
-    value: "best" as const,
-    title: "Distribute evenly",
-    description: "Spread extras into existing groups",
-  },
-  {
-    value: "overflow" as const,
-    title: "New smaller group",
-    description: "Put extras in a separate group",
-  },
-];
+const exportButton =
+  "flex min-h-11 w-full items-center gap-3 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-all hover:border-primary/40 hover:bg-accent";
 
+/** Settings column of the form dashboard. */
 export function Sidebar({
   groupBy,
   size,
@@ -75,208 +64,49 @@ export function Sidebar({
         groupsCount={groupsCount}
       />
 
-      <div className="space-y-6 rounded-2xl border border-border/50 bg-card/70 p-5 backdrop-blur-sm shadow-md animate-slide-up stagger-1">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          Configuration
-        </p>
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-foreground">
-              {groupBy === "size" ? "Members per group" : "Number of groups"}
-            </p>
-            <button
-              type="button"
-              onClick={() =>
-                onGroupByChange(groupBy === "size" ? "count" : "size")
-              }
-              className="rounded-full bg-muted/50 p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              title={
-                groupBy === "size"
-                  ? "Switch to number of groups"
-                  : "Switch to members per group"
-              }
-              aria-label={
-                groupBy === "size"
-                  ? "Switch to number of groups"
-                  : "Switch to members per group"
-              }
-            >
-              <svg
-                className="size-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M17 1l4 4-4 4" />
-                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-                <path d="M7 23l-4-4 4-4" />
-                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-              </svg>
-            </button>
-          </div>
-          {groupBy === "size" ? (
-            <SizeControl
-              label="Members per group"
-              value={size}
-              min={2}
-              max={99}
-              onChange={onSizeChange}
-            />
-          ) : (
-            <SizeControl
-              label="Number of groups"
-              value={groupCount}
-              min={1}
-              max={99}
-              onChange={onGroupCountChange}
-            />
-          )}
-          <p className="text-xs text-muted-foreground/80">
-            Min {groupBy === "size" ? 2 : 1} - Max 99
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          <p id="extra-members-label" className="text-sm font-medium text-foreground">
-            Extra members
-          </p>
-          <div className="space-y-2" role="radiogroup" aria-labelledby="extra-members-label">
-            {DISTRIBUTION_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                role="radio"
-                aria-checked={mode === option.value}
-                onClick={() => onModeChange(option.value)}
-                className={`w-full rounded-xl border p-3 text-left transition-all flex items-start gap-3 ${
-                  mode === option.value
-                    ? "border-primary/50 bg-primary/8"
-                    : "border-border/40 bg-muted/20 hover:border-primary/30"
-                }`}
-              >
-                <div
-                  className={`mt-0.5 size-4 shrink-0 rounded-full border-2 transition-all ${
-                    mode === option.value
-                      ? "border-primary bg-primary"
-                      : "border-muted-foreground/40"
-                  }`}
-                />
-                <div>
-                  <p className="text-xs font-semibold text-foreground">
-                    {option.title}
-                  </p>
-                  <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
-                    {option.description}
-                  </p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      <section className="surface space-y-4 p-5 animate-slide-up stagger-1">
+        <p className="eyebrow">Group settings</p>
+        <GroupSettings
+          groupBy={groupBy}
+          size={size}
+          groupCount={groupCount}
+          mode={mode}
+          nameCount={nameCount}
+          onGroupByChange={onGroupByChange}
+          onSizeChange={onSizeChange}
+          onGroupCountChange={onGroupCountChange}
+          onModeChange={onModeChange}
+        />
+      </section>
 
       {rules}
 
-      <div className="fixed bottom-4 left-4 right-4 z-50 pb-[env(safe-area-inset-bottom)] sm:static sm:bottom-auto sm:left-auto sm:right-auto sm:z-auto sm:pb-0">
-        <Button
-          type="button"
-          onClick={onGenerate}
-          disabled={isWorking || nameCount === 0}
-          variant={isWorking ? "shimmer" : "default"}
-          size="xl"
-          className={`w-full font-syne tracking-wide shadow-lg animate-slide-up stagger-2 border border-primary/30 backdrop-blur-md sm:border-transparent sm:backdrop-blur-none ${
-            !isWorking && nameCount > 0 ? "animate-pulse-ring" : ""
-          }`}
-        >
-          {isWorking ? (
-            <span className="flex items-center justify-center gap-2">
-              <svg className="size-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeLinecap="round" />
-              </svg>
-              Grouping...
-            </span>
-          ) : (
-            <span className="flex items-center justify-center gap-2">
-              {hasResults ? "Regenerate" : "Generate Groups"}
-              <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-          )}
-        </Button>
+      <div className="action-bar fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/90 px-4 pt-3 backdrop-blur-lg sm:static sm:z-auto sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-none">
+        <GenerateButton isWorking={isWorking} disabled={nameCount === 0} hasResults={hasResults} onClick={onGenerate} />
       </div>
 
       {hasResults && (
-        <div className="space-y-3 rounded-2xl border border-border/50 bg-card/70 p-5 backdrop-blur-sm shadow-md animate-slide-up stagger-3">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Export
-          </p>
+        <section className="surface space-y-3 p-5 animate-slide-up stagger-3">
+          <p className="eyebrow">Download</p>
           <div className="space-y-2">
-            <button
-              type="button"
-              onClick={() => onExport("excel")}
-              className="flex w-full items-center gap-3 rounded-xl border border-border/50 bg-muted/20 px-4 py-2.5 text-sm font-medium text-foreground transition-all hover:border-emerald-500/40 hover:bg-emerald-500/5 hover:text-emerald-600 dark:hover:text-emerald-400"
-            >
-              <svg
-                className="size-4 text-emerald-500"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM8 17.5l2.5-4 2.5 4h-5zm2.5-5.5L8 8h5l-2.5 4z" />
-              </svg>
-              Download Excel (.xlsx)
+            <button type="button" onClick={() => onExport("excel")} className={exportButton}>
+              <RiFileExcel2Line className="size-5 text-emerald-600 dark:text-emerald-400" />
+              Excel (.xlsx)
             </button>
-
-            <button
-              type="button"
-              onClick={() => onExport("word")}
-              className="flex w-full items-center gap-3 rounded-xl border border-border/50 bg-muted/20 px-4 py-2.5 text-sm font-medium text-foreground transition-all hover:border-blue-500/40 hover:bg-blue-500/5 hover:text-blue-600 dark:hover:text-blue-400"
-            >
-              <svg
-                className="size-4 text-blue-500"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM7 13h2l1.5 4L12 13h2l-2.5 6H9.5L7 13z" />
-              </svg>
-              Download Word (.docx)
+            <button type="button" onClick={() => onExport("word")} className={exportButton}>
+              <RiFileWord2Line className="size-5 text-blue-600 dark:text-blue-400" />
+              Word (.docx)
             </button>
-
-            <button
-              type="button"
-              onClick={onCopyText}
-              className="flex w-full items-center gap-3 rounded-xl border border-border/50 bg-muted/20 px-4 py-2.5 text-sm font-medium text-foreground transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-            >
+            <button type="button" onClick={onCopyText} className={exportButton}>
               {copiedText ? (
-                <svg
-                  className="size-4 text-emerald-500"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
+                <RiCheckLine className="size-5 text-emerald-500" />
               ) : (
-                <svg
-                  className="size-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <rect x="9" y="9" width="13" height="13" rx="2" />
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                </svg>
+                <RiFileCopyLine className="size-5 text-muted-foreground" />
               )}
               {copiedText ? "Copied!" : "Copy as text"}
             </button>
           </div>
-        </div>
+        </section>
       )}
 
       {hasResults && extraActions}

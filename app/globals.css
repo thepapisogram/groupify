@@ -4,26 +4,26 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+    --background: 200 25% 97%;
+    --foreground: 215 30% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 215 30% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 185 80% 35%;
+    --popover-foreground: 215 30% 12%;
+    --primary: 182 75% 32%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 93%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 93%;
-    --muted-foreground: 215 16% 40%;
-    --accent: 185 80% 35%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
+    --secondary: 200 22% 93%;
+    --secondary-foreground: 215 30% 12%;
+    --muted: 200 22% 94%;
+    --muted-foreground: 213 13% 40%;
+    --accent: 182 60% 94%;
+    --accent-foreground: 182 75% 22%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 185 80% 35%;
-    --radius: 0.625rem;
+    --border: 205 20% 88%;
+    --input: 205 20% 86%;
+    --ring: 182 75% 38%;
+    --radius: 0.75rem;
 
     /* ─────────────────────────────────────────────────────────────────────────
      * DESIGN TOKENS — single source of truth for layout conventions
@@ -44,35 +44,39 @@
      * text-[13px]. Map them to the nearest token above.
      * ───────────────────────────────────────────────────────────────────────── */
 
-    --glow-teal: rgba(13, 148, 136, 0.12);
-    --glow-cyan: rgba(8, 145, 178, 0.10);
-    --mesh-opacity: 0.05;
+    --glow-teal: rgba(13, 148, 136, 0.10);
+    --glow-cyan: rgba(8, 145, 178, 0.07);
+    --mesh-opacity: 0.25;
+    --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.12);
+    --shadow-float: 0 -8px 30px -12px rgb(15 23 42 / 0.25);
   }
 
   .dark {
-    --background: 230 25% 4%;
-    --foreground: 210 40% 98%;
-    --card: 230 20% 7%;
-    --card-foreground: 210 40% 98%;
-    --popover: 230 20% 7%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 185 85% 55%;
-    --primary-foreground: 230 25% 4%;
-    --secondary: 230 20% 14%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 230 20% 14%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 185 85% 55%;
-    --accent-foreground: 230 25% 4%;
-    --destructive: 0 62% 48%;
+    --background: 222 28% 6%;
+    --foreground: 210 30% 96%;
+    --card: 222 24% 9%;
+    --card-foreground: 210 30% 96%;
+    --popover: 222 24% 10%;
+    --popover-foreground: 210 30% 96%;
+    --primary: 180 70% 50%;
+    --primary-foreground: 222 30% 7%;
+    --secondary: 222 20% 15%;
+    --secondary-foreground: 210 30% 96%;
+    --muted: 222 20% 14%;
+    --muted-foreground: 215 16% 66%;
+    --accent: 182 40% 16%;
+    --accent-foreground: 180 70% 70%;
+    --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 98%;
-    --border: 230 20% 18%;
-    --input: 230 20% 16%;
-    --ring: 185 85% 55%;
+    --border: 222 18% 18%;
+    --input: 222 18% 20%;
+    --ring: 180 70% 50%;
 
-    --glow-teal: rgba(45, 212, 191, 0.15);
-    --glow-cyan: rgba(34, 211, 238, 0.12);
-    --mesh-opacity: 0.08;
+    --glow-teal: rgba(45, 212, 191, 0.10);
+    --glow-cyan: rgba(34, 211, 238, 0.06);
+    --mesh-opacity: 0.25;
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.5);
+    --shadow-float: 0 -8px 30px -12px rgb(0 0 0 / 0.6);
   }
 }
 
@@ -91,16 +95,31 @@
   body {
     @apply bg-background text-foreground overflow-x-hidden;
     background-image:
-      radial-gradient(ellipse 80% 50% at 20% -10%, var(--glow-teal), transparent),
-      radial-gradient(ellipse 60% 40% at 80% 110%, var(--glow-cyan), transparent);
-    background-size: 150% 150%;
+      radial-gradient(ellipse 70% 40% at 15% -5%, var(--glow-teal), transparent),
+      radial-gradient(ellipse 50% 35% at 90% 0%, var(--glow-cyan), transparent);
+    background-repeat: no-repeat;
     min-height: 100dvh;
-    animation: glow-pan 30s ease-in-out infinite alternate;
+    -webkit-tap-highlight-color: transparent;
   }
+}
 
-  @keyframes glow-pan {
-    0% { background-position: 0% 0%; }
-    100% { background-position: 100% 100%; }
+@layer components {
+  /* The one card style: section cards, panels, group cards. */
+  .surface {
+    @apply rounded-2xl border border-border bg-card text-card-foreground;
+    box-shadow: var(--shadow-card);
+  }
+  /* Small caps label above a section. */
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-widest text-muted-foreground;
+  }
+  /* Room for the fixed mobile action bar plus the iPhone home indicator. */
+  .pb-action-bar {
+    padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+  }
+  .action-bar {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    box-shadow: var(--shadow-float);
   }
 }
 
@@ -117,6 +136,8 @@
     linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px);
   background-size: 40px 40px;
   opacity: var(--mesh-opacity);
+  mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, #000 0%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, #000 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }

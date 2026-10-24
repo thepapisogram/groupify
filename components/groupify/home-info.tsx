@@ -4,8 +4,8 @@ import { RiFileList3Line, RiScales3Line, RiShareForwardLine } from "@remixicon/r
 const STEPS = [
   {
     icon: RiFileList3Line,
-    title: "Paste a list, or collect one",
-    text: "Drop in names from a spreadsheet, or create a form and share the link so people add themselves. No account needed.",
+    title: "Paste a list or upload a file",
+    text: "Paste names, upload an Excel or CSV sheet (every column is detected), or create a form so people add themselves. No account needed.",
   },
   {
     icon: RiScales3Line,
@@ -15,7 +15,7 @@ const STEPS = [
   {
     icon: RiShareForwardLine,
     title: "Share the result",
-    text: "Adjust groups by hand, download Excel or Word, print them, or publish so everyone can find their group.",
+    text: "Adjust groups by hand, then download a formatted Excel or Word file with just the columns you picked, print, or publish.",
   },
 ];
 
@@ -30,7 +30,11 @@ const FAQ = [
   },
   {
     q: "Where does my list go?",
-    a: "Names you paste into the quick tool are grouped in your browser and never sent to our servers. Forms you create are stored so people can respond to them.",
+    a: "Names you paste and files you upload are read and grouped in your browser and never sent to our servers. Forms you create are stored so people can respond to them.",
+  },
+  {
+    q: "Which spreadsheets work?",
+    a: "Excel (.xlsx, .xls), CSV and OpenDocument files, including Google Forms response sheets. The first row should hold the column names.",
   },
   {
     q: "Can I get a different result?",
@@ -41,14 +45,14 @@ const FAQ = [
 /** Plain, server-rendered explanation below the tool: helpful to new visitors and crawlable. */
 export function HomeInfo() {
   return (
-    <div className="mt-16 space-y-14 print:hidden">
+    <div className="mt-16 space-y-14 sm:mt-20 print:hidden">
       <section aria-labelledby="how-it-works">
-        <h2 id="how-it-works" className="text-2xl font-bold tracking-tight text-foreground">
+        <h2 id="how-it-works" className="font-syne text-2xl font-bold tracking-tight text-foreground">
           How it works
         </h2>
         <ol className="mt-6 grid gap-4 sm:grid-cols-3">
           {STEPS.map(({ icon: Icon, title, text }, i) => (
-            <li key={title} className="rounded-2xl border border-border/50 bg-card/50 p-5 backdrop-blur-sm">
+            <li key={title} className="surface p-5">
               <div className="flex items-center gap-3">
                 <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <Icon className="size-5" aria-hidden="true" />
@@ -76,10 +80,10 @@ export function HomeInfo() {
       </section>
 
       <section aria-labelledby="faq">
-        <h2 id="faq" className="text-2xl font-bold tracking-tight text-foreground">
+        <h2 id="faq" className="font-syne text-2xl font-bold tracking-tight text-foreground">
           Questions
         </h2>
-        <dl className="mt-6 grid gap-x-8 gap-y-6 sm:grid-cols-2">
+        <dl className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-2">
           {FAQ.map(({ q, a }) => (
             <div key={q}>
               <dt className="text-base font-semibold text-foreground">{q}</dt>

@@ -16,14 +16,11 @@ function useIsClient(): boolean {
 
 function QuickToolSkeleton() {
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_300px]" aria-busy="true" aria-label="Loading">
-      <div className="space-y-3">
-        <div className="h-4 w-40 animate-pulse rounded bg-muted/40" />
-        <div className="h-[22rem] animate-pulse rounded-2xl border border-border/40 bg-card/40" />
-      </div>
-      <div className="space-y-4">
-        <div className="h-20 animate-pulse rounded-2xl bg-card/40" />
-        <div className="h-64 animate-pulse rounded-2xl border border-border/40 bg-card/40" />
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-6" aria-busy="true" aria-label="Loading">
+      <div className="surface h-[30rem] animate-pulse" />
+      <div className="hidden space-y-4 lg:block">
+        <div className="surface h-72 animate-pulse" />
+        <div className="surface h-40 animate-pulse" />
       </div>
     </div>
   );

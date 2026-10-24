@@ -17,11 +17,11 @@ export function Footer() {
 
   return (
     <>
-      <footer className="mt-16 print:hidden w-full overflow-hidden rounded-3xl border border-border/40 bg-card/40 px-6 py-6 sm:px-8 sm:py-8 backdrop-blur-xl shadow-lg transition-all hover:border-border/60">
+      <footer className="surface mt-16 w-full overflow-hidden px-5 py-6 sm:px-8 sm:py-8 print:hidden">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <div className="relative rounded-xl border border-border/50 bg-card/80 p-1.5 backdrop-blur-sm shadow-sm">
+              <div className="relative rounded-xl border border-border bg-card p-1.5 shadow-sm">
                 <Image
                   src="/logo.webp"
                   width={24}
@@ -39,7 +39,7 @@ export function Footer() {
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
             <button
               onClick={() => setShowDonate(true)}
-              className="group relative flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-rose-500/10 to-pink-500/10 border border-rose-500/20 px-5 py-2.5 text-sm font-bold text-rose-500 transition-all hover:bg-rose-500/20 hover:scale-[1.02] active:scale-95 shadow-sm"
+              className="group relative flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-rose-500/25 bg-rose-500/10 px-5 text-sm font-semibold text-rose-600 transition-all hover:bg-rose-500/15 active:scale-95 dark:text-rose-400 sm:w-auto"
             >
               <RiHeartFill className="size-4 transition-transform group-hover:scale-110 group-hover:fill-rose-500/20" />
               Support the project
@@ -47,7 +47,7 @@ export function Footer() {
             
             <Link
               href="/documentation"
-              className="group flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-primary/10 border border-primary/20 px-5 py-2.5 text-sm font-bold text-primary transition-all hover:bg-primary/20 hover:scale-[1.02] active:scale-95 shadow-sm"
+              className="group flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-5 text-sm font-semibold text-foreground transition-all hover:bg-accent active:scale-95 sm:w-auto"
             >
               <svg
                 className="size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"

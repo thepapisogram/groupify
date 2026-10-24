@@ -28,6 +28,8 @@ describe("parseDraft", () => {
       mode: "best",
       rules: [],
       balanceBy: null,
+      source: "paste",
+      file: null,
     });
   });
 
@@ -67,6 +69,8 @@ describe("parseDraft", () => {
       mode: "overflow" as const,
       rules: [{ id: "r", type: "apart" as const, keys: ["ama", "kofi"] }],
       balanceBy: "tag",
+      source: "paste" as const,
+      file: null,
     };
     expect(parseDraft(JSON.stringify(draft))).toEqual(draft);
   });
@@ -106,5 +110,61 @@ describe("addRecent", () => {
     const first = saved("one", ["a", "b"]);
     const list = addRecent(saved("two", ["a", "b"]), [first]);
     expect(list.map((e) => e.id)).toEqual(["two"]);
+  });
+});
+
+describe("file drafts", () => {
+  const file = {
+    fileName: "Class.xlsx",
+    sheetName: "Sheet1",
+    columns: ["Full name", "Phone"],
+    rows: [
+      { "Full name": "Ama", Phone: "024" },
+      { "Full name": "Kofi", Phone: "055" },
+    ],
+    nameColumns: ["Full name"],
+    outputColumns: ["Full name", "Phone"],
+  };
+
+  it("round-trips an uploaded file", () => {
+    const d = parseDraft(JSON.stringify({ names: "", source: "file", file }))!;
+    expect(d.source).toBe("file");
+    expect(d.file).toEqual(file);
+  });
+
+  it("repairs column choices that point at missing columns", () => {
+    const d = parseDraft(
+      JSON.stringify({ names: "", file: { ...file, nameColumns: ["Gone"], outputColumns: ["Gone"], rows: [{ Phone: 5 }] } }),
+    )!;
+    expect(d.file).toMatchObject({
+      nameColumns: ["Full name"],
+      outputColumns: ["Full name", "Phone"],
+      rows: [{ "Full name": "", Phone: "" }],
+    });
+  });
+
+  it("drops a file with no columns or rows", () => {
+    expect(parseDraft(JSON.stringify({ names: "", file: { ...file, rows: [] } }))!.file).toBeNull();
+    expect(parseDraft(JSON.stringify({ names: "", file: { ...file, columns: [] } }))!.file).toBeNull();
+  });
+});
+
+describe("recent groupings from a file", () => {
+  it("keeps row data and columns when they line up with the members", () => {
+    const item = {
+      ...saved("f", ["Ama", "Kofi"]),
+      groups: [{ ...group(1, ["Ama", "Kofi"]), rawMembers: [{ Phone: "024" }, { Phone: "055" }] }],
+      columns: [{ key: "Phone", label: "Phone" }],
+      title: "Class",
+    };
+    const [parsed] = parseRecent(JSON.stringify([item]));
+    expect(parsed.groups[0].rawMembers).toEqual([{ Phone: "024" }, { Phone: "055" }]);
+    expect(parsed.columns).toEqual([{ key: "Phone", label: "Phone" }]);
+    expect(parsed.title).toBe("Class");
+  });
+
+  it("drops row data that doesn't line up", () => {
+    const item = { ...saved("f", ["Ama", "Kofi"]), groups: [{ ...group(1, ["Ama", "Kofi"]), rawMembers: [{}] }] };
+    expect(parseRecent(JSON.stringify([item]))[0].groups[0].rawMembers).toBeUndefined();
   });
 });
