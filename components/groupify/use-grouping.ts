@@ -161,7 +161,7 @@ export function useGrouping(people: Person[], initial?: Partial<GroupingSettings
         if (result.warnings.length > 0) {
           toast.warning(result.warnings[0]);
         } else if (kind === "generate") {
-          toast.success(`${plural(result.groups.length, "group")} created from ${plural(n, "name")}`);
+          toast.success(`${plural(result.groups.length, "group")} created from ${n === 1 ? "1 person" : `${n} people`}`);
         } else {
           toast.success("Reshuffled!");
         }

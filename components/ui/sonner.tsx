@@ -1,12 +1,26 @@
 "use client"
 
+import { useSyncExternalStore } from "react"
 import { useTheme } from "next-themes"
 import { Toaster as Sonner } from "sonner"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
+// Below lg the quick tool pins its actions to the bottom of the screen, so toasts go on top there.
+const SMALL_SCREEN = "(max-width: 1023px)"
+const subscribe = (onChange: () => void) => {
+  const query = window.matchMedia(SMALL_SCREEN)
+  query.addEventListener("change", onChange)
+  return () => query.removeEventListener("change", onChange)
+}
+
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
+  const small = useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia(SMALL_SCREEN).matches,
+    () => false,
+  )
 
   return (
     <Sonner
@@ -24,6 +38,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         },
       }}
       {...props}
+      {...(small ? { position: "top-center" as const } : {})}
     />
   )
 }

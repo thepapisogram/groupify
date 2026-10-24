@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Group } from "@/components/groupify/types";
+import { cellText, type ExportColumn } from "@/lib/group-export";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +19,8 @@ interface GroupCardProps {
   allGroups?: Group[];
   onRename?: (groupId: number, label: string) => void;
   onMoveMember?: (fromGroupId: number, memberIndex: number, toGroupId: number) => void;
+  /** Extra columns shown under each name (spreadsheet groupings). */
+  detailColumns?: ExportColumn[];
 }
 
 /** Group name that turns into an input on click. Enter or blur saves, Escape cancels. */
@@ -52,7 +55,7 @@ function EditableLabel({ label, onSave }: { label: string; onSave: (value: strin
             setEditing(false);
           }
         }}
-        className="w-full min-w-0 rounded-md border border-primary/40 bg-background/70 px-1.5 py-0.5 font-syne text-sm font-bold tracking-wide text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+        className="w-full min-w-0 rounded-md border border-primary/40 bg-card px-2 py-1 font-syne text-base font-bold text-foreground outline-none focus:ring-2 focus:ring-primary/30"
       />
     );
   }
@@ -68,8 +71,8 @@ function EditableLabel({ label, onSave }: { label: string; onSave: (value: strin
       aria-label={`Rename ${label}`}
       className="group/name flex min-w-0 items-center gap-1.5 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
     >
-      <span className="truncate font-syne text-sm font-bold tracking-wide text-foreground">{label}</span>
-      <RiPencilLine className="size-3 shrink-0 print:hidden text-muted-foreground/60 transition-opacity group-hover/name:text-foreground" />
+      <span className="truncate font-syne text-base font-bold text-foreground">{label}</span>
+      <RiPencilLine className="size-3.5 shrink-0 print:hidden text-muted-foreground/60 transition-opacity group-hover/name:text-foreground" />
     </button>
   );
 }
@@ -154,53 +157,54 @@ const CARD_PALETTE = [
   },
 ] as const;
 
-export function GroupCard({ group, index, allGroups, onRename, onMoveMember }: GroupCardProps) {
+export function GroupCard({ group, index, allGroups, onRename, onMoveMember, detailColumns = [] }: GroupCardProps) {
   const palette = CARD_PALETTE[index % CARD_PALETTE.length];
   const targets = (allGroups ?? []).filter((g) => g.id !== group.id);
   const canMove = Boolean(onMoveMember) && targets.length > 0;
 
   return (
-    <div
-      className={`group flex flex-col overflow-hidden rounded-2xl border print:break-inside-avoid ${palette.border} ${palette.cardBg} backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/5 animate-slide-up`}
-      style={{ animationDelay: `${index * 0.05}s` }}
+    <article
+      className="surface group flex flex-col overflow-hidden print:break-inside-avoid animate-slide-up"
+      style={{ animationDelay: `${Math.min(index, 12) * 0.04}s` }}
     >
-      <div className={`flex items-center justify-between gap-2 border-b ${palette.border} ${palette.headerBg} px-4 py-2.5 transition-colors`}>
-        <div className="flex min-w-0 items-center gap-2">
-          <div className={`flex size-6 shrink-0 items-center justify-center rounded-full shadow-sm ${palette.itemBg}`}>
-            <RiTeamLine className="size-4 text-emerald-500" />
-          </div>
+      <div className={`h-1 ${palette.badgeBg}`} aria-hidden="true" />
+      <header className={`flex items-center justify-between gap-2 border-b ${palette.border} ${palette.headerBg} px-4 py-3`}>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span
+            className={`flex size-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white ${palette.badgeBg}`}
+            aria-hidden="true"
+          >
+            {index + 1}
+          </span>
           {onRename ? (
             <EditableLabel label={group.label} onSave={(value) => onRename(group.id, value)} />
           ) : (
-            <span className="truncate font-syne text-sm font-bold tracking-wide text-foreground">
-              {group.label}
-            </span>
+            <span className="truncate font-syne text-base font-bold text-foreground">{group.label}</span>
           )}
         </div>
-        <span
-          className={`flex h-5 shrink-0 items-center rounded-full px-2 text-xs font-bold tracking-widest shadow-sm ${palette.badgeBg} text-white`}
-          title={`${group.members.length} member${group.members.length === 1 ? "" : "s"}`}
-        >
+        <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground">
+          <RiTeamLine className="size-3.5" aria-hidden="true" />
           {group.members.length}
+          <span className="sr-only"> member{group.members.length === 1 ? "" : "s"}</span>
         </span>
-      </div>
+      </header>
 
-      <div className="p-2">
-        <ul className="space-y-0.5">
-          {group.members.map((member, memberIndex) => (
-            <li
-              key={`${member}-${memberIndex}`}
-              className="group/item flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 transition-colors hover:bg-muted/40 animate-slide-up"
-              style={{ animationDelay: `${index * 0.05 + memberIndex * 0.03}s` }}
-            >
-              <span
-                className={`flex size-5 shrink-0 items-center justify-center rounded-md text-xs font-bold transition-colors group-hover/item:text-foreground ${palette.itemBg} ${palette.numberColor}`}
-              >
+      <ol className="divide-y divide-border/60 px-2 py-1">
+        {group.members.map((member, memberIndex) => {
+          const details = detailColumns
+            .map((column) => cellText(group, memberIndex, column))
+            .filter(Boolean);
+          return (
+            <li key={`${member}-${memberIndex}`} className="flex items-center gap-3 px-2 py-2">
+              <span className={`w-5 shrink-0 text-right text-xs font-semibold tabular-nums ${palette.numberColor}`}>
                 {memberIndex + 1}
               </span>
-              <span className="min-w-0 flex-1 break-words text-sm font-medium text-foreground/80 transition-colors group-hover/item:text-foreground">
-                {member}
-              </span>
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-medium text-foreground">{member}</p>
+                {details.length > 0 && (
+                  <p className="mt-0.5 break-words text-xs text-muted-foreground">{details.join("  ·  ")}</p>
+                )}
+              </div>
               {canMove && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -208,13 +212,15 @@ export function GroupCard({ group, index, allGroups, onRename, onMoveMember }: G
                       type="button"
                       aria-label={`Move ${member} to another group`}
                       title="Move to another group"
-                      className="shrink-0 print:hidden rounded-md p-1 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                      className="-my-1 flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 data-[state=open]:bg-muted print:hidden"
                     >
-                      <RiArrowLeftRightLine className="size-3.5" />
+                      <RiArrowLeftRightLine className="size-4" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="max-h-64 w-48 overflow-y-auto">
-                    <DropdownMenuLabel className="text-xs text-muted-foreground">Move to…</DropdownMenuLabel>
+                  <DropdownMenuContent align="end" className="max-h-72 w-56 overflow-y-auto">
+                    <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                      Move {member} to…
+                    </DropdownMenuLabel>
                     {targets.map((target) => (
                       <DropdownMenuItem
                         key={target.id}
@@ -229,9 +235,9 @@ export function GroupCard({ group, index, allGroups, onRename, onMoveMember }: G
                 </DropdownMenu>
               )}
             </li>
-          ))}
-        </ul>
-      </div>
-    </div>
+          );
+        })}
+      </ol>
+    </article>
   );
 }

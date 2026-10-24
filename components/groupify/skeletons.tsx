@@ -3,7 +3,7 @@ import { Footer } from "@/components/groupify/footer";
 
 export function HeaderAuthSkeleton() {
   return (
-    <div className="h-8 w-24 animate-pulse rounded-xl bg-muted/30" />
+    <div className="h-10 w-24 animate-pulse rounded-xl bg-muted" />
   );
 }
 

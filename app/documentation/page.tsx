@@ -12,6 +12,7 @@ import {
   RiDatabase2Line,
   RiUserAddLine,
   RiShieldCheckLine,
+  RiFileExcel2Line,
 } from "@remixicon/react";
 
 export const metadata = {
@@ -23,6 +24,7 @@ export const metadata = {
 
 const SECTIONS = [
   { id: "generating", label: "Making groups" },
+  { id: "spreadsheets", label: "Grouping a spreadsheet" },
   { id: "rules", label: "Rules and balancing" },
   { id: "editing", label: "Editing and saving" },
   { id: "forms", label: "Forms" },
@@ -112,7 +114,8 @@ export default function DocumentationPage() {
           >
             <p className="text-muted-foreground">
               Take any list of names and split it into groups in a few seconds. Everything happens in your browser, so
-              nothing you paste is sent anywhere.
+              nothing you paste or upload is sent anywhere. On a phone the tool walks you through three steps (People,
+              Settings, Groups) with the next action always at the bottom of the screen.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <Card title="1. Enter names">
@@ -123,24 +126,68 @@ export default function DocumentationPage() {
               </Card>
               <Card title="2. Choose the size">
                 <p>
-                  Set <strong>Members per group</strong> (for example 4) or switch with the arrows to{" "}
-                  <strong>Number of groups</strong> (for example exactly 5). The other value updates for you.
+                  Choose <strong>People per group</strong> (for example 4) or <strong>Number of groups</strong> (for
+                  example exactly 5). A line underneath shows exactly how the list will split.
                 </p>
               </Card>
               <Card title="3. Decide what to do with extras">
                 <p>
-                  If the list doesn&apos;t divide evenly, <strong>Distribute evenly</strong> spreads the extra people
-                  across the groups (10 people in groups of 3 gives 4, 3 and 3). <strong>New smaller group</strong> puts
+                  If the list doesn&apos;t divide evenly, <strong>Spread them out</strong> adds the extra people to
+                  existing groups (10 people in groups of 3 gives 4, 3 and 3). <strong>Smaller last group</strong> puts
                   them in a group of their own (3, 3, 3 and 1). Nobody is ever left out.
                 </p>
               </Card>
               <Card title="4. Generate and reshuffle">
                 <p>
-                  Press <strong>Generate Groups</strong>. Don&apos;t like the arrangement? <strong>Reshuffle</strong>{" "}
+                  Press <strong>Generate groups</strong> (or Ctrl + Enter). Don&apos;t like the arrangement? <strong>Reshuffle</strong>{" "}
                   makes a new one, and <strong>Undo</strong> brings the previous one back.
                 </p>
               </Card>
             </div>
+          </Section>
+
+          <Section
+            id="spreadsheets"
+            title="Grouping a spreadsheet"
+            tint="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+            icon={<RiFileExcel2Line className="size-5" aria-hidden="true" />}
+          >
+            <p className="text-muted-foreground">
+              Already have a sheet, like Google Forms responses or a class register? Upload it and keep every detail
+              with each person.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Card title="1. Upload the file">
+                <p>
+                  Choose <strong>Upload a file</strong> and pick an Excel (.xlsx, .xls), CSV or OpenDocument file, up to
+                  10 MB. The first row should hold the column names; every column is detected automatically.
+                </p>
+              </Card>
+              <Card title="2. Pick the name">
+                <p>
+                  Under <strong>Name shown on the groups</strong>, choose the column with each person&apos;s name. Pick
+                  two (for example First name and Surname) to join them.
+                </p>
+              </Card>
+              <Card title="3. Choose the columns">
+                <p>
+                  Toggle <strong>Columns to include</strong> on or off, for example keep phone and email but drop the
+                  timestamp. A preview shows the result. Only ticked columns appear on the groups and in downloads.
+                </p>
+              </Card>
+              <Card title="4. Download">
+                <p>
+                  The Excel file has a <strong>Groups</strong> sheet with each group as its own titled table and space
+                  between groups, an <strong>All</strong> sheet with a Group column for sorting or mail merge, and one
+                  sheet per group. Word and CSV are available too.
+                </p>
+              </Card>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Phone numbers keep their leading zero. If a sheet stored some numbers as plain numbers, Groupify puts the
+              zero back when most of that column starts with one. You can also spread a column evenly, such as gender or
+              level, from <strong>Rules</strong>.
+            </p>
           </Section>
 
           <Section
@@ -324,11 +371,17 @@ export default function DocumentationPage() {
                 for an email or chat.
               </li>
               <li>
-                <strong className="text-foreground">Excel (.xlsx)</strong> gives you each group with its members. For
-                forms it includes the answers you collected.
+                <strong className="text-foreground">Excel (.xlsx)</strong> gives you a formatted workbook: every group
+                as a coloured, titled table with space between groups, a flat sheet with a Group column, and a sheet per
+                group. For forms and spreadsheets it includes the columns you collected.
               </li>
               <li>
-                <strong className="text-foreground">Word (.docx)</strong> makes a clean, printable document.
+                <strong className="text-foreground">Word (.docx)</strong> makes a clean, printable document with a table
+                per group.
+              </li>
+              <li>
+                <strong className="text-foreground">CSV</strong> gives plain rows with a Group column, for any other
+                tool.
               </li>
               <li>
                 <strong className="text-foreground">Print</strong> prints just the groups, in black on white, with each

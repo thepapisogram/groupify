@@ -5,7 +5,23 @@ import Link from "next/link";
 import { useState } from "react";
 import { ModeToggle } from "@/components/theme-switcher";
 import { useSession, signOut } from "next-auth/react";
-import { RiLogoutBoxRLine, RiUserLine, RiFileTextLine, RiUserSettingsLine } from "@remixicon/react";
+import {
+  RiBookOpenLine,
+  RiFileTextLine,
+  RiGroupLine,
+  RiLogoutBoxRLine,
+  RiMenuLine,
+  RiUserLine,
+  RiUserSettingsLine,
+} from "@remixicon/react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +33,33 @@ import {
 import { Button } from "@/components/ui/button";
 import { HeaderAuthSkeleton } from "@/components/groupify/skeletons";
 
+function SignOutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Sign out</DialogTitle>
+          <DialogDescription>Are you sure you want to sign out of your account?</DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="mt-4 flex gap-2 sm:mt-0 sm:gap-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              onOpenChange(false);
+              signOut();
+            }}
+          >
+            Sign out
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function SignOutButton() {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -24,125 +67,121 @@ function SignOutButton() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+        className="flex size-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
         title="Sign out"
         aria-label="Sign out"
       >
-        <RiLogoutBoxRLine className="size-3.5" />
+        <RiLogoutBoxRLine className="size-4" />
       </button>
-
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="w-[calc(100%-2rem)] rounded-xl sm:w-full sm:max-w-md sm:rounded-lg">
-          <DialogHeader>
-            <DialogTitle>Sign out</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to sign out of your account?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex gap-2 sm:gap-0 mt-4 sm:mt-0">
-            <Button
-              variant="outline"
-              onClick={() => setIsOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setIsOpen(false);
-                signOut();
-              }}
-            >
-              Sign out
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SignOutDialog open={isOpen} onOpenChange={setIsOpen} />
     </>
   );
 }
 
+const navLink =
+  "inline-flex min-h-10 items-center gap-1.5 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
+
 export function PageHeader() {
   const { data: session, status } = useSession();
+  const [signOutOpen, setSignOutOpen] = useState(false);
+  const formsHref = session ? "/forms" : "/forms/new";
 
   return (
-    <header className="mb-6 sm:mb-10 animate-fade-in print:hidden">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="relative">
-            <Link href="/">
-              <div className="relative rounded-xl border border-border/50 bg-card/80 p-2 backdrop-blur-sm sm:rounded-2xl sm:p-3 hover:border-primary/50 transition-colors cursor-pointer">
-                <Image
-                  src="/logo.webp"
-                  width={36}
-                  height={36}
-                  alt="Groupify"
-                  className="size-7 sm:size-9"
-                  priority
-                  unoptimized
-                />
-              </div>
+    <header className="mb-6 flex items-center justify-between gap-3 animate-fade-in sm:mb-10 print:hidden">
+      <Link href="/" className="flex min-h-11 min-w-0 items-center gap-2.5 rounded-xl pr-2" aria-label="Groupify home">
+        <span className="shrink-0 rounded-xl border border-border bg-card p-1.5 shadow-sm">
+          <Image src="/logo.webp" width={32} height={32} alt="" className="size-7 sm:size-8" priority unoptimized />
+        </span>
+        <span className="font-syne text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">Groupify</span>
+      </Link>
+
+      <div className="flex items-center gap-1 sm:gap-2">
+        <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
+          <Link href={formsHref} className={navLink}>
+            <RiFileTextLine className="size-4" />
+            {session ? "My forms" : "Create a form"}
+          </Link>
+          <Link href="/documentation" className={navLink}>
+            <RiBookOpenLine className="size-4" />
+            Guide
+          </Link>
+        </nav>
+
+        {status === "loading" ? (
+          <div className="hidden sm:block"><HeaderAuthSkeleton /></div>
+        ) : session ? (
+          <div className="hidden items-center gap-1 rounded-xl border border-border bg-card px-1 shadow-sm md:flex">
+            <Link href="/account" className={`${navLink} max-w-[12rem]`} title="Account">
+              <RiUserSettingsLine className="size-4 shrink-0" />
+              <span className="truncate">{session.user?.name || session.user?.email}</span>
             </Link>
+            <SignOutButton />
           </div>
+        ) : (
+          <Link
+            href="/login"
+            className="hidden min-h-10 items-center gap-1.5 whitespace-nowrap rounded-xl bg-primary px-3.5 sm:inline-flex text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+          >
+            <RiUserLine className="size-4" />
+            Sign in
+          </Link>
+        )}
 
-          <div>
-            <span className="block text-2xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-              <Link href="/">Groupify</Link>
-            </span>
-          </div>
-        </div>
+        <ModeToggle />
 
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {status === "loading" ? (
-            <HeaderAuthSkeleton />
-          ) : session ? (
-            <div className="flex items-center gap-1 sm:gap-2 rounded-xl border border-border/50 bg-card/60 px-2 py-1 backdrop-blur-sm sm:px-3 sm:py-1.5">
-              <Link
-                href="/forms"
-                className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-              >
-                <RiFileTextLine className="size-3.5" />
-                <span className="hidden sm:inline">My Forms</span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="md:hidden" aria-label="Menu">
+              <RiMenuLine />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-60">
+            {session && (
+              <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
+                {session.user?.email}
+              </DropdownMenuLabel>
+            )}
+            <DropdownMenuItem asChild>
+              <Link href="/" className="cursor-pointer">
+                <RiGroupLine /> Make groups
               </Link>
-
-              <div className="h-4 w-px bg-border/50"></div>
-
-              <Link
-                href="/account"
-                className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-                title="Account"
-              >
-                <RiUserSettingsLine className="size-3.5 sm:hidden" aria-hidden />
-                <span className="sr-only sm:hidden">Account</span>
-                <span className="hidden max-w-[100px] truncate sm:block">
-                  {session.user?.name || session.user?.email}
-                </span>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={formsHref} className="cursor-pointer">
+                <RiFileTextLine /> {session ? "My forms" : "Create a form"}
               </Link>
-
-              <SignOutButton />
-            </div>
-          ) : (
-            <>
-              <Link
-                href="/forms/new"
-                className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-primary/10 hover:text-primary sm:px-3"
-              >
-                <RiFileTextLine className="size-3.5" />
-                <span className="hidden sm:inline">Create a form</span>
-                <span className="sm:hidden">Form</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/documentation" className="cursor-pointer">
+                <RiBookOpenLine /> Guide
               </Link>
-              <Link
-                href="/login"
-                className="flex items-center gap-1.5 rounded-xl border border-border/50 bg-primary/10 px-2.5 py-1.5 text-xs font-medium text-primary backdrop-blur-sm transition-colors hover:bg-primary/20 sm:gap-2 sm:px-3"
-              >
-                <RiUserLine className="size-3.5" />
-                Sign in
-              </Link>
-            </>
-          )}
-
-          <ModeToggle />
-        </div>
+            </DropdownMenuItem>
+            {status !== "loading" && !session && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/login" className="cursor-pointer font-medium text-primary">
+                    <RiUserLine /> Sign in
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            )}
+            {session && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/account" className="cursor-pointer">
+                    <RiUserSettingsLine /> Account
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setSignOutOpen(true)} className="cursor-pointer text-destructive focus:text-destructive">
+                  <RiLogoutBoxRLine /> Sign out
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <SignOutDialog open={signOutOpen} onOpenChange={setSignOutOpen} />
       </div>
     </header>
   );

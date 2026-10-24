@@ -54,18 +54,18 @@ export function WhatsNewBanner() {
     <div
       role="region"
       aria-label={`What's new in Groupify ${appMeta.app.version}`}
-      className="mb-6 flex items-start gap-3 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3 text-sm animate-fade-in print:hidden"
+      className="mb-4 flex items-start gap-3 rounded-2xl border border-primary/25 bg-accent px-4 py-3 text-sm animate-fade-in print:hidden"
     >
       <RiSparklingLine className="mt-0.5 size-4 shrink-0 text-primary" />
       <p className="flex-1 text-foreground/90">
-        <strong className="font-semibold">New in {appMeta.app.version}:</strong> keep people together or apart, spread
-        skill levels evenly, edit groups after generating them, and publish groups so everyone can find theirs.
+        <strong className="font-semibold">New in {appMeta.app.version}:</strong> upload an Excel or CSV file, pick the
+        columns you want, and download neatly formatted groups. Plus a fresh look that works great on phones.
       </p>
       <button
         type="button"
         onClick={dismiss}
         aria-label="Dismiss"
-        className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        className="-m-1.5 shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       >
         <RiCloseLine className="size-4" />
       </button>

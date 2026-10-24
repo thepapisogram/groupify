@@ -28,16 +28,16 @@ export default function Page() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }}
       />
-      <div className="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-28 sm:px-6 sm:py-8">
+      <div className="relative z-10 mx-auto max-w-6xl px-4 pt-4 pb-action-bar sm:px-6 sm:pt-8 lg:pb-12">
         <PageHeader />
 
-        <section className="mb-8 space-y-2 text-center sm:text-left print:hidden">
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+        <section className="mb-6 max-w-3xl space-y-2 sm:mb-8 print:hidden">
+          <h1 className="font-syne text-2xl font-extrabold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
             {appMeta.app.tagline}
           </h1>
-          <p className="max-w-2xl text-base text-muted-foreground">
-            Paste a list, pick a group size and go. Keep friends together, keep others apart, mix skill levels evenly,
-            then download the result or share it with everyone.
+          <p className="text-sm text-muted-foreground sm:text-lg">
+            Paste a list or upload a spreadsheet, choose a group size, and download tidy groups with the columns you
+            need. Keep people together or apart and mix skill levels evenly.
           </p>
         </section>
 

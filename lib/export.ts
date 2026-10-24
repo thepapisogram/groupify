@@ -23,3 +23,10 @@ export async function loadDocx() {
   ]);
   return { ...docx, saveAs };
 }
+
+export async function loadExcelJS() {
+  const [ExcelJS, { saveAs }] = await Promise.all([import("exceljs"), import("file-saver")]);
+  // The browser bundle exposes the API on `default`; Node's CommonJS build doesn't.
+  const api = ((ExcelJS as unknown as { default?: typeof ExcelJS }).default ?? ExcelJS) as typeof ExcelJS;
+  return { ExcelJS: api, saveAs };
+}

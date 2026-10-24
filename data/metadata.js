@@ -5,7 +5,7 @@ const author = {
 
 const app = {
     name: "Groupify",
-    version: "2.2.0",
+    version: "2.3.0",
     tagline: "Make fair groups in seconds",
     description: "Groupify splits any list into fair, balanced groups in seconds. Keep friends together, keep others apart, spread skill levels evenly, collect names with a shareable form, then download the result or share it. Free, and no account needed. Made for classrooms, workshops, teams and events.",
     applicationName: "Groupify",

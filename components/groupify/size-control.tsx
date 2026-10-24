@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { RiAddLine, RiSubtractLine } from "@remixicon/react";
 
 interface SizeControlProps {
   value: number;
@@ -8,6 +9,9 @@ interface SizeControlProps {
   /** Accessible name for the number and its +/- buttons. */
   label?: string;
 }
+
+const stepButton =
+  "flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/60 text-foreground transition-all hover:border-primary/50 hover:bg-accent active:scale-95 disabled:pointer-events-none disabled:opacity-40";
 
 export function SizeControl({ value, min = 2, max = 99, onChange, label = "value" }: SizeControlProps) {
   const [localValue, setLocalValue] = useState(value.toString());
@@ -31,38 +35,38 @@ export function SizeControl({ value, min = 2, max = 99, onChange, label = "value
   };
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       <button
         type="button"
         onClick={() => onChange(Math.max(min, value - 1))}
+        disabled={value <= min}
         aria-label={`Decrease ${label}`}
-        className="flex size-8 items-center justify-center rounded-xl border border-border/60 bg-muted/50 font-bold text-base text-foreground transition-all hover:border-primary/50 hover:bg-muted active:scale-95"
+        className={stepButton}
       >
-        <span aria-hidden="true">-</span>
+        <RiSubtractLine className="size-5" />
       </button>
 
-      <div className="relative w-12 text-center">
-        <input
-          type="number"
-          inputMode="numeric"
-          aria-label={label}
-          value={localValue}
-          onChange={(e) => setLocalValue(e.target.value)}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          className="w-full bg-transparent text-center font-syne text-2xl font-bold tabular-nums text-foreground outline-none animate-count-up"
-          min={min}
-          max={max}
-        />
-      </div>
+      <input
+        type="number"
+        inputMode="numeric"
+        aria-label={label}
+        value={localValue}
+        onChange={(e) => setLocalValue(e.target.value)}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        className="h-11 w-full min-w-0 flex-1 rounded-xl border border-transparent bg-transparent text-center font-syne text-3xl font-bold tabular-nums text-foreground outline-none transition-colors focus:border-primary/40 focus:bg-muted/40"
+        min={min}
+        max={max}
+      />
 
       <button
         type="button"
         onClick={() => onChange(Math.min(max, value + 1))}
+        disabled={value >= max}
         aria-label={`Increase ${label}`}
-        className="flex size-8 items-center justify-center rounded-xl border border-border/60 bg-muted/50 font-bold text-base text-foreground transition-all hover:border-primary/50 hover:bg-muted active:scale-95"
+        className={stepButton}
       >
-        <span aria-hidden="true">+</span>
+        <RiAddLine className="size-5" />
       </button>
     </div>
   );
