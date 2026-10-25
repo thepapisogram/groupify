@@ -8,6 +8,7 @@ Groupify turns any list into fair, balanced groups in seconds, for classrooms, w
 
 **Making groups**
 - **Spreadsheets**: upload Excel, CSV or ODS (e.g. Google Forms responses). Every column is detected; pick the name column(s) and toggle which columns to keep. Groups and downloads carry those columns. Read entirely in the browser.
+- **Duplicate rows** are detected on upload: rows matching an earlier one in the chosen columns (timestamps ignored by default) are removed, and rows sharing only a phone number or email are listed as possible duplicates to review.
 - Group by size or by number of groups; spread leftovers evenly or put them in a smaller group.
 - **Rules**: keep chosen people together, keep others apart, and spread a tag or form answer (skill level, year group, …) evenly. Rules that can't be met are reported, not hidden.
 - Rename groups, move people between them, undo, reshuffle. The quick tool remembers your list and your last eight groupings on the device.
