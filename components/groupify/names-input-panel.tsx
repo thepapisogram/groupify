@@ -8,11 +8,20 @@ interface NamesInputPanelProps {
   /** People found in the box, and how many of them repeat an earlier name. */
   count: number;
   duplicates: number;
+  onRemoveDuplicates?: () => void;
   /** Fill the box with sample names so a first-time visitor can see the result straight away. */
   onExample?: () => void;
 }
 
-export function NamesInputPanel({ names, onNamesChange, textareaRef, count, duplicates, onExample }: NamesInputPanelProps) {
+export function NamesInputPanel({
+  names,
+  onNamesChange,
+  textareaRef,
+  count,
+  duplicates,
+  onRemoveDuplicates,
+  onExample,
+}: NamesInputPanelProps) {
   return (
     <div className="space-y-3">
       <label htmlFor="names-input" className="sr-only">
@@ -60,6 +69,18 @@ export function NamesInputPanel({ names, onNamesChange, textareaRef, count, dupl
             <span className="text-amber-700 dark:text-amber-300">
               {" "}
               · {duplicates} repeated name{duplicates === 1 ? "" : "s"}
+              {onRemoveDuplicates && (
+                <>
+                  {" "}
+                  <button
+                    type="button"
+                    onClick={onRemoveDuplicates}
+                    className="-my-2 inline-flex min-h-8 items-center rounded-md px-1.5 font-semibold text-primary underline-offset-2 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </>
+              )}
             </span>
           )}
         </p>

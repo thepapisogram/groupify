@@ -154,15 +154,120 @@ export function guessNameColumns(columns: string[], rows: Row[]): string[] {
   return [texty ?? columns[0]];
 }
 
-/** One person per row. Keys are row positions, so two people with the same name stay distinct. */
-export function rowsToPeople(rows: Row[], nameColumns: string[]): Person[] {
-  return rows.map((row, i) => {
-    const label = nameColumns
-      .map((c) => row[c] ?? "")
-      .filter(Boolean)
-      .join(" ");
-    return { key: `row-${i + 1}`, label: label || `Row ${i + 1}`, data: row };
+/** A row's display name: its name columns joined, or "Row N". */
+export function rowLabel(row: Row, nameColumns: string[], index: number): string {
+  const label = nameColumns
+    .map((c) => row[c] ?? "")
+    .filter(Boolean)
+    .join(" ");
+  return label || `Row ${index + 1}`;
+}
+
+/**
+ * One person per row (or per row in `indices`). Keys are the row's position in
+ * the sheet, so two people with the same name stay distinct, and keys don't
+ * shift when duplicate rows are left out.
+ */
+export function rowsToPeople(rows: Row[], nameColumns: string[], indices?: number[]): Person[] {
+  return (indices ?? rows.map((_, i) => i)).map((i) => ({
+    key: `row-${i + 1}`,
+    label: rowLabel(rows[i], nameColumns, i),
+    data: rows[i],
+  }));
+}
+
+// ── duplicate rows ────────────────────────────────────────────────────────
+
+const DATE_HEADER = /time|stamp|date|submitted|created|updated/i;
+const DATE_VALUE = /^\d{1,4}[/.-]\d{1,2}[/.-]\d{1,4}(?:[ T,]+\d{1,2}:\d{2}(?::\d{2})?(?:\s?[ap]m)?)?$/i;
+
+/**
+ * Columns that identify a person when looking for duplicates: everything except
+ * timestamps and dates, which differ when someone fills in a form twice.
+ */
+export function defaultDuplicateColumns(columns: string[], rows: Row[]): string[] {
+  const sample = rows.slice(0, 50);
+  const picked = columns.filter((column) => {
+    if (DATE_HEADER.test(column)) return false;
+    const values = sample.map((r) => r[column]).filter(Boolean);
+    return !(values.length > 0 && values.filter((v) => DATE_VALUE.test(v)).length >= values.length * 0.8);
   });
+  return picked.length > 0 ? picked : columns.slice();
+}
+
+const PHONE_LIKE = /phone|tel|mobile|cell|whats\s?app|contact/i;
+
+/** Ignore case and spacing; compare phone numbers on their digits. */
+function comparable(column: string, value: string): string {
+  const text = value.trim().replace(/\s+/g, " ").toLowerCase();
+  if (PHONE_LIKE.test(column)) {
+    const digits = text.replace(/\D/g, "");
+    if (digits.length >= 6) return digits;
+  }
+  return text;
+}
+
+export interface DuplicateReport {
+  /** Rows to group, by position in the sheet. The first of each set of duplicates is kept. */
+  keep: number[];
+  /** Rows that repeat an earlier row in every compared column. */
+  removed: { index: number; duplicateOf: number }[];
+  /** Other rows sharing a phone number or email with an earlier row: likely the same person, worth a look. */
+  possible: { index: number; duplicateOf: number; column: string }[];
+}
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Columns that identify one person: phone numbers and email addresses. */
+export function identifierColumns(columns: string[], rows: Row[]): string[] {
+  const sample = rows.slice(0, 50);
+  return columns.filter((column) => {
+    if (PHONE_LIKE.test(column) || /e-?mail/i.test(column)) return true;
+    const values = sample.map((r) => r[column]).filter(Boolean);
+    return values.length > 0 && values.filter((v) => EMAIL.test(v)).length >= values.length * 0.8;
+  });
+}
+
+/**
+ * Exact duplicates match an earlier row in every one of `columns` (rows empty
+ * in all of them never match). Among the rest, rows that share a phone number
+ * or email with an earlier row are reported as possible duplicates.
+ */
+export function findDuplicates(rows: Row[], columns: string[], identifiers: string[] = []): DuplicateReport {
+  const seen = new Map<string, number>();
+  const unique: number[] = [];
+  const removed: DuplicateReport["removed"] = [];
+  rows.forEach((row, index) => {
+    const parts = columns.map((c) => comparable(c, row[c] ?? ""));
+    if (columns.length === 0 || parts.every((p) => !p)) {
+      unique.push(index);
+      return;
+    }
+    const id = JSON.stringify(parts);
+    const first = seen.get(id);
+    if (first === undefined) {
+      seen.set(id, index);
+      unique.push(index);
+    } else {
+      removed.push({ index, duplicateOf: first });
+    }
+  });
+
+  // Identifier values point at the first row (of its cluster) that used them.
+  const owner = new Map<string, number>();
+  const possible: DuplicateReport["possible"] = [];
+  const keep: number[] = [];
+  for (const index of unique) {
+    const values = identifiers
+      .map((column) => ({ column, value: comparable(column, rows[index][column] ?? "") }))
+      .filter(({ value }) => value.length >= 5);
+    const match = values.find(({ value }) => owner.has(value));
+    const root = match ? owner.get(match.value)! : index;
+    for (const { value } of values) if (!owner.has(value)) owner.set(value, root);
+    if (match) possible.push({ index, duplicateOf: root, column: match.column });
+    keep.push(index);
+  }
+  return { keep, removed, possible };
 }
 
 /** "Class list.xlsx" -> "Class list". */
@@ -180,6 +285,11 @@ export interface FileSource {
   nameColumns: string[];
   /** Ticked columns: shown on the group cards and included in downloads. */
   outputColumns: string[];
+  /** Leave out rows that repeat an earlier row in `duplicateColumns`. */
+  removeDuplicates: boolean;
+  duplicateColumns: string[];
+  /** Also leave out rows sharing a phone number or email with an earlier row. */
+  removePossibleDuplicates: boolean;
 }
 
 /** A FileSource for one sheet, with the name guessed and every column ticked. */
@@ -191,7 +301,19 @@ export function fileSourceFromSheet(fileName: string, sheet: SheetTable): FileSo
     rows: sheet.rows,
     nameColumns: guessNameColumns(sheet.columns, sheet.rows),
     outputColumns: sheet.columns,
+    removeDuplicates: true,
+    duplicateColumns: defaultDuplicateColumns(sheet.columns, sheet.rows),
+    removePossibleDuplicates: false,
   };
+}
+
+/** The duplicate check for a file, and the rows that will actually be grouped. */
+export function fileRows(source: FileSource): DuplicateReport {
+  const report = findDuplicates(source.rows, source.duplicateColumns, identifierColumns(source.columns, source.rows));
+  if (!source.removeDuplicates) return { ...report, keep: source.rows.map((_, i) => i) };
+  if (!source.removePossibleDuplicates) return report;
+  const flagged = new Set(report.possible.map((p) => p.index));
+  return { ...report, keep: report.keep.filter((i) => !flagged.has(i)) };
 }
 
 /**

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   collectTags,
+  removeRepeatedNames,
   computeGroupSizes,
   groupPeople,
   moveMember,
@@ -398,5 +399,11 @@ describe("editing helpers", () => {
     expect(moveMember(base(), 1, 0, 1)).toEqual(base());
     expect(moveMember(base(), 1, 9, 2)).toEqual(base());
     expect(moveMember(base(), 1, 0, 99)).toEqual(base());
+  });
+});
+
+describe("removeRepeatedNames", () => {
+  it("drops repeated names and blank lines, keeping the first spelling", () => {
+    expect(removeRepeatedNames("Ama\n\nkofi\n  ama \nKofi | B\nEsi")).toBe("Ama\nkofi\nEsi");
   });
 });

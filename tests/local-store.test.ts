@@ -124,6 +124,9 @@ describe("file drafts", () => {
     ],
     nameColumns: ["Full name"],
     outputColumns: ["Full name", "Phone"],
+    removeDuplicates: false,
+    duplicateColumns: ["Full name"],
+    removePossibleDuplicates: true,
   };
 
   it("round-trips an uploaded file", () => {
@@ -134,11 +137,24 @@ describe("file drafts", () => {
 
   it("repairs column choices that point at missing columns", () => {
     const d = parseDraft(
-      JSON.stringify({ names: "", file: { ...file, nameColumns: ["Gone"], outputColumns: ["Gone"], rows: [{ Phone: 5 }] } }),
+      JSON.stringify({
+        names: "",
+        file: {
+          ...file,
+          nameColumns: ["Gone"],
+          outputColumns: ["Gone"],
+          duplicateColumns: ["Gone"],
+          removeDuplicates: undefined,
+          rows: [{ Phone: 5 }],
+        },
+      }),
     )!;
     expect(d.file).toMatchObject({
       nameColumns: ["Full name"],
       outputColumns: ["Full name", "Phone"],
+      duplicateColumns: ["Full name", "Phone"],
+      removeDuplicates: true,
+      removePossibleDuplicates: true,
       rows: [{ "Full name": "", Phone: "" }],
     });
   });

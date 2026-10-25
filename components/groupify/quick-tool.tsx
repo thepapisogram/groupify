@@ -25,7 +25,7 @@ import { useGrouping } from "@/components/groupify/use-grouping";
 import { defaultColumns, exportGroupTable } from "@/components/groupify/utils";
 import { Button } from "@/components/ui/button";
 import { cellText, type ExportColumn } from "@/lib/group-export";
-import { collectTags, parseNames, TAG_KEY } from "@/lib/grouping";
+import { collectTags, parseNames, removeRepeatedNames, TAG_KEY } from "@/lib/grouping";
 import { buildJotterDraftUrl, parseJotterHandoff } from "@/lib/jotter-handoff";
 import {
   addRecent,
@@ -40,6 +40,7 @@ import {
   MAX_FILE_BYTES,
   balanceColumns,
   baseFileName,
+  fileRows,
   fileSourceFromSheet,
   parseSpreadsheet,
   rowsToPeople,
@@ -119,9 +120,13 @@ export function QuickTool() {
   }, [handoff]);
 
   const usingFile = source === "file" && file !== null;
+  const duplicateReport = useMemo(() => (file ? fileRows(file) : null), [file]);
   const people = useMemo(
-    () => (usingFile ? rowsToPeople(file.rows, file.nameColumns) : parseNames(names)),
-    [usingFile, file, names],
+    () =>
+      usingFile && duplicateReport
+        ? rowsToPeople(file.rows, file.nameColumns, duplicateReport.keep)
+        : parseNames(names),
+    [usingFile, file, duplicateReport, names],
   );
   const grouping = useGrouping(people, draft ?? undefined);
   const { groups, hasResults, settings, restore, clearResults, setBalanceBy } = grouping;
@@ -262,8 +267,17 @@ export function QuickTool() {
       setFile(next);
       setSource("file");
       resetResults();
+      const report = fileRows(next);
+      const removed = report.removed.length;
+      const possible = report.possible.length;
+      const notes = [
+        removed > 0 && `${removed} duplicate row${removed === 1 ? "" : "s"} removed`,
+        possible > 0 && `${possible} possible duplicate${possible === 1 ? "" : "s"} to check`,
+      ].filter(Boolean);
       if (found[0].truncated) toast.warning("Big file: only the first 5,000 rows and 50 columns were kept.");
-      else toast.success(`${next.rows.length} rows and ${next.columns.length} columns found`);
+      else if (notes.length > 0) {
+        toast.success(`${next.rows.length} rows found`, { description: `${notes.join(", ")}. Review them below.` });
+      } else toast.success(`${next.rows.length} rows and ${next.columns.length} columns found`);
     } catch {
       toast.error("Couldn't read that file. Try saving it as .xlsx or .csv.");
     } finally {
@@ -403,12 +417,18 @@ export function QuickTool() {
           textareaRef={textareaRef}
           count={nameCount}
           duplicates={duplicates}
+          onRemoveDuplicates={() => {
+            const next = removeRepeatedNames(names);
+            toast.success(`Removed ${duplicates} repeated name${duplicates === 1 ? "" : "s"}`);
+            handleNamesChange(next);
+          }}
           onExample={handleExample}
         />
       ) : (
         <>
           <FileImportPanel
             file={file}
+            duplicates={duplicateReport}
             sheets={sheets}
             busy={fileBusy}
             onPick={handlePickFile}

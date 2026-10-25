@@ -184,6 +184,13 @@ export default function DocumentationPage() {
               </Card>
             </div>
             <p className="text-sm text-muted-foreground">
+              <strong>Duplicates</strong> are found on upload. Rows that match an earlier row in every column you
+              choose (timestamps are ignored by default, so someone who filled in a form twice is caught) are left out
+              automatically, and you can review them or switch this off. Rows that only share a phone number or email
+              with an earlier row, for example with a typo in the name, are listed as possible duplicates for you to
+              check and remove with one switch.
+            </p>
+            <p className="text-sm text-muted-foreground">
               Phone numbers keep their leading zero. If a sheet stored some numbers as plain numbers, Groupify puts the
               zero back when most of that column starts with one. You can also spread a column evenly, such as gender or
               level, from <strong>Rules</strong>.

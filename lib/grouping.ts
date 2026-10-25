@@ -158,6 +158,19 @@ export function parseNames(raw: string): Person[] {
   return people;
 }
 
+/** The same text with repeated names (same name, ignoring case and spacing) and blank lines dropped. */
+export function removeRepeatedNames(raw: string): string {
+  const seen = new Set<string>();
+  const kept: string[] = [];
+  for (const line of raw.split(/\r?\n/)) {
+    const [person] = parseNames(line);
+    if (!person || seen.has(person.key)) continue;
+    seen.add(person.key);
+    kept.push(line.trim());
+  }
+  return kept.join("\n");
+}
+
 /** Distinct tags present in the list, in order of first appearance. */
 export function collectTags(people: Person[], attr: string = TAG_KEY): string[] {
   const seen = new Set<string>();

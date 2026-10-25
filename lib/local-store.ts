@@ -1,6 +1,6 @@
 import type { AttrValue, DistributionMode, Group, GroupBy, Rule } from "@/lib/grouping";
 import type { ExportColumn } from "@/lib/group-export";
-import { MAX_COLUMNS, MAX_ROWS, type FileSource, type Row } from "@/lib/spreadsheet";
+import { MAX_COLUMNS, MAX_ROWS, defaultDuplicateColumns, type FileSource, type Row } from "@/lib/spreadsheet";
 
 const DRAFT_KEY = "groupify:draft:v1";
 const RECENT_KEY = "groupify:recent:v1";
@@ -89,6 +89,7 @@ export function parseFileSource(value: unknown): FileSource | null {
   if (rows.length === 0) return null;
   const nameColumns = strings(value.nameColumns, MAX_COLUMNS).filter((c) => known.has(c));
   const outputColumns = strings(value.outputColumns, MAX_COLUMNS).filter((c) => known.has(c));
+  const duplicateColumns = strings(value.duplicateColumns, MAX_COLUMNS).filter((c) => known.has(c));
   return {
     fileName: value.fileName.slice(0, 200),
     sheetName: typeof value.sheetName === "string" ? value.sheetName.slice(0, 100) : "",
@@ -96,6 +97,9 @@ export function parseFileSource(value: unknown): FileSource | null {
     rows,
     nameColumns: nameColumns.length > 0 ? nameColumns : [columns[0]],
     outputColumns: outputColumns.length > 0 ? outputColumns : columns,
+    removeDuplicates: value.removeDuplicates !== false,
+    removePossibleDuplicates: value.removePossibleDuplicates === true,
+    duplicateColumns: duplicateColumns.length > 0 ? duplicateColumns : defaultDuplicateColumns(columns, rows),
   };
 }
 
